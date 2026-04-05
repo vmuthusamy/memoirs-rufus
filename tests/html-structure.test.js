@@ -35,6 +35,7 @@ describe("HTML structure", () => {
     expect(htmlContent).toContain('src="levels/level1.js"');
     expect(htmlContent).toContain('src="levels/level2.js"');
     expect(htmlContent).toContain('src="levels/level3.js"');
+    expect(htmlContent).toContain('src="levels/level4.js"');
   });
 
   test("level scripts are loaded before Kaplay", () => {
@@ -332,7 +333,7 @@ describe("Touch controls", () => {
 
   test("shows touch-friendly text on touch devices", () => {
     expect(htmlContent).toContain("Tap anywhere to play!");
-    expect(htmlContent).toContain("Tap here for About Rufus");
+    expect(htmlContent).toContain("About Rufus");
   });
 
   test("EVERY ontouchstart check includes maxTouchPoints fallback", () => {
@@ -536,7 +537,7 @@ describe("ALL_LEVELS configuration", () => {
   test("ALL_LEVELS array includes all level files", () => {
     expect(htmlContent).toContain("LEVEL_1");
     expect(htmlContent).toContain("LEVEL_2");
-    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*\]/);
+    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*LEVEL_4.*\]/);
   });
 
   test("level script tags match ALL_LEVELS entries", () => {

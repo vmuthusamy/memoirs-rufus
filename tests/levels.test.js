@@ -15,7 +15,8 @@ function loadLevel(filename) {
 const LEVEL_1 = loadLevel("level1.js");
 const LEVEL_2 = loadLevel("level2.js");
 const LEVEL_3 = loadLevel("level3.js");
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3];
+const LEVEL_4 = loadLevel("level4.js");
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4];
 
 // Game constants (must match index.html)
 const GAME_HEIGHT = 600;
@@ -244,7 +245,7 @@ describe("Enemy validation", () => {
     describe(`Level ${i + 1}: ${level.name}`, () => {
       test("all enemies have required fields", () => {
         level.enemies.forEach((e) => {
-          expect(["walker", "armored", "wasp_patrol", "wasp_dive"]).toContain(e.type);
+          expect(["walker", "armored", "wasp_patrol", "wasp_dive", "bookworm"]).toContain(e.type);
           expect(typeof e.x).toBe("number");
           expect(typeof e.y).toBe("number");
           expect(typeof e.patrol).toBe("number");
@@ -327,6 +328,26 @@ describe("Enemy validation", () => {
 
   test("Level 3 is harder than Level 2 (more enemies)", () => {
     expect(LEVEL_3.enemies.length).toBeGreaterThan(LEVEL_2.enemies.length);
+  });
+
+  test("Level 4 has bookworm enemies", () => {
+    const bookworms = LEVEL_4.enemies.filter((e) => e.type === "bookworm");
+    expect(bookworms.length).toBeGreaterThan(0);
+  });
+
+  test("Level 4 has swarm trigger position", () => {
+    expect(LEVEL_4.swarmTriggerX).toBeDefined();
+    expect(LEVEL_4.swarmTriggerX).toBeGreaterThan(LEVEL_4.playerStart.x);
+    expect(LEVEL_4.swarmTriggerX).toBeLessThan(LEVEL_4.exit.x);
+  });
+
+  test("Level 4 has mixed enemy types in act 3", () => {
+    const bookworms = LEVEL_4.enemies.filter((e) => e.type === "bookworm");
+    const squirrels = LEVEL_4.enemies.filter(
+      (e) => e.type === "walker" || e.type === "armored"
+    );
+    expect(bookworms.length).toBeGreaterThan(5);
+    expect(squirrels.length).toBeGreaterThan(0);
   });
 });
 

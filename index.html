@@ -1961,18 +1961,32 @@ scene("game", (levelIndex, startLives, spawnPos) => {
   }
 
   // --- PLATFORMS ---
+  const isLibrary = level.name === "The Library";
   level.platforms.forEach((p) => {
-    // Platform body
+    // Platform body — books in library, wood/earth elsewhere
     add([
       rect(p.width, p.height),
       pos(p.x, p.y),
-      color(101, 67, 33),
-      outline(2, rgb(60, 40, 20)),
+      color(isLibrary ? 120 : 101, isLibrary ? 50 : 67, isLibrary ? 50 : 33),
+      outline(2, rgb(isLibrary ? 80 : 60, isLibrary ? 30 : 40, isLibrary ? 30 : 20)),
       area(),
       body({ isStatic: true }),
       "platform",
     ]);
-    // Grass on top
+    if (isLibrary) {
+      // Book spines on platforms (colorful stripes!)
+      const bookColors = [[200,50,50],[50,50,200],[50,150,50],[200,200,50],[180,80,180]];
+      for (let bx = p.x + 4; bx < p.x + p.width - 8; bx += rand(12, 20)) {
+        const bc = bookColors[Math.floor(rand(0, bookColors.length))];
+        add([
+          rect(rand(6, 12), p.height - 4),
+          pos(bx, p.y + 2),
+          color(...bc),
+          z(0),
+        ]);
+      }
+    }
+    // Grass/shelf top
     add([
       rect(p.width, 6),
       pos(p.x, p.y - 3),
@@ -2099,11 +2113,16 @@ scene("game", (levelIndex, startLives, spawnPos) => {
       }
       e.flipX = rufus.pos.x < e.pos.x;
     } else {
-      // Walker / armored — ground patrol
-      e.pos.x += e.dir * (e.speed || 60) * dt();
+      // Walker / armored / bookworm — ground patrol
+      const spd = e.enemyType === "bookworm" ? (e.speed || 45) : (e.speed || 60);
+      e.pos.x += e.dir * spd * dt();
       if (e.pos.x > e.startX + e.patrol) e.dir = -1;
       if (e.pos.x < e.startX - e.patrol) e.dir = 1;
       e.flipX = e.dir < 0;
+      // Bookworms wiggle up and down
+      if (e.enemyType === "bookworm") {
+        e.pos.y = e.startY + Math.sin(time() * 6) * 3;
+      }
     }
   });
 
@@ -2531,7 +2550,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
 
     // Check if we're spinning (tail attack)
     if (rufus.isSpinning) {
-      if (enemy.enemyType === "walker" || enemy.isWasp || enemy.isDisarmed) {
+      if (enemy.enemyType === "walker" || enemy.enemyType === "bookworm" || enemy.isWasp || enemy.isDisarmed) {
         // Tail spin kills walkers and disarmed enemies!
         destroyEnemy(enemy);
       } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
@@ -2638,6 +2657,208 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     }
   });
 
+  // --- SWARM EVENT & FIERY NPC (Level 4 only) ---
+  let swarmTriggered = false;
+  let fieryNPC = null;
+
+  if (level.swarmTriggerX) {
+    rufus.onUpdate(() => {
+      if (!swarmTriggered && rufus.pos.x > level.swarmTriggerX) {
+        swarmTriggered = true;
+
+        // Make Rufus invincible during the cutscene!
+        isInvincible = true;
+
+        // "There's too many!" text
+        const warning = add([
+          text("There's too many!", { size: 24 }),
+          pos(rufus.pos.x, rufus.pos.y - 80),
+          anchor("center"),
+          color(255, 100, 100),
+          outline(2, rgb(0, 0, 0)),
+          opacity(1),
+          lifespan(2),
+          z(100),
+        ]);
+
+        // Spawn swarm enemies AHEAD of Rufus (so he sees them coming)
+        const swarmX = level.swarmTriggerX + 100;
+        for (let i = 0; i < 8; i++) {
+          add([
+            sprite("bookworm"),
+            pos(swarmX + i * 40, 535),
+            area(), anchor("bot"), z(1),
+            "bookworm", "enemy", "swarmEnemy",
+            { startX: swarmX + i * 40, startY: 535,
+              patrol: 30, speed: 40, dir: -1,
+              enemyType: "bookworm", isDisarmed: false, isWasp: false, isDiving: false, diveTimer: 0 },
+          ]);
+        }
+        for (let i = 0; i < 4; i++) {
+          add([
+            sprite("wasp"),
+            pos(swarmX + 50 + i * 80, 250 + rand(-50, 50)),
+            area(), anchor("bot"), z(1),
+            "wasp_patrol", "enemy", "swarmEnemy",
+            { startX: swarmX + 50 + i * 80, startY: 250 + rand(-50, 50),
+              patrol: 60, speed: 40, dir: -1,
+              enemyType: "wasp_patrol", isDisarmed: false, isWasp: true, isDiving: false, diveTimer: 0 },
+          ]);
+        }
+
+        // After 2 seconds, FIERY ARRIVES!
+        wait(2, () => {
+          // "CRASH!" text — anchored to swarm area, not Rufus
+          const crashX = swarmX + 200;
+          const crash = add([
+            text("CRASH!", { size: 48 }),
+            pos(crashX, height() / 2),
+            anchor("center"),
+            color(255, 100, 0),
+            outline(3, rgb(0, 0, 0)),
+            opacity(1),
+            lifespan(1.5),
+            z(150),
+          ]);
+
+          // Fiery enters from the right!
+          const fieryEntrance = add([
+            sprite("fiery"),
+            pos(crashX + 200, 400),
+            anchor("center"),
+            scale(4),
+            z(50),
+          ]);
+
+          // Fire breath effect — destroy all swarm enemies!
+          wait(0.5, () => {
+            // Fire wave particles
+            for (let i = 0; i < 15; i++) {
+              add([
+                rect(rand(8, 16), rand(8, 16)),
+                pos(fieryEntrance.pos.x - i * 30, fieryEntrance.pos.y + rand(-40, 40)),
+                color(255, rand(50, 150), 0),
+                opacity(0.9),
+                lifespan(0.8),
+                move(180, rand(100, 300)),
+                z(49),
+              ]);
+            }
+
+            // Destroy all swarm enemies
+            get("swarmEnemy").forEach((e) => {
+              // Poof effect
+              for (let j = 0; j < 3; j++) {
+                add([
+                  rect(rand(4, 8), rand(4, 8)),
+                  pos(e.pos),
+                  color(255, rand(100, 200), 0),
+                  opacity(1),
+                  lifespan(0.5),
+                  move(rand(0, 360), rand(80, 200)),
+                  z(5),
+                ]);
+              }
+              destroy(e);
+            });
+
+            // Fiery says his line
+            const rawrText = add([
+              text("RAWR! Nobody hurts my friend!", { size: 16 }),
+              pos(fieryEntrance.pos.x, fieryEntrance.pos.y - 60),
+              anchor("center"),
+              color(255, 200, 100),
+              outline(2, rgb(0, 0, 0)),
+              opacity(1),
+              lifespan(2.5),
+              z(151),
+            ]);
+
+            // After the entrance, Fiery becomes the NPC companion
+            wait(2, () => {
+              if (fieryEntrance.exists()) destroy(fieryEntrance);
+
+              // Spawn Fiery as a following NPC
+              fieryNPC = add([
+                sprite("fiery"),
+                pos(rufus.pos.x - 80, rufus.pos.y),
+                anchor("center"),
+                scale(2),
+                z(9),
+                "fieryNPC",
+              ]);
+
+              // Cutscene over — Rufus can take damage again
+              isInvincible = false;
+            });
+          });
+        });
+      }
+    });
+  }
+
+  // Fiery NPC follows Rufus and auto-attacks enemies
+  onUpdate("fieryNPC", (f) => {
+    if (!rufus.exists()) return;
+    // Follow Rufus with a lag
+    const targetX = rufus.pos.x - 80;
+    const targetY = rufus.pos.y;
+    f.pos.x += (targetX - f.pos.x) * 3 * dt();
+    f.pos.y += (targetY - f.pos.y) * 3 * dt();
+    f.flipX = rufus.flipX;
+  });
+
+  // Fiery auto-attacks nearby enemies every 2 seconds
+  let fieryAttackTimer = 0;
+  onUpdate(() => {
+    if (!fieryNPC || !fieryNPC.exists()) return;
+    fieryAttackTimer += dt();
+    if (fieryAttackTimer >= 2) {
+      fieryAttackTimer = 0;
+      // Find closest enemy
+      const enemies = get("enemy");
+      let closest = null;
+      let closestDist = 200; // Attack range
+      enemies.forEach((e) => {
+        const dist = Math.abs(e.pos.x - fieryNPC.pos.x) + Math.abs(e.pos.y - fieryNPC.pos.y);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = e;
+        }
+      });
+      if (closest) {
+        // Fire puff attack!
+        const dir = closest.pos.x > fieryNPC.pos.x ? 1 : -1;
+        for (let i = 0; i < 4; i++) {
+          add([
+            rect(rand(4, 8), rand(4, 8)),
+            pos(fieryNPC.pos.x + dir * 20, fieryNPC.pos.y - 10 + rand(-10, 10)),
+            color(255, rand(50, 150), 0),
+            opacity(0.8),
+            lifespan(0.4),
+            move(dir > 0 ? 0 : 180, rand(100, 200)),
+            z(8),
+          ]);
+        }
+        // Destroy the enemy
+        for (let j = 0; j < 3; j++) {
+          add([
+            rect(rand(4, 6), rand(4, 6)),
+            pos(closest.pos),
+            color(255, rand(100, 200), 0),
+            opacity(1),
+            lifespan(0.4),
+            move(rand(0, 360), rand(80, 150)),
+            z(5),
+          ]);
+        }
+        score += 50;
+        scoreText.text = `Treats: ${score}`;
+        destroy(closest);
+      }
+    }
+  });
+
   // --- HUD (Heads Up Display) ---
   const scoreText = add([
     text(`Treats: ${score}`, { size: 20 }),
@@ -2710,6 +2931,12 @@ scene("levelComplete", ({ score, levelIndex }) => {
       title: "Gym Champion!",
       message: "The wasps have been swatted and the squirrels sent packing! Rufus owns the gym!",
       rufusColor: [255, 100, 50],
+    },
+    { // Level 4 - library victory, warm amber
+      bg: [60, 40, 20],
+      title: "Library Heroes!",
+      message: "Rufus and Fiery saved the books! RAWR means 'we did it' in dinosaur!",
+      rufusColor: [255, 150, 50],
     },
   ];
   const theme = themes[levelIndex] || themes[0];
