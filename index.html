@@ -16,6 +16,7 @@
 <!-- Load level data -->
 <script src="levels/level1.js"></script>
 <script src="levels/level2.js"></script>
+<script src="levels/level3.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -55,7 +56,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -659,6 +660,74 @@ function drawFirey() {
   return c;
 }
 
+// --- DRAW CHECKPOINT FLAG (gray = inactive, green = active) ---
+function drawCheckpointFlag(active) {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = 40;
+  const ctx = c.getContext("2d");
+  // Pole
+  ctx.fillStyle = "#8B8B8B";
+  ctx.fillRect(4, 0, 4, 40);
+  // Flag
+  ctx.fillStyle = active ? "#00CC00" : "#888888";
+  ctx.fillRect(8, 2, 14, 12);
+  // Check mark on active flag
+  if (active) {
+    ctx.fillStyle = "#FFF";
+    ctx.fillRect(12, 6, 2, 4);
+    ctx.fillRect(14, 8, 2, 2);
+    ctx.fillRect(16, 6, 2, 2);
+  }
+  // Base
+  ctx.fillStyle = "#666";
+  ctx.fillRect(0, 36, 12, 4);
+  return c;
+}
+
+// --- DRAW WASP (yellow/black, wings, stinger) ---
+function drawWasp() {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = 20;
+  const ctx = c.getContext("2d");
+
+  // Wings (transparent-ish)
+  ctx.fillStyle = "rgba(200, 220, 255, 0.6)";
+  ctx.fillRect(4, 0, 6, 8);
+  ctx.fillRect(14, 0, 6, 8);
+  ctx.fillRect(2, 2, 4, 4);
+  ctx.fillRect(18, 2, 4, 4);
+
+  // Body - yellow/black stripes
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(6, 6, 12, 10);
+  ctx.fillStyle = "#222";
+  ctx.fillRect(6, 8, 12, 2);
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(6, 10, 12, 2);
+  ctx.fillStyle = "#222";
+  ctx.fillRect(6, 12, 12, 2);
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(6, 14, 12, 2);
+
+  // Head
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(8, 4, 8, 4);
+
+  // Angry eyes
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(9, 5, 2, 2);
+  ctx.fillRect(13, 5, 2, 2);
+
+  // Stinger!
+  ctx.fillStyle = "#222";
+  ctx.fillRect(10, 16, 4, 2);
+  ctx.fillRect(11, 18, 2, 2);
+
+  return c;
+}
+
 // --- DRAW SLEEPING RUFUS (nap time!) ---
 function drawFoxSleeping() {
   const c = document.createElement("canvas");
@@ -726,6 +795,9 @@ loadSprite("walker", drawWalker().toDataURL());
 loadSprite("armored", drawArmored().toDataURL());
 loadSprite("disarmed", drawDisarmed().toDataURL());
 loadSprite("bounceCrate", drawBounceCrate().toDataURL());
+loadSprite("checkpoint", drawCheckpointFlag(false).toDataURL());
+loadSprite("checkpoint_active", drawCheckpointFlag(true).toDataURL());
+loadSprite("wasp", drawWasp().toDataURL());
 loadSprite("marthina", drawMarthina().toDataURL());
 loadSprite("renard", drawRenard().toDataURL());
 loadSprite("fiery", drawFirey().toDataURL());
@@ -1374,6 +1446,7 @@ scene("game", (levelIndex, startLives) => {
   let isSpinning = false;
   let lives = (startLives !== undefined) ? startLives : 3;
   let spinCooldown = 0;
+  let nextExtraLife = 200;
 
   // Set gravity
   setGravity(1600);
@@ -1487,9 +1560,15 @@ scene("game", (levelIndex, startLives) => {
 
   // --- ENEMIES ---
   level.enemies.forEach((e) => {
-    const enemySprite = e.type === "armored" ? "armored" : "walker";
+    const isWasp = e.type === "wasp_patrol" || e.type === "wasp_dive";
+    const spriteMap = {
+      walker: "walker",
+      armored: "armored",
+      wasp_patrol: "wasp",
+      wasp_dive: "wasp",
+    };
     const en = add([
-      sprite(enemySprite),
+      sprite(spriteMap[e.type] || "walker"),
       pos(e.x, e.y),
       area(),
       anchor("bot"),
@@ -1498,21 +1577,82 @@ scene("game", (levelIndex, startLives) => {
       "enemy",
       {
         startX: e.x,
+        startY: e.y,
         patrol: e.patrol || 100,
+        speed: e.speed || 60,
         dir: 1,
         enemyType: e.type,
         isDisarmed: false,
+        isWasp: isWasp,
+        isDiving: false,
+        diveTimer: 0,
       },
     ]);
   });
 
-  // Enemy patrol movement
+  // Enemy movement
   onUpdate("enemy", (e) => {
-    e.pos.x += e.dir * 60 * dt();
-    if (e.pos.x > e.startX + e.patrol) e.dir = -1;
-    if (e.pos.x < e.startX - e.patrol) e.dir = 1;
-    e.flipX = e.dir < 0;
+    if (e.enemyType === "wasp_patrol") {
+      // Sine wave flight pattern
+      e.pos.x += e.dir * (e.speed || 50) * dt();
+      e.pos.y = e.startY + Math.sin(time() * 2.5) * 40;
+      if (e.pos.x > e.startX + e.patrol) e.dir = -1;
+      if (e.pos.x < e.startX - e.patrol) e.dir = 1;
+      e.flipX = e.dir < 0;
+    } else if (e.enemyType === "wasp_dive") {
+      if (!e.isDiving) {
+        // Hover and bob gently
+        e.pos.y = e.startY + Math.sin(time() * 2) * 10;
+        // Check if Rufus is close enough to dive
+        const dist = Math.abs(e.pos.x - rufus.pos.x);
+        if (dist < 200 && rufus.pos.y > e.pos.y) {
+          e.isDiving = true;
+          e.diveTimer = 1.0;
+          e.diveTargetX = rufus.pos.x;
+          e.diveTargetY = rufus.pos.y;
+        }
+      } else {
+        // Diving toward target!
+        const dx = e.diveTargetX - e.pos.x;
+        const dy = e.diveTargetY - e.pos.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 5) {
+          e.pos.x += (dx / len) * 250 * dt();
+          e.pos.y += (dy / len) * 250 * dt();
+        }
+        e.diveTimer -= dt();
+        if (e.diveTimer <= 0) {
+          // Return to hover position
+          e.isDiving = false;
+          e.pos.x = e.startX;
+          e.pos.y = e.startY;
+        }
+      }
+      e.flipX = rufus.pos.x < e.pos.x;
+    } else {
+      // Walker / armored — ground patrol
+      e.pos.x += e.dir * (e.speed || 60) * dt();
+      if (e.pos.x > e.startX + e.patrol) e.dir = -1;
+      if (e.pos.x < e.startX - e.patrol) e.dir = 1;
+      e.flipX = e.dir < 0;
+    }
   });
+
+  // --- CHECKPOINTS ---
+  let lastCheckpoint = null;
+  if (level.checkpoints) {
+    level.checkpoints.forEach((cp) => {
+      add([
+        sprite("checkpoint"),
+        pos(cp.x, cp.y),
+        area(),
+        anchor("bot"),
+        z(1),
+        "checkpoint",
+        { activated: false },
+      ]);
+    });
+  }
 
   // --- EXIT FLAG ---
   add([
@@ -1817,6 +1957,24 @@ scene("game", (levelIndex, startLives) => {
       score += 10;
       scoreText.text = `Treats: ${score}`;
 
+      // Extra life every 200 points! (max 5 lives)
+      if (score >= nextExtraLife && lives < 5) {
+        lives++;
+        nextExtraLife += 200;
+        livesText.text = `Lives: ${"🦊".repeat(lives)}`;
+        // Big "EXTRA LIFE!" popup
+        const popup = add([
+          text("EXTRA LIFE!", { size: 28 }),
+          pos(rufus.pos.x, rufus.pos.y - 60),
+          anchor("center"),
+          color(255, 215, 0),
+          outline(2, rgb(0, 0, 0)),
+          lifespan(1.5),
+          z(100),
+        ]);
+        popup.onUpdate(() => { popup.pos.y -= 30 * dt(); });
+      }
+
       // Sparkle effect!
       for (let i = 0; i < 5; i++) {
         add([
@@ -1829,6 +1987,27 @@ scene("game", (levelIndex, startLives) => {
         ]);
       }
       destroy(treat);
+    }
+  });
+
+  // --- CHECKPOINT ACTIVATION ---
+  rufus.onCollide("checkpoint", (cp) => {
+    if (!cp.activated) {
+      cp.activated = true;
+      cp.use(sprite("checkpoint_active"));
+      lastCheckpoint = { x: cp.pos.x, y: cp.pos.y };
+      // Green flash effect
+      for (let i = 0; i < 4; i++) {
+        add([
+          rect(4, 4),
+          pos(cp.pos.x + rand(-15, 15), cp.pos.y - rand(10, 30)),
+          color(0, 200, 0),
+          opacity(0.8),
+          lifespan(0.5),
+          move(rand(60, 120), rand(50, 100)),
+          z(5),
+        ]);
+      }
     }
   });
 
@@ -1881,7 +2060,7 @@ scene("game", (levelIndex, startLives) => {
 
     // Check if we're spinning (tail attack)
     if (rufus.isSpinning) {
-      if (enemy.enemyType === "walker" || enemy.isDisarmed) {
+      if (enemy.enemyType === "walker" || enemy.isWasp || enemy.isDisarmed) {
         // Tail spin kills walkers and disarmed enemies!
         destroyEnemy(enemy);
       } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
@@ -1904,8 +2083,8 @@ scene("game", (levelIndex, startLives) => {
         hurtRufus();
       }
     }
-    // Check if we're jumping on top of enemy
-    else if (rufus.pos.y < enemy.pos.y - 20 && !rufus.isGrounded()) {
+    // Check if we're jumping on top of enemy (wasps can't be stomped!)
+    else if (!enemy.isWasp && rufus.pos.y < enemy.pos.y - 20 && !rufus.isGrounded()) {
       if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
         // Jump disarms armored enemy! Helmet pops off!
         enemy.isDisarmed = true;
@@ -1954,13 +2133,29 @@ scene("game", (levelIndex, startLives) => {
 
   function hurtRufus() {
     if (isInvincible) return;
-    isInvincible = true; // Prevent any further damage
+    isInvincible = true;
     lives--;
+    livesText.text = `Lives: ${"🦊".repeat(Math.max(0, lives))}`;
 
     if (lives <= 0) {
       go("gameOver", { score, levelIndex });
+    } else if (lastCheckpoint) {
+      // Respawn at checkpoint!
+      rufus.pos = vec2(lastCheckpoint.x, lastCheckpoint.y - 50);
+      rufus.opacity = 0.5;
+      // Cancel any spin
+      rufus.isSpinning = false;
+      rufus.use(sprite("rufus"));
+      rufus.use(scale(2));
+      rufus.angle = 0;
+      wait(1.5, () => {
+        if (rufus.exists()) {
+          isInvincible = false;
+          rufus.opacity = 1;
+        }
+      });
     } else {
-      // Restart the level with remaining lives
+      // No checkpoint — restart level
       go("game", levelIndex, lives);
     }
   }
@@ -2043,6 +2238,12 @@ scene("levelComplete", ({ score, levelIndex }) => {
       title: "Neighborhood Hero!",
       message: "The armored squirrels have been defeated! Rufus rules the neighborhood!",
       rufusColor: [100, 200, 255],
+    },
+    { // Level 3 - gym victory, bright lights
+      bg: [240, 230, 200],
+      title: "Gym Champion!",
+      message: "The wasps have been swatted and the squirrels sent packing! Rufus owns the gym!",
+      rufusColor: [255, 100, 50],
     },
   ];
   const theme = themes[levelIndex] || themes[0];

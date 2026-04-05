@@ -105,41 +105,47 @@ const LEVEL_2 = {
     { x: 4500, y: 560 },   // Near the exit
   ],
 
+  // Checkpoints (flag posts - respawn here on death)
+  checkpoints: [
+    { x: 1600, y: 560 },
+    { x: 3000, y: 560 },
+  ],
+
   enemies: [
-    // Opening - single walker to warm up
-    { type: "walker", x: 650, y: 535, patrol: 100 },
+    // Opening - single walker to warm up (faster speed!)
+    { type: "walker", x: 650, y: 535, patrol: 100, speed: 80 },
 
     // First armored enemy - alone so player can learn
-    { type: "armored", x: 1000, y: 535, patrol: 80 },
+    { type: "armored", x: 1000, y: 535, patrol: 80, speed: 70 },
 
-    // Gauntlet - walker + armored combos!
-    { type: "walker", x: 1200, y: 535, patrol: 70 },
-    { type: "walker", x: 1400, y: 535, patrol: 90 },
-    { type: "armored", x: 1650, y: 535, patrol: 60 },
+    // Gauntlet - walker + armored combos! (faster)
+    { type: "walker", x: 1200, y: 535, patrol: 70, speed: 85 },
+    { type: "walker", x: 1400, y: 535, patrol: 90, speed: 80 },
+    { type: "armored", x: 1650, y: 535, patrol: 60, speed: 75 },
 
     // Staircase guards
-    { type: "walker", x: 1850, y: 535, patrol: 80 },
-    { type: "armored", x: 2250, y: 535, patrol: 50 },
+    { type: "walker", x: 1850, y: 535, patrol: 80, speed: 85 },
+    { type: "armored", x: 2250, y: 535, patrol: 50, speed: 70 },
 
     // Between the roads
-    { type: "walker", x: 2650, y: 535, patrol: 100 },
-    { type: "armored", x: 2850, y: 535, patrol: 70 },
+    { type: "walker", x: 2650, y: 535, patrol: 100, speed: 90 },
+    { type: "armored", x: 2850, y: 535, patrol: 70, speed: 75 },
 
-    // Final gauntlet - the hard part!
-    { type: "armored", x: 3200, y: 535, patrol: 90 },
-    { type: "walker", x: 3400, y: 535, patrol: 60 },
-    { type: "armored", x: 3650, y: 535, patrol: 80 },
-    { type: "walker", x: 3900, y: 535, patrol: 100 },
-    { type: "armored", x: 4100, y: 535, patrol: 70 },
-    { type: "walker", x: 4300, y: 535, patrol: 90 },
+    // Final gauntlet - the hard part! (fastest)
+    { type: "armored", x: 3200, y: 535, patrol: 90, speed: 85 },
+    { type: "walker", x: 3400, y: 535, patrol: 60, speed: 95 },
+    { type: "armored", x: 3650, y: 535, patrol: 80, speed: 80 },
+    { type: "walker", x: 3900, y: 535, patrol: 100, speed: 90 },
+    { type: "armored", x: 4100, y: 535, patrol: 70, speed: 85 },
+    { type: "walker", x: 4300, y: 535, patrol: 90, speed: 95 },
 
-    // Platform squirrels! Nasty surprise when you jump up
-    { type: "walker", x: 580, y: 355, patrol: 40 },     // On opening platform
-    { type: "walker", x: 1350, y: 325, patrol: 30 },     // Gauntlet platform
-    { type: "armored", x: 1550, y: 255, patrol: 40 },    // Armored on high gauntlet platform!
-    { type: "walker", x: 2800, y: 175, patrol: 60 },     // Guarding the high road bonus treats
-    { type: "armored", x: 2800, y: 395, patrol: 50 },    // Armored on the low road too!
-    { type: "walker", x: 3850, y: 275, patrol: 50 },     // Late platform guard
-    { type: "walker", x: 4400, y: 295, patrol: 60 },     // Final platform guard
+    // Platform squirrels! Faster and meaner
+    { type: "walker", x: 580, y: 355, patrol: 40, speed: 75 },
+    { type: "armored", x: 1350, y: 325, patrol: 30, speed: 65 },
+    { type: "armored", x: 1550, y: 255, patrol: 40, speed: 70 },
+    { type: "walker", x: 2800, y: 175, patrol: 60, speed: 80 },
+    { type: "armored", x: 2800, y: 395, patrol: 50, speed: 75 },
+    { type: "armored", x: 3850, y: 275, patrol: 50, speed: 70 },
+    { type: "walker", x: 4400, y: 295, patrol: 60, speed: 85 },
   ],
 };

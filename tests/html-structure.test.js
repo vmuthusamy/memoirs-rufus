@@ -34,6 +34,7 @@ describe("HTML structure", () => {
   test("loads all level files", () => {
     expect(htmlContent).toContain('src="levels/level1.js"');
     expect(htmlContent).toContain('src="levels/level2.js"');
+    expect(htmlContent).toContain('src="levels/level3.js"');
   });
 
   test("level scripts are loaded before Kaplay", () => {
@@ -102,6 +103,14 @@ describe("Sprites", () => {
 
   test("bounce crate sprite draw function exists", () => {
     expect(htmlContent).toContain("function drawBounceCrate()");
+  });
+
+  test("wasp sprite draw function exists", () => {
+    expect(htmlContent).toContain("function drawWasp()");
+  });
+
+  test("checkpoint sprite draw function exists", () => {
+    expect(htmlContent).toContain("function drawCheckpointFlag(");
   });
 });
 
@@ -231,9 +240,39 @@ describe("Combat system", () => {
 
   test("has fall detection that calls hurtRufus", () => {
     expect(htmlContent).toMatch(/rufus\.pos\.y\s*>\s*height\(\)\s*\+/);
-    // Fall handler should use hurtRufus, not custom logic
     const fallSection = htmlContent.match(/FALL OFF SCREEN[\s\S]*?hurtRufus\(\)/);
     expect(fallSection).not.toBeNull();
+  });
+
+  test("wasps cannot be jumped on", () => {
+    expect(htmlContent).toContain("!enemy.isWasp");
+  });
+
+  test("wasps can be killed by tail spin", () => {
+    expect(htmlContent).toContain("enemy.isWasp");
+  });
+
+  test("has checkpoint collision handler", () => {
+    expect(htmlContent).toContain('onCollide("checkpoint"');
+  });
+
+  test("checkpoint respawn in hurtRufus", () => {
+    expect(htmlContent).toContain("lastCheckpoint");
+  });
+
+  test("extra life system exists", () => {
+    expect(htmlContent).toContain("nextExtraLife");
+    expect(htmlContent).toContain("EXTRA LIFE!");
+  });
+
+  test("wasp_dive enemies have dive behavior", () => {
+    expect(htmlContent).toContain("isDiving");
+    expect(htmlContent).toContain("diveTargetX");
+  });
+
+  test("wasp_patrol enemies have sine wave movement", () => {
+    expect(htmlContent).toContain("wasp_patrol");
+    expect(htmlContent).toContain("Math.sin(time()");
   });
 });
 
@@ -496,7 +535,7 @@ describe("ALL_LEVELS configuration", () => {
   test("ALL_LEVELS array includes all level files", () => {
     expect(htmlContent).toContain("LEVEL_1");
     expect(htmlContent).toContain("LEVEL_2");
-    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*\]/);
+    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*\]/);
   });
 
   test("level script tags match ALL_LEVELS entries", () => {

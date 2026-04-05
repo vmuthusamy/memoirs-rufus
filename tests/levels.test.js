@@ -14,7 +14,8 @@ function loadLevel(filename) {
 
 const LEVEL_1 = loadLevel("level1.js");
 const LEVEL_2 = loadLevel("level2.js");
-const ALL_LEVELS = [LEVEL_1, LEVEL_2];
+const LEVEL_3 = loadLevel("level3.js");
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3];
 
 // Game constants (must match index.html)
 const GAME_HEIGHT = 600;
@@ -243,7 +244,7 @@ describe("Enemy validation", () => {
     describe(`Level ${i + 1}: ${level.name}`, () => {
       test("all enemies have required fields", () => {
         level.enemies.forEach((e) => {
-          expect(["walker", "armored"]).toContain(e.type);
+          expect(["walker", "armored", "wasp_patrol", "wasp_dive"]).toContain(e.type);
           expect(typeof e.x).toBe("number");
           expect(typeof e.y).toBe("number");
           expect(typeof e.patrol).toBe("number");
@@ -298,6 +299,35 @@ describe("Enemy validation", () => {
   test("Level 2 is harder than Level 1 (more enemies)", () => {
     expect(LEVEL_2.enemies.length).toBeGreaterThan(LEVEL_1.enemies.length);
   });
+
+  test("Level 3 has wasp enemies", () => {
+    const wasps = LEVEL_3.enemies.filter(
+      (e) => e.type === "wasp_patrol" || e.type === "wasp_dive"
+    );
+    expect(wasps.length).toBeGreaterThan(0);
+  });
+
+  test("Level 3 has both wasp types", () => {
+    const patrol = LEVEL_3.enemies.filter((e) => e.type === "wasp_patrol");
+    const dive = LEVEL_3.enemies.filter((e) => e.type === "wasp_dive");
+    expect(patrol.length).toBeGreaterThan(0);
+    expect(dive.length).toBeGreaterThan(0);
+  });
+
+  test("Level 3 has a mix of squirrels and wasps", () => {
+    const squirrels = LEVEL_3.enemies.filter(
+      (e) => e.type === "walker" || e.type === "armored"
+    );
+    const wasps = LEVEL_3.enemies.filter(
+      (e) => e.type === "wasp_patrol" || e.type === "wasp_dive"
+    );
+    expect(squirrels.length).toBeGreaterThan(0);
+    expect(wasps.length).toBeGreaterThan(0);
+  });
+
+  test("Level 3 is harder than Level 2 (more enemies)", () => {
+    expect(LEVEL_3.enemies.length).toBeGreaterThan(LEVEL_2.enemies.length);
+  });
 });
 
 // ============================================
@@ -306,15 +336,22 @@ describe("Enemy validation", () => {
 describe("Platform enemy placement", () => {
   ALL_LEVELS.forEach((level, i) => {
     describe(`Level ${i + 1}: ${level.name}`, () => {
-      test("has enemies on platforms (not just ground)", () => {
-        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+      // Filter: ground enemies on platforms (exclude wasps — they fly)
+      const isGroundType = (e) =>
+        e.type === "walker" || e.type === "armored";
+
+      test("has ground enemies on platforms (not just ground)", () => {
+        const platformEnemies = level.enemies.filter(
+          (e) => isGroundType(e) && e.y < 500
+        );
         expect(platformEnemies.length).toBeGreaterThan(0);
       });
 
       test("platform enemies are near actual platforms", () => {
-        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+        const platformEnemies = level.enemies.filter(
+          (e) => isGroundType(e) && e.y < 500
+        );
         platformEnemies.forEach((e) => {
-          // Check that there's a platform near this enemy's y position
           const nearbyPlatform = level.platforms.some((p) => {
             const onPlatformY = Math.abs(e.y - p.y) < 30;
             const withinPlatformX =
@@ -327,7 +364,9 @@ describe("Platform enemy placement", () => {
       });
 
       test("platform enemy patrol range fits on platform", () => {
-        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+        const platformEnemies = level.enemies.filter(
+          (e) => isGroundType(e) && e.y < 500
+        );
         platformEnemies.forEach((e) => {
           // Find the closest platform to this enemy (by y AND x proximity)
           const platform = level.platforms.find((p) => {
