@@ -414,6 +414,238 @@ function drawFlag() {
   return c;
 }
 
+// --- DRAW MARTHINA (fluffy Italian fox, cuddly, no teeth) ---
+function drawMarthina() {
+  const c = document.createElement("canvas");
+  c.width = 36;
+  c.height = 34;
+  const ctx = c.getContext("2d");
+
+  // Fluffy body (rounder, bigger, lighter orange)
+  ctx.fillStyle = "#E8A040";
+  ctx.fillRect(6, 12, 22, 14);
+  ctx.fillRect(4, 14, 26, 10); // Extra width = fluffiness
+
+  // Big white chest/belly (she's very fluffy here)
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(10, 14, 14, 10);
+  ctx.fillRect(8, 16, 18, 6);
+
+  // Fluffy head (rounder, wider than Rufus)
+  ctx.fillStyle = "#E8A040";
+  ctx.fillRect(8, 2, 18, 14);
+  ctx.fillRect(6, 4, 22, 10); // Extra fluff on sides
+
+  // White face patch (big white muzzle area)
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(12, 8, 10, 8);
+  ctx.fillRect(10, 10, 14, 4);
+
+  // Fluffy ears (rounder, not as pointy as Rufus)
+  ctx.fillStyle = "#E8A040";
+  ctx.fillRect(9, 0, 5, 5);
+  ctx.fillRect(22, 0, 5, 5);
+  ctx.fillStyle = "#D4883A";
+  ctx.fillRect(10, 1, 3, 3);
+  ctx.fillRect(23, 1, 3, 3);
+
+  // Sweet eyes (rounder, friendlier than Rufus)
+  ctx.fillStyle = "#2D5A1E";
+  ctx.fillRect(13, 6, 3, 3);
+  ctx.fillRect(20, 6, 3, 3);
+  // Big eye shine (sparkly!)
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(14, 6, 2, 1);
+  ctx.fillRect(21, 6, 2, 1);
+
+  // Small pink nose
+  ctx.fillStyle = "#FF9999";
+  ctx.fillRect(16, 10, 2, 2);
+
+  // Gentle smile (NO teeth - she's sweet not toothy!)
+  ctx.fillStyle = "#D4883A";
+  ctx.fillRect(14, 12, 2, 1);
+  ctx.fillRect(16, 13, 2, 1);
+  ctx.fillRect(18, 12, 2, 1);
+
+  // Fluffy cheeks
+  ctx.fillStyle = "#FFCCAA";
+  ctx.fillRect(10, 9, 2, 2);
+  ctx.fillRect(24, 9, 2, 2);
+
+  // Stubby fluffy legs
+  ctx.fillStyle = "#D4883A";
+  ctx.fillRect(10, 26, 5, 6);
+  ctx.fillRect(21, 26, 5, 6);
+  // White paws
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(10, 30, 5, 2);
+  ctx.fillRect(21, 30, 5, 2);
+
+  // Big fluffy tail
+  ctx.fillStyle = "#E8A040";
+  ctx.fillRect(0, 12, 6, 6);
+  ctx.fillRect(-2, 10, 6, 6);
+  // White tail tip (bigger than Rufus's)
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(-2, 10, 4, 6);
+
+  return c;
+}
+
+// --- DRAW RENARD (grumpy French fox, darker, scowling) ---
+function drawRenard() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 32;
+  const ctx = c.getContext("2d");
+
+  // Body (darker brownish-orange)
+  ctx.fillStyle = "#B85C2A";
+  ctx.fillRect(8, 12, 16, 12);
+
+  // Head (darker)
+  ctx.fillStyle = "#B85C2A";
+  ctx.fillRect(10, 4, 14, 12);
+
+  // Dark ear tips (very French fox look)
+  ctx.fillStyle = "#B85C2A";
+  ctx.fillRect(10, 0, 4, 6);
+  ctx.fillRect(20, 0, 4, 6);
+  ctx.fillStyle = "#333";
+  ctx.fillRect(10, 0, 4, 2);
+  ctx.fillRect(20, 0, 4, 2);
+
+  // Inner ears
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(11, 1, 2, 4);
+  ctx.fillRect(21, 1, 2, 4);
+
+  // Belly (cream)
+  ctx.fillStyle = "#DEB887";
+  ctx.fillRect(12, 16, 10, 6);
+
+  // Grumpy eyes (angry eyebrows!)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(13, 7, 3, 3);
+  ctx.fillRect(19, 7, 3, 3);
+  // Angry eyebrows slanting down
+  ctx.fillStyle = "#333";
+  ctx.fillRect(12, 5, 4, 2);
+  ctx.fillRect(19, 5, 4, 2);
+  ctx.fillRect(13, 6, 2, 1);
+  ctx.fillRect(21, 6, 2, 1);
+
+  // Eye glint (even grumps have a spark)
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(14, 7, 1, 1);
+  ctx.fillRect(20, 7, 1, 1);
+
+  // Nose
+  ctx.fillStyle = "#000";
+  ctx.fillRect(16, 10, 2, 2);
+
+  // Frown (definitely NOT smiling)
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(13, 13, 2, 1);
+  ctx.fillRect(15, 14, 4, 1);
+  ctx.fillRect(19, 13, 2, 1);
+
+  // Legs (darker)
+  ctx.fillStyle = "#6B3410";
+  ctx.fillRect(10, 24, 4, 6);
+  ctx.fillRect(20, 24, 4, 6);
+  ctx.fillStyle = "#333";
+  ctx.fillRect(10, 28, 4, 4);
+  ctx.fillRect(20, 28, 4, 4);
+
+  // Tail
+  ctx.fillStyle = "#B85C2A";
+  ctx.fillRect(2, 14, 6, 4);
+  ctx.fillRect(0, 12, 4, 4);
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(0, 12, 3, 4);
+
+  return c;
+}
+
+// --- DRAW FIERY (baby T-Rex, red/orange, big head, tiny arms) ---
+function drawFirey() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 34;
+  const ctx = c.getContext("2d");
+
+  // Body (red-orange)
+  ctx.fillStyle = "#CC3300";
+  ctx.fillRect(8, 12, 16, 14);
+
+  // Belly (lighter, like his ribbed tummy in the photo)
+  ctx.fillStyle = "#FFAA66";
+  ctx.fillRect(11, 14, 10, 10);
+  // Belly ridges
+  ctx.fillStyle = "#FF9955";
+  ctx.fillRect(11, 16, 10, 1);
+  ctx.fillRect(11, 19, 10, 1);
+  ctx.fillRect(11, 22, 10, 1);
+
+  // Big head (T-Rex has a big head!)
+  ctx.fillStyle = "#CC3300";
+  ctx.fillRect(6, 0, 20, 14);
+
+  // Big jaw
+  ctx.fillStyle = "#AA2200";
+  ctx.fillRect(6, 8, 20, 6);
+
+  // Teeth!! (T-Rex teeth!)
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(8, 8, 2, 3);
+  ctx.fillRect(12, 8, 2, 3);
+  ctx.fillRect(16, 8, 2, 3);
+  ctx.fillRect(20, 8, 2, 3);
+  ctx.fillRect(24, 8, 2, 3);
+  // Bottom teeth
+  ctx.fillRect(10, 11, 2, 2);
+  ctx.fillRect(14, 11, 2, 2);
+  ctx.fillRect(18, 11, 2, 2);
+  ctx.fillRect(22, 11, 2, 2);
+
+  // Eyes (round, curious baby eyes)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(10, 3, 4, 4);
+  ctx.fillRect(20, 3, 4, 4);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(11, 4, 2, 2);
+  ctx.fillRect(21, 4, 2, 2);
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(12, 4, 1, 1);
+  ctx.fillRect(22, 4, 1, 1);
+
+  // Tiny T-Rex arms!
+  ctx.fillStyle = "#CC3300";
+  ctx.fillRect(4, 16, 4, 3);
+  ctx.fillRect(24, 16, 4, 3);
+  ctx.fillStyle = "#AA2200";
+  ctx.fillRect(3, 18, 2, 2);
+  ctx.fillRect(26, 18, 2, 2);
+
+  // Thick legs
+  ctx.fillStyle = "#AA2200";
+  ctx.fillRect(9, 26, 6, 8);
+  ctx.fillRect(19, 26, 6, 8);
+  ctx.fillStyle = "#882200";
+  ctx.fillRect(9, 30, 6, 4);
+  ctx.fillRect(19, 30, 6, 4);
+
+  // Spiky back/head ridges
+  ctx.fillStyle = "#FF4400";
+  ctx.fillRect(14, -2, 4, 3);
+  ctx.fillRect(10, 0, 3, 2);
+  ctx.fillRect(19, 0, 3, 2);
+
+  return c;
+}
+
 // --- DRAW SLEEPING RUFUS (nap time!) ---
 function drawFoxSleeping() {
   const c = document.createElement("canvas");
@@ -481,6 +713,9 @@ loadSprite("walker", drawWalker().toDataURL());
 loadSprite("armored", drawArmored().toDataURL());
 loadSprite("disarmed", drawDisarmed().toDataURL());
 loadSprite("bounceCrate", drawBounceCrate().toDataURL());
+loadSprite("marthina", drawMarthina().toDataURL());
+loadSprite("renard", drawRenard().toDataURL());
+loadSprite("fiery", drawFirey().toDataURL());
 loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
 
@@ -650,7 +885,7 @@ scene("about", (pageIndex) => {
       title: "The Grumpy One",
       bg: [25, 25, 45],
       accent: [100, 130, 255],
-      sprite: "walker", // Reusing walker sprite tinted as Renard placeholder
+      sprite: "renard",
       flag: [[0,35,149], [255,255,255], [239,65,53]], // French
       flagLabel: "France",
       bio: [
@@ -683,7 +918,7 @@ scene("about", (pageIndex) => {
       title: "The Chef",
       bg: [45, 30, 25],
       accent: [255, 150, 100],
-      sprite: "rufus", // Placeholder
+      sprite: "marthina",
       flag: [[0,140,69], [255,255,255], [206,43,55]], // Italian
       flagLabel: "Italia",
       bio: [
@@ -716,7 +951,7 @@ scene("about", (pageIndex) => {
       title: "The Baby T-Rex",
       bg: [45, 20, 20],
       accent: [255, 100, 50],
-      sprite: "armored", // Placeholder - closest to a tough creature
+      sprite: "fiery",
       flag: null, // No country - he's a dinosaur!
       flagLabel: null,
       bio: [
