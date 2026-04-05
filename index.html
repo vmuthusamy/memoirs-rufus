@@ -608,105 +608,312 @@ scene("title", () => {
 // ============================================
 // ABOUT RUFUS
 // ============================================
-scene("about", () => {
-  // Cozy parchment background
-  add([
-    rect(width(), height()),
-    pos(0, 0),
-    color(45, 35, 25),
-    fixed(),
-  ]);
+scene("about", (pageIndex) => {
+  const page = pageIndex || 0;
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // Character pages
+  const pages = [
+    {
+      name: "Rufus",
+      title: "The Leader",
+      bg: [45, 35, 25],
+      accent: [255, 200, 100],
+      sprite: "rufus",
+      flag: [[0,0,0], [221,0,0], [255,206,0]], // German
+      flagLabel: "Deutschland",
+      bio: [
+        "Hallo! I'm Rufus, a happy-go-loving fox!",
+        "",
+        "I belong to my wonderful human master",
+        "yellowtictac (that's his secret identity",
+        "to keep him safe on the interweb!).",
+        "",
+        "Things I love:",
+        "  Brushing my teeth (gotta keep this",
+        "    toothy grin sparkling!)",
+        "  Creating art",
+        "  Playing with my best friends",
+        "  Jumping when I'm happy (so... always!)",
+        "",
+        "Originally from Germany!",
+        "Ich bin ein glucklicher Fuchs!",
+      ],
+      animation: (spr) => {
+        spr.onUpdate(() => {
+          spr.pos.y = 155 + Math.abs(Math.sin(time() * 3)) * -20;
+        });
+      },
+    },
+    {
+      name: "Renard",
+      title: "The Grumpy One",
+      bg: [25, 25, 45],
+      accent: [100, 130, 255],
+      sprite: "walker", // Reusing walker sprite tinted as Renard placeholder
+      flag: [[0,35,149], [255,255,255], [239,65,53]], // French
+      flagLabel: "France",
+      bio: [
+        "Hmph. I'm Renard. Don't touch me.",
+        "",
+        "I'm French, which means I'm better",
+        "than everyone else. Obviously.",
+        "",
+        "Things I tolerate:",
+        "  Blueberries (the ONLY acceptable food)",
+        "  Scaring people with rabies threats",
+        "  Being grumpy (it's an art form)",
+        "  Judging everyone silently",
+        "",
+        "Don't make me bite you.",
+        "I WILL give you rabies.",
+        "",
+        "...okay fine, I can't actually do that.",
+        "But I LOOK like I can. That counts.",
+      ],
+      animation: (spr) => {
+        // Renard barely moves. He's grumpy.
+        spr.onUpdate(() => {
+          spr.angle = Math.sin(time() * 0.5) * 3;
+        });
+      },
+    },
+    {
+      name: "Marthina",
+      title: "The Chef",
+      bg: [45, 30, 25],
+      accent: [255, 150, 100],
+      sprite: "rufus", // Placeholder
+      flag: [[0,140,69], [255,255,255], [206,43,55]], // Italian
+      flagLabel: "Italia",
+      bio: [
+        "Ciao, darlings! I'm Marthina!",
+        "",
+        "I'm the fluffiest fox you'll ever meet.",
+        "I'm Italian, and I LIVE to cook!",
+        "",
+        "My specialties:",
+        "  Lasagna (secret family recipe!)",
+        "  Fresh pasta (made with love & paws)",
+        "  Tiramisu (for special occasions)",
+        "  Anything with lots of cheese",
+        "",
+        "When I'm not cooking, I'm thinking",
+        "about cooking. Or eating.",
+        "",
+        "Mangia, mangia! Life is delicious!",
+      ],
+      animation: (spr) => {
+        // Marthina sways gracefully
+        spr.onUpdate(() => {
+          spr.pos.y = 155 + Math.sin(time() * 2) * 8;
+          spr.angle = Math.sin(time() * 1.5) * 5;
+        });
+      },
+    },
+    {
+      name: "Fiery",
+      title: "The Baby T-Rex",
+      bg: [45, 20, 20],
+      accent: [255, 100, 50],
+      sprite: "armored", // Placeholder - closest to a tough creature
+      flag: null, // No country - he's a dinosaur!
+      flagLabel: null,
+      bio: [
+        "RAWR! Me Fiery! Me... um... hello!",
+        "",
+        "I just learned how to speak!",
+        "Words are hard but I'm trying my best.",
+        "",
+        "Things Fiery loves:",
+        "  SPICY FOOD (the spicier the better!)",
+        "  Warm blankets (I'm cold-blooded, ok?)",
+        "  Trying to roar (still practising)",
+        "  Snuggling with the foxes",
+        "  Fire! (obviously)",
+        "",
+        "The foxes say I'm not a fox.",
+        "I say... what's a fox?",
+        "",
+        "RAWR means 'I love you' in dinosaur!",
+      ],
+      animation: (spr) => {
+        // Fiery bounces excitedly - he's a baby!
+        spr.onUpdate(() => {
+          spr.pos.y = 155 + Math.abs(Math.sin(time() * 5)) * -15;
+          spr.scale = vec2(4 + Math.sin(time() * 4) * 0.2, 4 - Math.sin(time() * 4) * 0.2);
+        });
+      },
+    },
+  ];
+
+  const p = pages[page];
+
+  // Background
+  add([rect(width(), height()), pos(0, 0), color(...p.bg), fixed()]);
 
   // Journal page
   add([
-    rect(680, 520),
-    pos(width() / 2, height() / 2),
+    rect(680, 480),
+    pos(width() / 2, height() / 2 - 10),
     anchor("center"),
-    color(65, 55, 40),
-    outline(3, rgb(110, 90, 60)),
+    color(p.bg[0] + 20, p.bg[1] + 20, p.bg[2] + 15),
+    outline(3, rgb(...p.accent)),
     fixed(),
   ]);
 
-  // Title
+  // Name and title
   add([
-    text("About Rufus", { size: 36 }),
-    pos(width() / 2, 65),
+    text(p.name, { size: 36 }),
+    pos(width() / 2, 55),
     anchor("center"),
-    color(255, 200, 100),
+    color(...p.accent),
+    fixed(),
+  ]);
+  add([
+    text(p.title, { size: 16 }),
+    pos(width() / 2, 85),
+    anchor("center"),
+    color(p.accent[0] * 0.7, p.accent[1] * 0.7, p.accent[2] * 0.7),
     fixed(),
   ]);
 
-  // Big Rufus with bounce
-  const aboutFox = add([
-    sprite("rufus"),
-    pos(width() / 2, 150),
+  // Character sprite
+  const charSprite = add([
+    sprite(p.sprite),
+    pos(width() / 2, 155),
     anchor("center"),
     scale(4),
     fixed(),
   ]);
-
-  // Rufus bounces because he's happy!
-  aboutFox.onUpdate(() => {
-    aboutFox.pos.y = 150 + Math.abs(Math.sin(time() * 3)) * -20;
-  });
+  p.animation(charSprite);
 
   // Bio text
-  const bio = [
-    "Hallo! I'm Rufus, a happy-go-loving fox!",
-    "",
-    "I belong to my wonderful human master",
-    "yellowtictac (that's his secret identity",
-    "to keep him safe on the interweb!).",
-    "",
-    "Things I love:",
-    "  Brushing my teeth (gotta keep this",
-    "    toothy grin sparkling!)",
-    "  Creating art",
-    "  Playing with yellowtictac's other",
-    "    adorable pets: Martina, Renard & Fiery",
-    "  Jumping when I'm happy (so... always!)",
-    "",
-    "I'm originally from Germany!",
-    "Ich bin ein glucklicher Fuchs!",
-  ];
-
-  bio.forEach((line, i) => {
+  p.bio.forEach((line, i) => {
     add([
-      text(line, { size: 14 }),
-      pos(130, 205 + i * 22),
+      text(line, { size: 13 }),
+      pos(130, 205 + i * 21),
       color(220, 200, 160),
       fixed(),
     ]);
   });
 
-  // German flag colors as a little decoration
-  const flagY = 530;
-  add([ rect(60, 8), pos(width() / 2 - 30, flagY), color(0, 0, 0), fixed() ]);
-  add([ rect(60, 8), pos(width() / 2 - 30, flagY + 8), color(221, 0, 0), fixed() ]);
-  add([ rect(60, 8), pos(width() / 2 - 30, flagY + 16), color(255, 206, 0), fixed() ]);
+  // Flag decoration (if they have a country)
+  if (p.flag) {
+    const flagY = 530;
+    add([ rect(60, 8), pos(width() / 2 - 60, flagY), color(...p.flag[0]), fixed() ]);
+    add([ rect(60, 8), pos(width() / 2 - 60, flagY + 8), color(...p.flag[1]), fixed() ]);
+    add([ rect(60, 8), pos(width() / 2 - 60, flagY + 16), color(...p.flag[2]), fixed() ]);
+    add([
+      text(p.flagLabel, { size: 12 }),
+      pos(width() / 2 + 15, flagY + 8),
+      anchor("left"),
+      color(180, 170, 150),
+      fixed(),
+    ]);
+  } else {
+    // Fiery gets fire emoji equivalent
+    add([
+      text("~ a real dinosaur ~", { size: 12 }),
+      pos(width() / 2, 538),
+      anchor("center"),
+      color(255, 100, 50),
+      opacity(0.7),
+      fixed(),
+    ]);
+  }
 
-  // Back button - clickable
-  const backBtn = add([
-    rect(width(), height()),
-    pos(0, 0),
-    opacity(0),
+  // Page indicator dots
+  pages.forEach((_, i) => {
+    add([
+      rect(i === page ? 12 : 8, i === page ? 12 : 8),
+      pos(width() / 2 - 30 + i * 20, height() - 55),
+      anchor("center"),
+      color(i === page ? 255 : 120, i === page ? 200 : 100, i === page ? 100 : 80),
+      fixed(),
+    ]);
+  });
+
+  // Navigation
+  const nextPage = (page + 1) % pages.length;
+  const prevPage = (page - 1 + pages.length) % pages.length;
+
+  // Left arrow
+  const leftBtn = add([
+    rect(50, 50),
+    pos(15, height() / 2),
+    anchor("center"),
+    color(0, 0, 0),
+    opacity(0.4),
+    outline(2, rgb(...p.accent)),
     fixed(),
     area(),
-    z(-1),
   ]);
-  backBtn.onClick(() => go("title"));
-
   add([
-    text("Press ESC or tap to go back", { size: 14 }),
-    pos(width() / 2, height() - 25),
+    text("<", { size: 30 }),
+    pos(15, height() / 2),
     anchor("center"),
-    color(255, 165, 0),
-    opacity(0.7),
+    color(...p.accent),
+    fixed(),
+  ]);
+  leftBtn.onClick(() => go("about", prevPage));
+
+  // Right arrow
+  const rightBtn = add([
+    rect(50, 50),
+    pos(width() - 15, height() / 2),
+    anchor("center"),
+    color(0, 0, 0),
+    opacity(0.4),
+    outline(2, rgb(...p.accent)),
+    fixed(),
+    area(),
+  ]);
+  add([
+    text(">", { size: 30 }),
+    pos(width() - 15, height() / 2),
+    anchor("center"),
+    color(...p.accent),
+    fixed(),
+  ]);
+  rightBtn.onClick(() => go("about", nextPage));
+
+  // Navigation hint
+  add([
+    text(isTouch ? "Swipe arrows | Tap X to close" : "Arrow keys to browse | ESC to close", { size: 11 }),
+    pos(width() / 2, height() - 20),
+    anchor("center"),
+    color(150, 140, 120),
     fixed(),
   ]);
 
+  // Close button
+  const closeBtn = add([
+    rect(36, 36),
+    pos(width() - 45, 25),
+    anchor("center"),
+    color(0, 0, 0),
+    opacity(0.5),
+    outline(2, rgb(255, 100, 100)),
+    fixed(),
+    area(),
+    z(10),
+  ]);
+  add([
+    text("X", { size: 20 }),
+    pos(width() - 45, 25),
+    anchor("center"),
+    color(255, 100, 100),
+    fixed(),
+    z(11),
+  ]);
+  closeBtn.onClick(() => go("title"));
+
+  // Keyboard nav
   onKeyPress("escape", () => go("title"));
   onKeyPress("enter", () => go("title"));
+  onKeyPress("right", () => go("about", nextPage));
+  onKeyPress("left", () => go("about", prevPage));
 });
 
 // ============================================

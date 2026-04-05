@@ -392,7 +392,7 @@ describe("About Rufus page", () => {
   });
 
   test("mentions the other pets", () => {
-    expect(htmlContent).toContain("Martina");
+    expect(htmlContent).toContain("Marthina");
     expect(htmlContent).toContain("Renard");
     expect(htmlContent).toContain("Fiery");
   });
