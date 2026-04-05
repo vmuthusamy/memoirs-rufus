@@ -37,45 +37,14 @@ kaplay({
   touchToMouse: true,
 });
 
-// --- FIX TOUCH ON iPAD ---
-// iPad Safari needs special handling. We convert touch events
-// into mouse events so Kaplay's onClick works on touch devices.
-(function fixiPadTouch() {
+// --- TOUCH SETUP ---
+// Kaplay's touchToMouse: true handles menu clicks.
+// We just need to prevent iOS zoom/scroll gestures on the canvas.
+(function setupTouch() {
   function setup() {
     const c = document.querySelector("canvas");
     if (!c) { setTimeout(setup, 100); return; }
-
     c.style.touchAction = "none";
-
-    // Convert touch to mouse events so Kaplay picks them up
-    c.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      const touch = e.changedTouches[0];
-      c.dispatchEvent(new MouseEvent("mousedown", {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        bubbles: true,
-      }));
-    }, { passive: false });
-
-    c.addEventListener("touchend", (e) => {
-      e.preventDefault();
-      const touch = e.changedTouches[0];
-      c.dispatchEvent(new MouseEvent("mouseup", {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        bubbles: true,
-      }));
-      c.dispatchEvent(new MouseEvent("click", {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        bubbles: true,
-      }));
-    }, { passive: false });
-
-    c.addEventListener("touchmove", (e) => {
-      e.preventDefault();
-    }, { passive: false });
   }
   setup();
 })();

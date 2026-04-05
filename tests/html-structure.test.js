@@ -229,14 +229,13 @@ describe("Touch controls", () => {
     expect(htmlContent).toContain("touchToMouse: true");
   });
 
-  test("has touch event to mouse event conversion for iPad", () => {
-    expect(htmlContent).toContain('new MouseEvent("mousedown"');
-    expect(htmlContent).toContain('new MouseEvent("mouseup"');
-    expect(htmlContent).toContain('new MouseEvent("click"');
+  test("has touch-action none on canvas for iOS", () => {
+    expect(htmlContent).toContain('touchAction = "none"');
   });
 
   test("prevents default on touch events", () => {
-    expect(htmlContent).toContain("e.preventDefault()");
+    // In-game touch handlers use ev.preventDefault()
+    expect(htmlContent).toContain("ev.preventDefault()");
   });
 
   test("detects touch devices", () => {
