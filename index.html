@@ -643,6 +643,19 @@ function drawFirey() {
   ctx.fillRect(10, 0, 3, 2);
   ctx.fillRect(19, 0, 3, 2);
 
+  // Big thick T-Rex tail!
+  ctx.fillStyle = "#CC3300";
+  ctx.fillRect(0, 18, 8, 5);
+  ctx.fillRect(-2, 20, 6, 4);
+  ctx.fillRect(-4, 22, 4, 3);
+  // Tail ridges
+  ctx.fillStyle = "#FF4400";
+  ctx.fillRect(0, 18, 8, 1);
+  ctx.fillRect(-2, 20, 6, 1);
+  // Tail tip
+  ctx.fillStyle = "#AA2200";
+  ctx.fillRect(-4, 23, 3, 2);
+
   return c;
 }
 
