@@ -93,12 +93,27 @@ const LEVEL_1 = {
     { x: 2400, y: 535 },
   ],
 
+  // ---- BOUNCE CRATES ----
+  // Green crates that launch Rufus high! Great for getting back to platforms.
+  bounceCrates: [
+    { x: 500, y: 560 },    // Near first platforms - helps get back up
+    { x: 1150, y: 560 },   // Near the high ledge area
+    { x: 1850, y: 560 },   // Middle of level
+    { x: 2550, y: 560 },   // Near final stretch
+  ],
+
   // ---- ENEMIES ----
   // type: "walker" = walks back and forth (soft, tail spin works)
   // type: "armored" = need to jump on first, then tail spin
   enemies: [
+    // Ground squirrels
     { type: "walker", x: 800, y: 535, patrol: 100 },
     { type: "walker", x: 1600, y: 535, patrol: 150 },
     { type: "walker", x: 2100, y: 535, patrol: 100 },
+
+    // Platform squirrels! Guarding the treats up high
+    { type: "walker", x: 950, y: 295, patrol: 60 },    // On the wide platform
+    { type: "walker", x: 1750, y: 375, patrol: 50 },   // Pacing on mid platform
+    { type: "walker", x: 2850, y: 275, patrol: 60 },   // Guarding the final platform
   ],
 };

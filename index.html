@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Adventures of Rufus 🦊</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -218,7 +221,7 @@ function drawTreat() {
   return c;
 }
 
-// --- DRAW A CRATE ---
+// --- DRAW A CRATE (smashable) ---
 function drawCrate() {
   const c = document.createElement("canvas");
   c.width = 32;
@@ -241,6 +244,33 @@ function drawCrate() {
   ctx.fillRect(27, 3, 2, 2);
   ctx.fillRect(3, 27, 2, 2);
   ctx.fillRect(27, 27, 2, 2);
+  return c;
+}
+
+// --- DRAW A BOUNCE CRATE (springy! helps Rufus reach high places) ---
+function drawBounceCrate() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 32;
+  const ctx = c.getContext("2d");
+  // Main crate (green tinted - looks special!)
+  ctx.fillStyle = "#2E7D32";
+  ctx.fillRect(0, 0, 32, 32);
+  // Planks
+  ctx.fillStyle = "#43A047";
+  ctx.fillRect(2, 2, 28, 12);
+  ctx.fillRect(2, 18, 28, 12);
+  // Cross boards
+  ctx.fillStyle = "#1B5E20";
+  ctx.fillRect(14, 0, 4, 32);
+  ctx.fillRect(0, 14, 32, 4);
+  // Spring arrow pointing up (so player knows to jump on it!)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(13, 6, 6, 8);
+  ctx.fillRect(10, 8, 12, 4);
+  ctx.fillRect(13, 4, 6, 4);
+  // Arrow tip
+  ctx.fillRect(15, 2, 2, 4);
   return c;
 }
 
@@ -379,6 +409,7 @@ loadSprite("crate", drawCrate().toDataURL());
 loadSprite("walker", drawWalker().toDataURL());
 loadSprite("armored", drawArmored().toDataURL());
 loadSprite("disarmed", drawDisarmed().toDataURL());
+loadSprite("bounceCrate", drawBounceCrate().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
 
 // ============================================
@@ -458,9 +489,127 @@ scene("title", () => {
     fixed(),
   ]);
 
+  // About Rufus link
+  add([
+    text("Press A for About Rufus", { size: 14 }),
+    pos(width() / 2, 540),
+    anchor("center"),
+    color(255, 165, 0),
+    opacity(0.7),
+    fixed(),
+  ]);
+
   onKeyPress("enter", () => {
     go("levelSelect");
   });
+
+  onKeyPress("a", () => {
+    go("about");
+  });
+
+  // Touch: tap anywhere to start (but not the about link area)
+  onClick((pos) => {
+    if (pos.y > 525 && pos.y < 560) {
+      go("about");
+    } else {
+      go("levelSelect");
+    }
+  });
+});
+
+// ============================================
+// ABOUT RUFUS
+// ============================================
+scene("about", () => {
+  // Cozy parchment background
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(45, 35, 25),
+    fixed(),
+  ]);
+
+  // Journal page
+  add([
+    rect(680, 520),
+    pos(width() / 2, height() / 2),
+    anchor("center"),
+    color(65, 55, 40),
+    outline(3, rgb(110, 90, 60)),
+    fixed(),
+  ]);
+
+  // Title
+  add([
+    text("About Rufus", { size: 36 }),
+    pos(width() / 2, 65),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  // Big Rufus with bounce
+  const aboutFox = add([
+    sprite("rufus"),
+    pos(width() / 2, 150),
+    anchor("center"),
+    scale(4),
+    fixed(),
+  ]);
+
+  // Rufus bounces because he's happy!
+  aboutFox.onUpdate(() => {
+    aboutFox.pos.y = 150 + Math.abs(Math.sin(time() * 3)) * -20;
+  });
+
+  // Bio text
+  const bio = [
+    "Hallo! I'm Rufus, a happy-go-loving fox!",
+    "",
+    "I belong to my wonderful human master",
+    "yellowtictac (that's his secret identity",
+    "to keep him safe on the interweb!).",
+    "",
+    "Things I love:",
+    "  Brushing my teeth (gotta keep this",
+    "    toothy grin sparkling!)",
+    "  Creating art",
+    "  Playing with yellowtictac's other",
+    "    adorable pets: Martina, Renard & Fiery",
+    "  Jumping when I'm happy (so... always!)",
+    "",
+    "I'm originally from Germany!",
+    "Ich bin ein glucklicher Fuchs!",
+  ];
+
+  bio.forEach((line, i) => {
+    add([
+      text(line, { size: 14 }),
+      pos(130, 205 + i * 22),
+      color(220, 200, 160),
+      fixed(),
+    ]);
+  });
+
+  // German flag colors as a little decoration
+  const flagY = 530;
+  add([ rect(60, 8), pos(width() / 2 - 30, flagY), color(0, 0, 0), fixed() ]);
+  add([ rect(60, 8), pos(width() / 2 - 30, flagY + 8), color(221, 0, 0), fixed() ]);
+  add([ rect(60, 8), pos(width() / 2 - 30, flagY + 16), color(255, 206, 0), fixed() ]);
+
+  // Back button
+  add([
+    text("Press ESC or tap to go back", { size: 14 }),
+    pos(width() / 2, height() - 25),
+    anchor("center"),
+    color(255, 165, 0),
+    opacity(0.7),
+    fixed(),
+  ]);
+
+  onKeyPress("escape", () => go("title"));
+  onKeyPress("enter", () => go("title"));
+  onClick(() => go("title"));
 });
 
 // ============================================
@@ -525,11 +674,70 @@ scene("levelSelect", () => {
     ]);
   });
 
+  // "About Me" journal entry at the bottom
+  const aboutY = 150 + ALL_LEVELS.length * 100;
+  add([
+    rect(600, 80),
+    pos(width() / 2, aboutY),
+    anchor("center"),
+    color(55, 45, 30),
+    outline(2, rgb(110, 90, 60)),
+    fixed(),
+  ]);
+
+  // Little Rufus icon
+  add([
+    sprite("rufus"),
+    pos(width() / 2 - 260, aboutY),
+    anchor("center"),
+    scale(2),
+    fixed(),
+  ]);
+
+  add([
+    text("About Me: Who is Rufus?", { size: 22 }),
+    pos(width() / 2, aboutY - 15),
+    anchor("center"),
+    color(255, 165, 0),
+    fixed(),
+  ]);
+  add([
+    text("A happy-go-loving fox from Germany!", { size: 12 }),
+    pos(width() / 2, aboutY + 15),
+    anchor("center"),
+    color(200, 180, 140),
+    fixed(),
+  ]);
+  add([
+    text("Press A", { size: 14 }),
+    pos(width() / 2 + 260, aboutY),
+    anchor("center"),
+    color(255, 165, 0),
+    fixed(),
+  ]);
+
   // Listen for level selection
   ALL_LEVELS.forEach((_, i) => {
     onKeyPress(`${i + 1}`, () => {
       go("memoir", i);
     });
+  });
+
+  onKeyPress("a", () => go("about"));
+
+  // Touch: tap a journal entry or about me
+  onClick((pos) => {
+    // Check level entries
+    ALL_LEVELS.forEach((_, i) => {
+      const y = 150 + i * 100;
+      if (pos.y > y - 40 && pos.y < y + 40) {
+        go("memoir", i);
+      }
+    });
+    // Check about me
+    if (pos.y > aboutY - 40 && pos.y < aboutY + 40) {
+      go("about");
+    }
   });
 
   onKeyPress("escape", () => go("title"));
@@ -597,6 +805,9 @@ scene("memoir", (levelIndex) => {
   onKeyPress("enter", () => {
     go("game", levelIndex);
   });
+
+  // Touch: tap to begin
+  onClick(() => go("game", levelIndex));
 });
 
 // ============================================
@@ -704,6 +915,21 @@ scene("game", (levelIndex) => {
     ]);
   });
 
+  // --- BOUNCE CRATES (green crates that launch Rufus up!) ---
+  if (level.bounceCrates) {
+    level.bounceCrates.forEach((bc) => {
+      add([
+        sprite("bounceCrate"),
+        pos(bc.x, bc.y),
+        area(),
+        anchor("bot"),
+        body({ isStatic: true }),
+        z(1),
+        "bounceCrate",
+      ]);
+    });
+  }
+
   // --- ENEMIES ---
   level.enemies.forEach((e) => {
     const enemySprite = e.type === "armored" ? "armored" : "walker";
@@ -787,6 +1013,175 @@ scene("game", (levelIndex) => {
     }
   });
 
+  // --- TOUCH CONTROLS (for iPad/phone!) ---
+  // Track touch state for continuous movement
+  let touchMoving = 0; // -1 left, 0 none, 1 right
+  let touchId = null;
+
+  // On-screen buttons (only show on touch devices)
+  const isTouchDevice = ("ontouchstart" in window);
+  if (isTouchDevice) {
+    // Left button
+    const btnLeft = add([
+      rect(80, 80),
+      pos(50, height() - 100),
+      color(255, 255, 255),
+      opacity(0.3),
+      outline(2, rgb(255, 255, 255)),
+      fixed(),
+      z(200),
+      area(),
+      "touchBtn",
+    ]);
+    add([
+      text("<", { size: 36 }),
+      pos(90, height() - 100),
+      anchor("center"),
+      color(255, 255, 255),
+      opacity(0.5),
+      fixed(),
+      z(201),
+    ]);
+
+    // Right button
+    const btnRight = add([
+      rect(80, 80),
+      pos(150, height() - 100),
+      color(255, 255, 255),
+      opacity(0.3),
+      outline(2, rgb(255, 255, 255)),
+      fixed(),
+      z(200),
+      area(),
+      "touchBtn",
+    ]);
+    add([
+      text(">", { size: 36 }),
+      pos(190, height() - 100),
+      anchor("center"),
+      color(255, 255, 255),
+      opacity(0.5),
+      fixed(),
+      z(201),
+    ]);
+
+    // Jump button
+    const btnJump = add([
+      rect(80, 80),
+      pos(width() - 200, height() - 100),
+      color(100, 200, 255),
+      opacity(0.3),
+      outline(2, rgb(100, 200, 255)),
+      fixed(),
+      z(200),
+      area(),
+      "touchBtn",
+    ]);
+    add([
+      text("UP", { size: 24 }),
+      pos(width() - 160, height() - 100),
+      anchor("center"),
+      color(100, 200, 255),
+      opacity(0.5),
+      fixed(),
+      z(201),
+    ]);
+
+    // Spin button
+    const btnSpin = add([
+      rect(80, 80),
+      pos(width() - 100, height() - 100),
+      color(255, 165, 0),
+      opacity(0.3),
+      outline(2, rgb(255, 165, 0)),
+      fixed(),
+      z(200),
+      area(),
+      "touchBtn",
+    ]);
+    add([
+      text("SPIN", { size: 20 }),
+      pos(width() - 60, height() - 100),
+      anchor("center"),
+      color(255, 165, 0),
+      opacity(0.5),
+      fixed(),
+      z(201),
+    ]);
+
+    // Handle multi-touch via raw events
+    const canvas = document.querySelector("canvas");
+    canvas.addEventListener("touchstart", (ev) => {
+      ev.preventDefault();
+      for (const touch of ev.changedTouches) {
+        const r = canvas.getBoundingClientRect();
+        const tx = (touch.clientX - r.left) / r.width * width();
+        const ty = (touch.clientY - r.top) / r.height * height();
+
+        // Left button area
+        if (tx < 140 && ty > height() - 120) {
+          touchMoving = -1;
+        }
+        // Right button area
+        if (tx >= 140 && tx < 240 && ty > height() - 120) {
+          touchMoving = 1;
+        }
+        // Jump button area
+        if (tx > width() - 220 && tx < width() - 120 && ty > height() - 120) {
+          if (rufus.isGrounded()) rufus.jump(jumpForce);
+        }
+        // Spin button area
+        if (tx > width() - 120 && ty > height() - 120) {
+          if (!rufus.isSpinning && spinCooldown <= 0) {
+            rufus.isSpinning = true;
+            rufus.spinTimer = tailSpinDuration;
+            rufus.use(sprite("rufus_spin"));
+            rufus.use(scale(2));
+            spinCooldown = 0.3;
+            for (let i = 0; i < 6; i++) {
+              add([
+                rect(4, 4),
+                pos(rufus.pos.x + rand(-30, 30), rufus.pos.y + rand(-20, 20)),
+                color(255, 165, 0), opacity(0.8), lifespan(0.3),
+                move(rand(0, 360), rand(50, 150)), z(9),
+              ]);
+            }
+          }
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", (ev) => {
+      ev.preventDefault();
+      // Stop moving if no direction touches remain
+      let stillTouching = false;
+      for (const touch of ev.touches) {
+        const r = canvas.getBoundingClientRect();
+        const tx = (touch.clientX - r.left) / r.width * width();
+        const ty = (touch.clientY - r.top) / r.height * height();
+        if (tx < 240 && ty > height() - 120) stillTouching = true;
+      }
+      if (!stillTouching) touchMoving = 0;
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", (ev) => {
+      ev.preventDefault();
+    }, { passive: false });
+
+    // Apply touch movement each frame
+    rufus.onUpdate(() => {
+      if (touchMoving === -1) {
+        rufus.move(-foxSpeed, 0);
+        rufus.facingRight = false;
+        rufus.flipX = true;
+      } else if (touchMoving === 1) {
+        rufus.move(foxSpeed, 0);
+        rufus.facingRight = true;
+        rufus.flipX = false;
+      }
+    });
+  }
+
   // --- TAIL SPIN ATTACK ---
   onKeyPress("space", () => {
     if (!rufus.isSpinning && spinCooldown <= 0) {
@@ -848,6 +1243,25 @@ scene("game", (levelIndex) => {
         ]);
       }
       destroy(treat);
+    }
+  });
+
+  // --- BOUNCE CRATES launch Rufus super high! ---
+  rufus.onCollide("bounceCrate", () => {
+    // Super jump! Higher than normal to reach platforms
+    rufus.jump(jumpForce * 1.4);
+
+    // Spring effect - green particles burst
+    for (let i = 0; i < 8; i++) {
+      add([
+        rect(4, 4),
+        pos(rufus.pos.x + rand(-20, 20), rufus.pos.y + 10),
+        color(50, 200, 50),
+        opacity(0.9),
+        lifespan(0.4),
+        move(rand(0, 360), rand(80, 200)),
+        z(9),
+      ]);
     }
   });
 
@@ -1070,6 +1484,7 @@ scene("levelComplete", ({ score, levelIndex }) => {
       fixed(),
     ]);
     onKeyPress("enter", () => go("memoir", nextLevel));
+    onClick(() => go("memoir", nextLevel));
   } else {
     add([
       text("You've completed all chapters!", { size: 20 }),
@@ -1085,6 +1500,7 @@ scene("levelComplete", ({ score, levelIndex }) => {
       color(200, 180, 140),
       fixed(),
     ]);
+    onClick(() => go("levelSelect"));
   }
 
   onKeyPress("escape", () => go("levelSelect"));
@@ -1135,6 +1551,7 @@ scene("gameOver", ({ score, levelIndex }) => {
 
   onKeyPress("enter", () => go("memoir", levelIndex));
   onKeyPress("escape", () => go("levelSelect"));
+  onClick(() => go("memoir", levelIndex));
 });
 
 // ============================================

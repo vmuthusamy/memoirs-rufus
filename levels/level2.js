@@ -1,66 +1,145 @@
 // ============================================
 // LEVEL 2: "The Neighborhood"
 // Armored enemies appear! Learn the jump-disarm combo.
+// HARDER: More enemies, tighter gaps, enemies on platforms!
 // ============================================
 
 const LEVEL_2 = {
   name: "The Neighborhood",
 
-  memoir: "Dear Diary, I ventured past the fence today. The neighborhood squirrels have HELMETS now! I learned that if I jump on them first, their helmets pop off. Then my tail spin finishes the job. Clever fox, that's me!",
+  memoir: "Dear Diary, I ventured past the fence today. The neighborhood squirrels have HELMETS now! And they're EVERYWHERE - on the ground, on platforms, even guarding the treats! I learned that if I jump on them first, their helmets pop off. Then my tail spin finishes the job. This is going to be tough!",
 
   skyColor: [180, 220, 255],
   groundColor: [80, 160, 50],
-  width: 4000,
+  width: 4800,
 
   playerStart: { x: 100, y: 0 },
-  exit: { x: 3850, y: 300 },
+  exit: { x: 4650, y: 300 },
 
   platforms: [
-    { x: 300, y: 450, width: 200, height: 30 },
-    { x: 600, y: 380, width: 150, height: 30 },
-    { x: 850, y: 320, width: 200, height: 30 },
-    { x: 1150, y: 400, width: 250, height: 30 },
-    { x: 1500, y: 340, width: 150, height: 30 },
-    { x: 1750, y: 280, width: 200, height: 30 },
-    { x: 2100, y: 380, width: 180, height: 30 },
-    { x: 2400, y: 320, width: 200, height: 30 },
-    { x: 2700, y: 260, width: 150, height: 30 },
-    { x: 2950, y: 350, width: 250, height: 30 },
-    { x: 3300, y: 300, width: 200, height: 30 },
-    { x: 3600, y: 350, width: 200, height: 30 },
+    // Opening section - teaches jump-disarm with space to breathe
+    { x: 300, y: 450, width: 180, height: 30 },
+    { x: 550, y: 380, width: 130, height: 30 },
+    { x: 800, y: 320, width: 160, height: 30 },
+
+    // Gauntlet section - tighter platforms, enemies patrolling
+    { x: 1100, y: 420, width: 120, height: 30 },
+    { x: 1300, y: 350, width: 100, height: 30 },
+    { x: 1500, y: 280, width: 130, height: 30 },
+    { x: 1700, y: 350, width: 100, height: 30 },
+
+    // Staircase of danger
+    { x: 2000, y: 450, width: 120, height: 30 },
+    { x: 2150, y: 380, width: 100, height: 30 },
+    { x: 2300, y: 310, width: 100, height: 30 },
+    { x: 2450, y: 240, width: 120, height: 30 },
+
+    // High road or low road (choice!)
+    { x: 2750, y: 200, width: 200, height: 30 },  // High (harder, more treats)
+    { x: 2750, y: 420, width: 200, height: 30 },  // Low (easier)
+
+    // Final gauntlet
+    { x: 3100, y: 350, width: 130, height: 30 },
+    { x: 3350, y: 280, width: 100, height: 30 },
+    { x: 3550, y: 350, width: 120, height: 30 },
+    { x: 3800, y: 300, width: 150, height: 30 },
+    { x: 4100, y: 380, width: 130, height: 30 },
+    { x: 4350, y: 320, width: 200, height: 30 },
   ],
 
   treats: [
+    // Opening
     { x: 350, y: 410 }, { x: 400, y: 410 },
-    { x: 650, y: 340 }, { x: 700, y: 340 },
-    { x: 900, y: 280 }, { x: 950, y: 280 },
-    { x: 1200, y: 360 }, { x: 1300, y: 360 },
-    { x: 1550, y: 300 },
-    { x: 1800, y: 240 }, { x: 1850, y: 240 },
-    { x: 2150, y: 340 },
-    { x: 2450, y: 280 }, { x: 2500, y: 280 },
-    { x: 2750, y: 220 },
-    { x: 3000, y: 310 }, { x: 3050, y: 310 },
-    { x: 3350, y: 260 }, { x: 3400, y: 260 },
-    { x: 3700, y: 310 },
+    { x: 600, y: 340 },
+    { x: 850, y: 280 }, { x: 900, y: 280 },
+
+    // Gauntlet treats (risk/reward!)
+    { x: 1150, y: 380 },
+    { x: 1350, y: 310 },
+    { x: 1550, y: 240 }, { x: 1580, y: 240 },
+    { x: 1750, y: 310 },
+
+    // Staircase
+    { x: 2050, y: 410 },
+    { x: 2200, y: 340 },
+    { x: 2350, y: 270 },
+    { x: 2500, y: 200 }, { x: 2530, y: 200 },
+
+    // High road bonus treats (reward for taking the hard path!)
+    { x: 2780, y: 160 }, { x: 2820, y: 160 }, { x: 2860, y: 160 },
+    { x: 2900, y: 160 }, { x: 2940, y: 160 },
+
+    // Low road (just one)
+    { x: 2850, y: 380 },
+
+    // Final stretch
+    { x: 3150, y: 310 },
+    { x: 3400, y: 240 },
+    { x: 3600, y: 310 },
+    { x: 3850, y: 260 }, { x: 3900, y: 260 },
+    { x: 4150, y: 340 },
+    { x: 4400, y: 280 }, { x: 4450, y: 280 },
+
+    // End celebration
+    { x: 4550, y: 530 }, { x: 4580, y: 530 }, { x: 4610, y: 530 },
   ],
 
   crates: [
-    { x: 500, y: 535 },
-    { x: 1050, y: 535 },
-    { x: 1650, y: 535 },
-    { x: 2300, y: 535 },
-    { x: 2850, y: 535 },
-    { x: 3200, y: 535 },
+    { x: 450, y: 535 },
+    { x: 950, y: 535 },
+    { x: 1600, y: 535 },
+    { x: 1900, y: 535 },
+    { x: 2650, y: 535 },
+    { x: 3000, y: 535 },
+    { x: 3700, y: 535 },
+    { x: 4200, y: 535 },
+  ],
+
+  // Bounce crates to help get back up after falling
+  bounceCrates: [
+    { x: 700, y: 560 },    // After first set of platforms
+    { x: 1450, y: 560 },   // Middle of gauntlet
+    { x: 2100, y: 560 },   // Base of staircase
+    { x: 2950, y: 560 },   // After high/low road choice
+    { x: 3450, y: 560 },   // Final gauntlet
+    { x: 4500, y: 560 },   // Near the exit
   ],
 
   enemies: [
-    { type: "walker", x: 700, y: 535, patrol: 120 },
-    { type: "walker", x: 1400, y: 535, patrol: 100 },
-    // First armored enemy! Must jump on first, then tail spin
-    { type: "armored", x: 2000, y: 535, patrol: 80 },
-    { type: "walker", x: 2600, y: 535, patrol: 130 },
-    { type: "armored", x: 3100, y: 535, patrol: 100 },
-    { type: "walker", x: 3500, y: 535, patrol: 90 },
+    // Opening - single walker to warm up
+    { type: "walker", x: 650, y: 535, patrol: 100 },
+
+    // First armored enemy - alone so player can learn
+    { type: "armored", x: 1000, y: 535, patrol: 80 },
+
+    // Gauntlet - walker + armored combos!
+    { type: "walker", x: 1200, y: 535, patrol: 70 },
+    { type: "walker", x: 1400, y: 535, patrol: 90 },
+    { type: "armored", x: 1650, y: 535, patrol: 60 },
+
+    // Staircase guards
+    { type: "walker", x: 1850, y: 535, patrol: 80 },
+    { type: "armored", x: 2250, y: 535, patrol: 50 },
+
+    // Between the roads
+    { type: "walker", x: 2650, y: 535, patrol: 100 },
+    { type: "armored", x: 2850, y: 535, patrol: 70 },
+
+    // Final gauntlet - the hard part!
+    { type: "armored", x: 3200, y: 535, patrol: 90 },
+    { type: "walker", x: 3400, y: 535, patrol: 60 },
+    { type: "armored", x: 3650, y: 535, patrol: 80 },
+    { type: "walker", x: 3900, y: 535, patrol: 100 },
+    { type: "armored", x: 4100, y: 535, patrol: 70 },
+    { type: "walker", x: 4300, y: 535, patrol: 90 },
+
+    // Platform squirrels! Nasty surprise when you jump up
+    { type: "walker", x: 580, y: 355, patrol: 40 },     // On opening platform
+    { type: "walker", x: 1350, y: 325, patrol: 30 },     // Gauntlet platform
+    { type: "armored", x: 1550, y: 255, patrol: 40 },    // Armored on high gauntlet platform!
+    { type: "walker", x: 2800, y: 175, patrol: 60 },     // Guarding the high road bonus treats
+    { type: "armored", x: 2800, y: 395, patrol: 50 },    // Armored on the low road too!
+    { type: "walker", x: 3850, y: 275, patrol: 50 },     // Late platform guard
+    { type: "walker", x: 4400, y: 295, patrol: 60 },     // Final platform guard
   ],
 };
