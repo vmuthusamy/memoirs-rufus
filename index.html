@@ -1060,119 +1060,152 @@ scene("game", (levelIndex) => {
   let touchId = null;
 
   // On-screen buttons (only show on touch devices)
-  const isTouchDevice = ("ontouchstart" in window);
+  const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   if (isTouchDevice) {
     // Left button
     const btnLeft = add([
-      rect(80, 80),
-      pos(50, height() - 100),
-      color(255, 255, 255),
-      opacity(0.3),
-      outline(2, rgb(255, 255, 255)),
+      rect(90, 90),
+      pos(10, height() - 100),
+      color(0, 0, 0),
+      opacity(0.6),
+      outline(3, rgb(255, 255, 255)),
       fixed(),
       z(200),
       area(),
       "touchBtn",
     ]);
     add([
-      text("<", { size: 36 }),
-      pos(90, height() - 100),
+      text("<", { size: 40 }),
+      pos(55, height() - 55),
       anchor("center"),
       color(255, 255, 255),
-      opacity(0.5),
       fixed(),
       z(201),
     ]);
 
     // Right button
     const btnRight = add([
-      rect(80, 80),
-      pos(150, height() - 100),
-      color(255, 255, 255),
-      opacity(0.3),
-      outline(2, rgb(255, 255, 255)),
+      rect(90, 90),
+      pos(110, height() - 100),
+      color(0, 0, 0),
+      opacity(0.6),
+      outline(3, rgb(255, 255, 255)),
       fixed(),
       z(200),
       area(),
       "touchBtn",
     ]);
     add([
-      text(">", { size: 36 }),
-      pos(190, height() - 100),
+      text(">", { size: 40 }),
+      pos(155, height() - 55),
       anchor("center"),
       color(255, 255, 255),
-      opacity(0.5),
       fixed(),
       z(201),
     ]);
 
     // Jump button
     const btnJump = add([
-      rect(80, 80),
-      pos(width() - 200, height() - 100),
-      color(100, 200, 255),
-      opacity(0.3),
-      outline(2, rgb(100, 200, 255)),
+      rect(90, 90),
+      pos(width() - 195, height() - 100),
+      color(0, 0, 0),
+      opacity(0.6),
+      outline(3, rgb(100, 200, 255)),
       fixed(),
       z(200),
       area(),
       "touchBtn",
     ]);
     add([
-      text("UP", { size: 24 }),
-      pos(width() - 160, height() - 100),
+      text("JUMP", { size: 22 }),
+      pos(width() - 150, height() - 55),
       anchor("center"),
       color(100, 200, 255),
-      opacity(0.5),
       fixed(),
       z(201),
     ]);
 
     // Spin button
     const btnSpin = add([
-      rect(80, 80),
-      pos(width() - 100, height() - 100),
-      color(255, 165, 0),
-      opacity(0.3),
-      outline(2, rgb(255, 165, 0)),
+      rect(90, 90),
+      pos(width() - 95, height() - 100),
+      color(0, 0, 0),
+      opacity(0.6),
+      outline(3, rgb(255, 165, 0)),
       fixed(),
       z(200),
       area(),
       "touchBtn",
     ]);
     add([
-      text("SPIN", { size: 20 }),
-      pos(width() - 60, height() - 100),
+      text("SPIN", { size: 22 }),
+      pos(width() - 50, height() - 55),
       anchor("center"),
       color(255, 165, 0),
-      opacity(0.5),
       fixed(),
       z(201),
     ]);
 
-    // Handle multi-touch via raw events
+    // --- MULTI-TOUCH INPUT ---
+    // Raw touch events with proper letterbox coordinate conversion.
+    // This supports simultaneous move + jump/spin.
     const canvas = document.querySelector("canvas");
+    const gameW = 800;
+    const gameH = 600;
+    const gameAspect = gameW / gameH;
+
+    // Convert a touch's clientX/clientY to game coordinates,
+    // accounting for letterbox black bars
+    function touchToGame(touch) {
+      const r = canvas.getBoundingClientRect();
+      const canvasAspect = r.width / r.height;
+      let areaX, areaY, areaW, areaH;
+
+      if (canvasAspect > gameAspect) {
+        // Black bars on left/right
+        areaH = r.height;
+        areaW = r.height * gameAspect;
+        areaX = r.left + (r.width - areaW) / 2;
+        areaY = r.top;
+      } else {
+        // Black bars on top/bottom
+        areaW = r.width;
+        areaH = r.width / gameAspect;
+        areaX = r.left;
+        areaY = r.top + (r.height - areaH) / 2;
+      }
+
+      return {
+        x: (touch.clientX - areaX) / areaW * gameW,
+        y: (touch.clientY - areaY) / areaH * gameH,
+      };
+    }
+
+    // Track active direction touch
+    let moveTouchId = null;
+    let touchDir = 0; // -1 left, 0 none, 1 right
+
     canvas.addEventListener("touchstart", (ev) => {
       ev.preventDefault();
       for (const touch of ev.changedTouches) {
-        const r = canvas.getBoundingClientRect();
-        const tx = (touch.clientX - r.left) / r.width * width();
-        const ty = (touch.clientY - r.top) / r.height * height();
+        const g = touchToGame(touch);
 
         // Left button area
-        if (tx < 140 && ty > height() - 120) {
-          touchMoving = -1;
+        if (g.x >= 10 && g.x < 100 && g.y > gameH - 100) {
+          moveTouchId = touch.identifier;
+          touchDir = -1;
         }
         // Right button area
-        if (tx >= 140 && tx < 240 && ty > height() - 120) {
-          touchMoving = 1;
+        else if (g.x >= 110 && g.x < 200 && g.y > gameH - 100) {
+          moveTouchId = touch.identifier;
+          touchDir = 1;
         }
         // Jump button area
-        if (tx > width() - 220 && tx < width() - 120 && ty > height() - 120) {
+        else if (g.x > gameW - 195 && g.x < gameW - 105 && g.y > gameH - 100) {
           if (rufus.isGrounded()) rufus.jump(jumpForce);
         }
         // Spin button area
-        if (tx > width() - 120 && ty > height() - 120) {
+        else if (g.x > gameW - 95 && g.y > gameH - 100) {
           if (!rufus.isSpinning && spinCooldown <= 0) {
             rufus.isSpinning = true;
             rufus.spinTimer = tailSpinDuration;
@@ -1194,15 +1227,13 @@ scene("game", (levelIndex) => {
 
     canvas.addEventListener("touchend", (ev) => {
       ev.preventDefault();
-      // Stop moving if no direction touches remain
-      let stillTouching = false;
-      for (const touch of ev.touches) {
-        const r = canvas.getBoundingClientRect();
-        const tx = (touch.clientX - r.left) / r.width * width();
-        const ty = (touch.clientY - r.top) / r.height * height();
-        if (tx < 240 && ty > height() - 120) stillTouching = true;
+      for (const touch of ev.changedTouches) {
+        // If the direction touch was released, stop moving
+        if (touch.identifier === moveTouchId) {
+          moveTouchId = null;
+          touchDir = 0;
+        }
       }
-      if (!stillTouching) touchMoving = 0;
     }, { passive: false });
 
     canvas.addEventListener("touchmove", (ev) => {
@@ -1211,11 +1242,11 @@ scene("game", (levelIndex) => {
 
     // Apply touch movement each frame
     rufus.onUpdate(() => {
-      if (touchMoving === -1) {
+      if (touchDir === -1) {
         rufus.move(-foxSpeed, 0);
         rufus.facingRight = false;
         rufus.flipX = true;
-      } else if (touchMoving === 1) {
+      } else if (touchDir === 1) {
         rufus.move(foxSpeed, 0);
         rufus.facingRight = true;
         rufus.flipX = false;

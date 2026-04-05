@@ -233,9 +233,18 @@ describe("Touch controls", () => {
     expect(htmlContent).toContain('touchAction = "none"');
   });
 
-  test("prevents default on touch events", () => {
-    // In-game touch handlers use ev.preventDefault()
-    expect(htmlContent).toContain("ev.preventDefault()");
+  test("touch input handles letterbox coordinate conversion", () => {
+    // Raw touch events must convert coordinates accounting for letterbox bars
+    expect(htmlContent).toContain("function touchToGame(");
+    expect(htmlContent).toContain("canvasAspect");
+    expect(htmlContent).toContain("gameAspect");
+  });
+
+  test("touch input tracks individual touch identifiers for multi-touch", () => {
+    // Movement touch must be tracked by identifier so jump/spin
+    // doesn't interrupt it (simultaneous two-finger input)
+    expect(htmlContent).toContain("touch.identifier");
+    expect(htmlContent).toContain("moveTouchId");
   });
 
   test("detects touch devices", () => {
@@ -251,7 +260,7 @@ describe("Touch controls", () => {
   });
 
   test("has on-screen jump button", () => {
-    expect(htmlContent).toContain('"UP"');
+    expect(htmlContent).toContain('"JUMP"');
   });
 
   test("has on-screen spin button", () => {
@@ -268,6 +277,52 @@ describe("Touch controls", () => {
   test("shows touch-friendly text on touch devices", () => {
     expect(htmlContent).toContain("Tap anywhere to play!");
     expect(htmlContent).toContain("Tap here for About Rufus");
+  });
+
+  test("EVERY ontouchstart check includes maxTouchPoints fallback", () => {
+    // This prevents the iPad bug where ontouchstart alone fails on modern iPads.
+    // Every line that checks ontouchstart must also check maxTouchPoints.
+    const lines = htmlContent.split("\n");
+    const touchDetectionLines = lines.filter(
+      (line) => line.includes("ontouchstart") && line.includes("const ")
+    );
+    expect(touchDetectionLines.length).toBeGreaterThan(0);
+    touchDetectionLines.forEach((line) => {
+      expect(line).toContain("maxTouchPoints");
+    });
+  });
+
+  test("keyboard controls are NOT inside the touch-only block", () => {
+    // Keyboard controls must work independently of touch detection.
+    // They must be at the game scene's top level, not nested inside
+    // the if (isTouchDevice) block.
+    const gameScene = htmlContent.slice(
+      htmlContent.indexOf('scene("game"')
+    );
+
+    // All keyboard controls must exist in game scene
+    expect(gameScene).toContain('onKeyDown("left"');
+    expect(gameScene).toContain('onKeyDown("right"');
+    expect(gameScene).toContain('onKeyPress("up"');
+    expect(gameScene).toContain('onKeyPress("space"');
+
+    // Extract the touch-only block (between "if (isTouchDevice)" and its closing "}")
+    const touchStart = gameScene.indexOf("if (isTouchDevice)");
+    // Find the matching closing brace by counting braces
+    let braceCount = 0;
+    let touchEnd = -1;
+    for (let i = gameScene.indexOf("{", touchStart); i < gameScene.length; i++) {
+      if (gameScene[i] === "{") braceCount++;
+      if (gameScene[i] === "}") braceCount--;
+      if (braceCount === 0) { touchEnd = i; break; }
+    }
+    const touchBlock = gameScene.slice(touchStart, touchEnd + 1);
+
+    // Keyboard controls must NOT be inside the touch block
+    expect(touchBlock).not.toContain('onKeyDown("left"');
+    expect(touchBlock).not.toContain('onKeyDown("right"');
+    expect(touchBlock).not.toContain('onKeyPress("up"');
+    expect(touchBlock).not.toContain('onKeyPress("space"');
   });
 });
 
