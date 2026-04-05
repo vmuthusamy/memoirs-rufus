@@ -2,7 +2,7 @@
 
 A 2D platformer game starring **Rufus**, a happy-go-loving fox from Germany with a legendary toothy grin and a tail that can take out anything in his path.
 
-**Play it now:** [https://vmuthusamy.github.io/memoirs-rufus/](https://vmuthusamy.github.io/memoirs-rufus/)
+**Play it now:** [https://rufusfamily.com](https://rufusfamily.com)
 
 ---
 
