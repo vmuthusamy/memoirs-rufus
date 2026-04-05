@@ -106,14 +106,14 @@ const LEVEL_3 = {
   ],
 
   bounceCrates: [
-    { x: 450, y: 560 },
-    { x: 1250, y: 560 },
-    { x: 1950, y: 560 },
-    { x: 2550, y: 560 },
-    { x: 3150, y: 560 },
-    { x: 3750, y: 560 },
-    { x: 4400, y: 560 },
-    { x: 5050, y: 560 },
+    { x: 700, y: 560 },    // Open gap between platforms at x:550 and x:800
+    { x: 1550, y: 560 },   // Gap between platforms at x:1400 and x:1650
+    { x: 1950, y: 560 },   // Clear area
+    { x: 2500, y: 560 },   // Clear of platform at x:2650
+    { x: 3450, y: 560 },   // Gap between platforms at x:3350 and x:3600
+    { x: 3750, y: 560 },   // Clear area
+    { x: 4350, y: 560 },   // Clear of platform at x:4450
+    { x: 5250, y: 560 },   // Past last platform, near exit
   ],
 
   enemies: [

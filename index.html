@@ -1844,6 +1844,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
 
     canvas.addEventListener("touchstart", (ev) => {
       ev.preventDefault();
+      if (!rufus.exists()) return; // Guard against scene changes
       for (const touch of ev.changedTouches) {
         const g = touchToGame(touch);
 
@@ -1976,7 +1977,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
           lifespan(1.5),
           z(100),
         ]);
-        popup.onUpdate(() => { popup.pos.y -= 30 * dt(); });
+        popup.onUpdate(() => { if (popup.exists()) popup.pos.y -= 30 * dt(); });
       }
 
       // Sparkle effect!
@@ -2432,6 +2433,7 @@ scene("gameOver", ({ score, levelIndex }) => {
         { t: 0 },
       ]);
       z.onUpdate(() => {
+        if (!z.exists()) return;
         z.t += dt();
         z.pos.x += 15 * dt();
         z.pos.y -= 30 * dt();
