@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Adventures of Rufus 🦊</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Load level data -->
+<script src="levels/level1.js"></script>
+<script src="levels/level2.js"></script>
+
+<!-- Load Kaplay game engine -->
+<script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
+
+<script>
+// ============================================
+// 🦊 ADVENTURES OF RUFUS
+// A game by a young fox lover, built with code!
+// ============================================
+
+// --- START THE GAME ENGINE ---
+kaplay({
+  width: 800,
+  height: 600,
+  background: [20, 20, 40],
+  stretch: true,
+  letterbox: true,
+  crisp: true,
+});
+
+// --- HOW FAST AND HIGH RUFUS MOVES ---
+const foxSpeed = 300;
+const jumpForce = 650;
+const tailSpinDuration = 0.4;
+
+// All levels in order
+const ALL_LEVELS = [LEVEL_1, LEVEL_2];
+
+// --- DRAW RUFUS AS PIXEL ART ---
+// This creates a little fox sprite that looks like the real Rufus!
+function drawFoxSprite() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 32;
+  const ctx = c.getContext("2d");
+
+  // Body (orange)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(8, 12, 16, 12);
+
+  // Head (orange, rounder)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(10, 4, 14, 12);
+
+  // Ears (pointy orange)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(10, 0, 4, 6);
+  ctx.fillRect(20, 0, 4, 6);
+
+  // Inner ears (darker)
+  ctx.fillStyle = "#A0522D";
+  ctx.fillRect(11, 1, 2, 4);
+  ctx.fillRect(21, 1, 2, 4);
+
+  // Belly (lighter)
+  ctx.fillStyle = "#F4A460";
+  ctx.fillRect(12, 16, 10, 6);
+
+  // Eyes (black, bright)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(13, 7, 3, 3);
+  ctx.fillRect(19, 7, 3, 3);
+
+  // Eye shine
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(14, 7, 1, 1);
+  ctx.fillRect(20, 7, 1, 1);
+
+  // Nose (black)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(16, 10, 2, 2);
+
+  // BIG TOOTHY GRIN - Rufus's signature!
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(12, 13, 2, 2);
+  ctx.fillRect(14, 12, 2, 2);
+  ctx.fillRect(16, 13, 2, 2);
+  ctx.fillRect(18, 12, 2, 2);
+  ctx.fillRect(20, 13, 2, 2);
+
+  // Legs
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(10, 24, 4, 6);
+  ctx.fillRect(20, 24, 4, 6);
+
+  // Paws (darker)
+  ctx.fillStyle = "#5C3317";
+  ctx.fillRect(10, 28, 4, 4);
+  ctx.fillRect(20, 28, 4, 4);
+
+  // Tail (the famous spinning tail!)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(2, 14, 6, 4);
+  ctx.fillRect(0, 12, 4, 4);
+
+  // White tail tip
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 12, 3, 4);
+
+  return c;
+}
+
+// --- DRAW RUFUS SPINNING (tail out wide) ---
+function drawFoxSpinning() {
+  const c = document.createElement("canvas");
+  c.width = 40;
+  c.height = 32;
+  const ctx = c.getContext("2d");
+
+  // Same body but shifted right to make room for extended tail
+  const ox = 6;
+
+  // Body
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(ox + 8, 12, 16, 12);
+
+  // Head
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(ox + 10, 4, 14, 12);
+
+  // Ears
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(ox + 10, 0, 4, 6);
+  ctx.fillRect(ox + 20, 0, 4, 6);
+
+  ctx.fillStyle = "#A0522D";
+  ctx.fillRect(ox + 11, 1, 2, 4);
+  ctx.fillRect(ox + 21, 1, 2, 4);
+
+  // Belly
+  ctx.fillStyle = "#F4A460";
+  ctx.fillRect(ox + 12, 16, 10, 6);
+
+  // Eyes (dizzy spiral look when spinning!)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(ox + 13, 7, 3, 3);
+  ctx.fillRect(ox + 19, 7, 3, 3);
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(ox + 14, 8, 1, 1);
+  ctx.fillRect(ox + 20, 8, 1, 1);
+
+  // Nose
+  ctx.fillStyle = "#000";
+  ctx.fillRect(ox + 16, 10, 2, 2);
+
+  // Grin
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(ox + 12, 13, 2, 2);
+  ctx.fillRect(ox + 14, 12, 2, 2);
+  ctx.fillRect(ox + 16, 13, 2, 2);
+  ctx.fillRect(ox + 18, 12, 2, 2);
+  ctx.fillRect(ox + 20, 13, 2, 2);
+
+  // Legs
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(ox + 10, 24, 4, 6);
+  ctx.fillRect(ox + 20, 24, 4, 6);
+  ctx.fillStyle = "#5C3317";
+  ctx.fillRect(ox + 10, 28, 4, 4);
+  ctx.fillRect(ox + 20, 28, 4, 4);
+
+  // EXTENDED TAIL (spinning!)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(0, 10, 14, 6);
+  // Tail blur lines
+  ctx.fillStyle = "#F4A460";
+  ctx.fillRect(0, 10, 14, 1);
+  ctx.fillRect(0, 15, 14, 1);
+  // White tip
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(0, 10, 4, 6);
+
+  // Spin effect lines on the right side too
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(ox + 24, 12, 10, 4);
+  ctx.fillStyle = "#F4A460";
+  ctx.fillRect(ox + 24, 12, 10, 1);
+  ctx.fillRect(ox + 24, 15, 10, 1);
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(ox + 32, 12, 4, 4);
+
+  return c;
+}
+
+// --- DRAW A TREAT (berry) ---
+function drawTreat() {
+  const c = document.createElement("canvas");
+  c.width = 16;
+  c.height = 16;
+  const ctx = c.getContext("2d");
+  // Berry body
+  ctx.fillStyle = "#FF4444";
+  ctx.fillRect(4, 4, 8, 8);
+  ctx.fillRect(2, 6, 12, 4);
+  ctx.fillRect(6, 2, 4, 12);
+  // Shine
+  ctx.fillStyle = "#FF8888";
+  ctx.fillRect(5, 5, 2, 2);
+  // Leaf
+  ctx.fillStyle = "#228B22";
+  ctx.fillRect(7, 0, 3, 4);
+  ctx.fillRect(10, 1, 2, 2);
+  return c;
+}
+
+// --- DRAW A CRATE ---
+function drawCrate() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 32;
+  const ctx = c.getContext("2d");
+  // Main crate
+  ctx.fillStyle = "#8B6914";
+  ctx.fillRect(0, 0, 32, 32);
+  // Planks
+  ctx.fillStyle = "#A0792C";
+  ctx.fillRect(2, 2, 28, 12);
+  ctx.fillRect(2, 18, 28, 12);
+  // Cross boards
+  ctx.fillStyle = "#6B4E0A";
+  ctx.fillRect(14, 0, 4, 32);
+  ctx.fillRect(0, 14, 32, 4);
+  // Nails
+  ctx.fillStyle = "#888";
+  ctx.fillRect(3, 3, 2, 2);
+  ctx.fillRect(27, 3, 2, 2);
+  ctx.fillRect(3, 27, 2, 2);
+  ctx.fillRect(27, 27, 2, 2);
+  return c;
+}
+
+// --- DRAW A WALKER ENEMY (squirrel) ---
+function drawWalker() {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = 24;
+  const ctx = c.getContext("2d");
+  // Body (gray squirrel)
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(6, 8, 12, 10);
+  // Head
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(8, 2, 10, 8);
+  // Ears
+  ctx.fillStyle = "#696969";
+  ctx.fillRect(8, 0, 3, 4);
+  ctx.fillRect(15, 0, 3, 4);
+  // Eyes (angry!)
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(10, 4, 2, 2);
+  ctx.fillRect(15, 4, 2, 2);
+  // Big fluffy tail
+  ctx.fillStyle = "#A0A0A0";
+  ctx.fillRect(0, 4, 6, 10);
+  ctx.fillRect(2, 2, 4, 4);
+  // Feet
+  ctx.fillStyle = "#555";
+  ctx.fillRect(8, 18, 4, 4);
+  ctx.fillRect(14, 18, 4, 4);
+  return c;
+}
+
+// --- DRAW AN ARMORED ENEMY (helmeted squirrel) ---
+function drawArmored() {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = 28;
+  const ctx = c.getContext("2d");
+  // Helmet!
+  ctx.fillStyle = "#C0C0C0";
+  ctx.fillRect(6, 0, 14, 8);
+  ctx.fillStyle = "#A0A0A0";
+  ctx.fillRect(8, 0, 10, 2);
+  // Helmet spike
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(12, -2, 3, 4);
+  // Body
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(6, 12, 12, 10);
+  // Head (behind helmet visor)
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(8, 6, 10, 8);
+  // Eyes (angry, visible through visor)
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(10, 8, 2, 2);
+  ctx.fillRect(15, 8, 2, 2);
+  // Visor slit
+  ctx.fillStyle = "#333";
+  ctx.fillRect(8, 7, 10, 1);
+  // Tail
+  ctx.fillStyle = "#A0A0A0";
+  ctx.fillRect(0, 8, 6, 10);
+  ctx.fillRect(2, 6, 4, 4);
+  // Feet
+  ctx.fillStyle = "#555";
+  ctx.fillRect(8, 22, 4, 4);
+  ctx.fillRect(14, 22, 4, 4);
+  return c;
+}
+
+// --- DRAW DISARMED ENEMY (helmet popped off) ---
+function drawDisarmed() {
+  const c = document.createElement("canvas");
+  c.width = 24;
+  c.height = 24;
+  const ctx = c.getContext("2d");
+  // Same as walker but dazed
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(6, 8, 12, 10);
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(8, 2, 10, 8);
+  ctx.fillStyle = "#696969";
+  ctx.fillRect(8, 0, 3, 4);
+  ctx.fillRect(15, 0, 3, 4);
+  // Dizzy eyes (spirals!)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(10, 4, 2, 2);
+  ctx.fillRect(15, 4, 2, 2);
+  ctx.fillStyle = "#FFA500";
+  ctx.fillRect(11, 5, 1, 1);
+  ctx.fillRect(16, 5, 1, 1);
+  // Stars around head (dazed!)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(6, 0, 2, 2);
+  ctx.fillRect(18, 0, 2, 2);
+  ctx.fillRect(12, -2, 2, 2);
+  // Tail
+  ctx.fillStyle = "#A0A0A0";
+  ctx.fillRect(0, 4, 6, 10);
+  ctx.fillRect(2, 2, 4, 4);
+  // Feet
+  ctx.fillStyle = "#555";
+  ctx.fillRect(8, 18, 4, 4);
+  ctx.fillRect(14, 18, 4, 4);
+  return c;
+}
+
+// --- DRAW EXIT FLAG ---
+function drawFlag() {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 48;
+  const ctx = c.getContext("2d");
+  // Pole
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(4, 0, 4, 48);
+  // Flag
+  ctx.fillStyle = "#FF6600";
+  ctx.fillRect(8, 2, 20, 16);
+  // Fox paw print on flag
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(14, 6, 4, 4);
+  ctx.fillRect(12, 4, 2, 2);
+  ctx.fillRect(18, 4, 2, 2);
+  ctx.fillRect(15, 11, 2, 2);
+  return c;
+}
+
+// --- LOAD ALL SPRITES ---
+loadSprite("rufus", drawFoxSprite().toDataURL());
+loadSprite("rufus_spin", drawFoxSpinning().toDataURL());
+loadSprite("treat", drawTreat().toDataURL());
+loadSprite("crate", drawCrate().toDataURL());
+loadSprite("walker", drawWalker().toDataURL());
+loadSprite("armored", drawArmored().toDataURL());
+loadSprite("disarmed", drawDisarmed().toDataURL());
+loadSprite("flag", drawFlag().toDataURL());
+
+// ============================================
+// TITLE SCREEN
+// ============================================
+scene("title", () => {
+  // Sky background
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(20, 20, 60),
+    fixed(),
+  ]);
+
+  // Stars
+  for (let i = 0; i < 50; i++) {
+    add([
+      rect(2, 2),
+      pos(rand(0, width()), rand(0, height() * 0.6)),
+      color(255, 255, rand(150, 255)),
+      fixed(),
+      { twinkleSpeed: rand(1, 3) },
+    ]);
+  }
+
+  // Title
+  add([
+    text("Adventures of Rufus", { size: 48 }),
+    pos(width() / 2, 120),
+    anchor("center"),
+    color(255, 165, 0),
+    fixed(),
+  ]);
+
+  // Subtitle
+  add([
+    text("Memoirs of a Fox", { size: 24 }),
+    pos(width() / 2, 170),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  // Rufus sprite
+  const titleFox = add([
+    sprite("rufus"),
+    pos(width() / 2, 300),
+    anchor("center"),
+    scale(6),
+    fixed(),
+  ]);
+
+  // Bounce Rufus
+  titleFox.onUpdate(() => {
+    titleFox.pos.y = 300 + Math.sin(time() * 2) * 15;
+  });
+
+  // Instructions
+  add([
+    text("Press ENTER to start!", { size: 20 }),
+    pos(width() / 2, 440),
+    anchor("center"),
+    color(255, 255, 255),
+    fixed(),
+    { flashTimer: 0 },
+  ]).onUpdate(function() {
+    this.flashTimer += dt();
+    this.opacity = Math.sin(this.flashTimer * 3) * 0.4 + 0.6;
+  });
+
+  // Controls help
+  add([
+    text("Arrow Keys: Move & Jump | Space: Tail Spin!", { size: 14 }),
+    pos(width() / 2, 500),
+    anchor("center"),
+    color(180, 180, 180),
+    fixed(),
+  ]);
+
+  onKeyPress("enter", () => {
+    go("levelSelect");
+  });
+});
+
+// ============================================
+// LEVEL SELECT - "Rufus's Journal"
+// ============================================
+scene("levelSelect", () => {
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(40, 30, 20),
+    fixed(),
+  ]);
+
+  add([
+    text("Rufus's Journal", { size: 40 }),
+    pos(width() / 2, 60),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  // Draw each level as a journal entry
+  ALL_LEVELS.forEach((level, i) => {
+    const y = 150 + i * 100;
+
+    // Journal entry background
+    add([
+      rect(600, 80),
+      pos(width() / 2, y),
+      anchor("center"),
+      color(60, 50, 35),
+      outline(2, rgb(100, 80, 50)),
+      fixed(),
+    ]);
+
+    // Chapter number
+    add([
+      text(`Chapter ${i + 1}: ${level.name}`, { size: 22 }),
+      pos(width() / 2, y - 15),
+      anchor("center"),
+      color(255, 200, 100),
+      fixed(),
+    ]);
+
+    // Memoir preview
+    const preview = level.memoir.substring(0, 60) + "...";
+    add([
+      text(preview, { size: 12, width: 550 }),
+      pos(width() / 2, y + 15),
+      anchor("center"),
+      color(200, 180, 140),
+      fixed(),
+    ]);
+
+    // Key to press
+    add([
+      text(`Press ${i + 1}`, { size: 14 }),
+      pos(width() / 2 + 260, y),
+      anchor("center"),
+      color(255, 165, 0),
+      fixed(),
+    ]);
+  });
+
+  // Listen for level selection
+  ALL_LEVELS.forEach((_, i) => {
+    onKeyPress(`${i + 1}`, () => {
+      go("memoir", i);
+    });
+  });
+
+  onKeyPress("escape", () => go("title"));
+});
+
+// ============================================
+// MEMOIR SCREEN (shows before each level)
+// ============================================
+scene("memoir", (levelIndex) => {
+  const level = ALL_LEVELS[levelIndex];
+
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(40, 30, 20),
+    fixed(),
+  ]);
+
+  // Journal decoration
+  add([
+    rect(650, 400),
+    pos(width() / 2, height() / 2 - 20),
+    anchor("center"),
+    color(60, 50, 35),
+    outline(3, rgb(100, 80, 50)),
+    fixed(),
+  ]);
+
+  add([
+    text(`Chapter ${levelIndex + 1}`, { size: 20 }),
+    pos(width() / 2, 120),
+    anchor("center"),
+    color(200, 160, 100),
+    fixed(),
+  ]);
+
+  add([
+    text(level.name, { size: 36 }),
+    pos(width() / 2, 160),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  add([
+    text(level.memoir, { size: 16, width: 550 }),
+    pos(width() / 2, 280),
+    anchor("center"),
+    color(220, 200, 160),
+    fixed(),
+  ]);
+
+  add([
+    text("Press ENTER to begin!", { size: 18 }),
+    pos(width() / 2, 450),
+    anchor("center"),
+    color(255, 165, 0),
+    fixed(),
+    { flashTimer: 0 },
+  ]).onUpdate(function() {
+    this.flashTimer += dt();
+    this.opacity = Math.sin(this.flashTimer * 3) * 0.4 + 0.6;
+  });
+
+  onKeyPress("enter", () => {
+    go("game", levelIndex);
+  });
+});
+
+// ============================================
+// MAIN GAME
+// ============================================
+scene("game", (levelIndex) => {
+  const level = ALL_LEVELS[levelIndex];
+  let score = 0;
+  let isSpinning = false;
+  let lives = 3;
+  let spinCooldown = 0;
+
+  // Set gravity
+  setGravity(1600);
+
+  // Background sky
+  add([
+    rect(level.width, height()),
+    pos(0, 0),
+    color(...level.skyColor),
+    fixed(),
+    z(-10),
+  ]);
+
+  // Draw some background clouds
+  for (let i = 0; i < 8; i++) {
+    add([
+      rect(rand(60, 120), rand(20, 40)),
+      pos(rand(0, level.width), rand(30, 200)),
+      color(255, 255, 255),
+      opacity(0.3),
+      z(-5),
+    ]);
+  }
+
+  // Ground
+  const ground = add([
+    rect(level.width, 40),
+    pos(0, height() - 40),
+    color(...level.groundColor),
+    outline(2, rgb(0, 100, 0)),
+    area(),
+    body({ isStatic: true }),
+    "ground",
+  ]);
+
+  // Draw grass tufts on ground
+  for (let gx = 0; gx < level.width; gx += rand(20, 50)) {
+    add([
+      rect(4, rand(6, 14)),
+      pos(gx, height() - 40 - rand(4, 10)),
+      color(0, rand(140, 200), 0),
+      z(-1),
+    ]);
+  }
+
+  // --- PLATFORMS ---
+  level.platforms.forEach((p) => {
+    // Platform body
+    add([
+      rect(p.width, p.height),
+      pos(p.x, p.y),
+      color(101, 67, 33),
+      outline(2, rgb(60, 40, 20)),
+      area(),
+      body({ isStatic: true }),
+      "platform",
+    ]);
+    // Grass on top
+    add([
+      rect(p.width, 6),
+      pos(p.x, p.y - 3),
+      color(0, 160, 0),
+    ]);
+  });
+
+  // --- TREATS ---
+  level.treats.forEach((t) => {
+    add([
+      sprite("treat"),
+      pos(t.x, t.y),
+      area(),
+      anchor("center"),
+      z(1),
+      "treat",
+      { collected: false, bobOffset: rand(0, 6.28) },
+    ]);
+  });
+
+  // Bob the treats up and down
+  onUpdate("treat", (t) => {
+    t.pos.y += Math.sin(time() * 3 + t.bobOffset) * 0.3;
+  });
+
+  // --- CRATES ---
+  level.crates.forEach((c) => {
+    add([
+      sprite("crate"),
+      pos(c.x, c.y),
+      area(),
+      anchor("bot"),
+      z(1),
+      "crate",
+      "destructible",
+    ]);
+  });
+
+  // --- ENEMIES ---
+  level.enemies.forEach((e) => {
+    const enemySprite = e.type === "armored" ? "armored" : "walker";
+    const en = add([
+      sprite(enemySprite),
+      pos(e.x, e.y),
+      area(),
+      anchor("bot"),
+      z(1),
+      e.type,
+      "enemy",
+      {
+        startX: e.x,
+        patrol: e.patrol || 100,
+        dir: 1,
+        enemyType: e.type,
+        isDisarmed: false,
+      },
+    ]);
+  });
+
+  // Enemy patrol movement
+  onUpdate("enemy", (e) => {
+    e.pos.x += e.dir * 60 * dt();
+    if (e.pos.x > e.startX + e.patrol) e.dir = -1;
+    if (e.pos.x < e.startX - e.patrol) e.dir = 1;
+    e.flipX = e.dir < 0;
+  });
+
+  // --- EXIT FLAG ---
+  add([
+    sprite("flag"),
+    pos(level.exit.x, level.exit.y),
+    area(),
+    anchor("bot"),
+    z(1),
+    "exit",
+  ]);
+
+  // =====================
+  // 🦊 RUFUS (the player)
+  // =====================
+  const rufus = add([
+    sprite("rufus"),
+    pos(level.playerStart.x, level.playerStart.y),
+    area({ shape: new Rect(vec2(0, 0), 28, 30) }),
+    body(),
+    anchor("center"),
+    scale(2),
+    z(10),
+    "player",
+    {
+      isSpinning: false,
+      spinTimer: 0,
+      facingRight: true,
+    },
+  ]);
+
+  // Camera follows Rufus
+  rufus.onUpdate(() => {
+    camPos(rufus.pos.x, height() / 2);
+  });
+
+  // --- MOVEMENT ---
+  onKeyDown("left", () => {
+    rufus.move(-foxSpeed, 0);
+    rufus.facingRight = false;
+    rufus.flipX = true;
+  });
+
+  onKeyDown("right", () => {
+    rufus.move(foxSpeed, 0);
+    rufus.facingRight = true;
+    rufus.flipX = false;
+  });
+
+  // --- JUMPING ---
+  onKeyPress("up", () => {
+    if (rufus.isGrounded()) {
+      rufus.jump(jumpForce);
+    }
+  });
+
+  // --- TAIL SPIN ATTACK ---
+  onKeyPress("space", () => {
+    if (!rufus.isSpinning && spinCooldown <= 0) {
+      rufus.isSpinning = true;
+      rufus.spinTimer = tailSpinDuration;
+      rufus.use(sprite("rufus_spin"));
+      rufus.use(scale(2));
+      spinCooldown = 0.3;
+
+      // Spin effect - create whirl particles
+      for (let i = 0; i < 6; i++) {
+        add([
+          rect(4, 4),
+          pos(rufus.pos.x + rand(-30, 30), rufus.pos.y + rand(-20, 20)),
+          color(255, 165, 0),
+          opacity(0.8),
+          lifespan(0.3),
+          move(rand(0, 360), rand(50, 150)),
+          z(9),
+        ]);
+      }
+    }
+  });
+
+  // Spin timer
+  rufus.onUpdate(() => {
+    if (rufus.isSpinning) {
+      rufus.spinTimer -= dt();
+      // Rotate during spin
+      rufus.angle += 1200 * dt();
+      if (rufus.spinTimer <= 0) {
+        rufus.isSpinning = false;
+        rufus.use(sprite("rufus"));
+        rufus.use(scale(2));
+        rufus.angle = 0;
+      }
+    }
+    if (spinCooldown > 0) {
+      spinCooldown -= dt();
+    }
+  });
+
+  // --- COLLECT TREATS ---
+  rufus.onCollide("treat", (treat) => {
+    if (!treat.collected) {
+      treat.collected = true;
+      score += 10;
+      scoreText.text = `Treats: ${score}`;
+
+      // Sparkle effect!
+      for (let i = 0; i < 5; i++) {
+        add([
+          rect(3, 3),
+          pos(treat.pos),
+          color(255, 255, rand(0, 100)),
+          opacity(1),
+          lifespan(0.4),
+          move(rand(0, 360), rand(80, 200)),
+        ]);
+      }
+      destroy(treat);
+    }
+  });
+
+  // --- TAIL SPIN DESTROYS CRATES ---
+  rufus.onCollide("crate", (crate) => {
+    if (rufus.isSpinning) {
+      // Crate explosion effect!
+      for (let i = 0; i < 8; i++) {
+        add([
+          rect(rand(4, 10), rand(4, 10)),
+          pos(crate.pos),
+          color(139, 105, 20),
+          opacity(1),
+          lifespan(0.5),
+          move(rand(0, 360), rand(100, 300)),
+          z(5),
+        ]);
+      }
+      score += 25;
+      scoreText.text = `Treats: ${score}`;
+      destroy(crate);
+    }
+  });
+
+  // --- ENEMY INTERACTIONS ---
+  rufus.onCollide("enemy", (enemy) => {
+    // Check if we're spinning (tail attack)
+    if (rufus.isSpinning) {
+      if (enemy.enemyType === "walker" || enemy.isDisarmed) {
+        // Tail spin kills walkers and disarmed enemies!
+        destroyEnemy(enemy);
+      } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
+        // Can't spin an armored enemy! Rufus bounces back
+        rufus.move(rufus.facingRight ? -200 : 200, 0);
+        // Visual feedback - sparks!
+        for (let i = 0; i < 4; i++) {
+          add([
+            rect(3, 3),
+            pos(enemy.pos),
+            color(255, 255, 0),
+            lifespan(0.3),
+            move(rand(0, 360), rand(100, 200)),
+          ]);
+        }
+      }
+    }
+    // Check if we're jumping on top of enemy
+    else if (rufus.pos.y < enemy.pos.y - 20 && !rufus.isGrounded()) {
+      if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
+        // Jump disarms armored enemy! Helmet pops off!
+        enemy.isDisarmed = true;
+        enemy.use(sprite("disarmed"));
+        rufus.jump(jumpForce * 0.6); // Bounce off
+
+        // Helmet flying off effect!
+        const helmet = add([
+          rect(16, 10),
+          pos(enemy.pos.x, enemy.pos.y - 30),
+          color(192, 192, 192),
+          opacity(1),
+          lifespan(1),
+          move(rand(60, 120), 200),
+          z(15),
+        ]);
+      } else {
+        // Stomp kills walkers and disarmed enemies
+        destroyEnemy(enemy);
+        rufus.jump(jumpForce * 0.6); // Bounce off
+      }
+    }
+    // Enemy hits Rufus (ouch!)
+    else {
+      hurtRufus();
+    }
+  });
+
+  function destroyEnemy(enemy) {
+    // Poof effect
+    for (let i = 0; i < 6; i++) {
+      add([
+        rect(rand(4, 8), rand(4, 8)),
+        pos(enemy.pos),
+        color(rand(100, 200), rand(100, 200), rand(100, 200)),
+        opacity(1),
+        lifespan(0.5),
+        move(rand(0, 360), rand(80, 250)),
+        z(5),
+      ]);
+    }
+    score += 50;
+    scoreText.text = `Treats: ${score}`;
+    destroy(enemy);
+  }
+
+  function hurtRufus() {
+    if (rufus.opacity < 1) return; // Already hurt (invincibility frames)
+    lives--;
+    livesText.text = `Lives: ${"🦊".repeat(Math.max(0, lives))}`;
+
+    if (lives <= 0) {
+      go("gameOver", { score, levelIndex });
+      return;
+    }
+
+    // Flash Rufus (invincibility frames)
+    rufus.opacity = 0.5;
+    rufus.jump(jumpForce * 0.5);
+    rufus.move(rufus.facingRight ? -150 : 150, 0);
+
+    wait(1.5, () => {
+      if (rufus.exists()) rufus.opacity = 1;
+    });
+  }
+
+  // --- FALL OFF SCREEN ---
+  rufus.onUpdate(() => {
+    if (rufus.pos.y > height() + 100) {
+      lives--;
+      if (lives <= 0) {
+        go("gameOver", { score, levelIndex });
+      } else {
+        rufus.pos = vec2(level.playerStart.x, level.playerStart.y);
+        livesText.text = `Lives: ${"🦊".repeat(lives)}`;
+      }
+    }
+  });
+
+  // --- REACH EXIT ---
+  rufus.onCollide("exit", () => {
+    go("levelComplete", { score, levelIndex });
+  });
+
+  // --- HUD (Heads Up Display) ---
+  const scoreText = add([
+    text(`Treats: ${score}`, { size: 20 }),
+    pos(20, 20),
+    color(255, 255, 255),
+    outline(2, rgb(0, 0, 0)),
+    fixed(),
+    z(100),
+  ]);
+
+  const livesText = add([
+    text(`Lives: ${"🦊".repeat(lives)}`, { size: 20 }),
+    pos(20, 50),
+    color(255, 255, 255),
+    outline(2, rgb(0, 0, 0)),
+    fixed(),
+    z(100),
+  ]);
+
+  const levelText = add([
+    text(`Ch.${levelIndex + 1}: ${level.name}`, { size: 16 }),
+    pos(width() - 20, 20),
+    anchor("topright"),
+    color(255, 200, 100),
+    outline(2, rgb(0, 0, 0)),
+    fixed(),
+    z(100),
+  ]);
+
+  // Controls hint (fades away)
+  const hint = add([
+    text("Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
+    pos(width() / 2, height() - 30),
+    anchor("center"),
+    color(255, 255, 255),
+    opacity(1),
+    outline(1, rgb(0, 0, 0)),
+    fixed(),
+    z(100),
+  ]);
+  wait(4, () => {
+    if (hint.exists()) hint.opacity = 0;
+  });
+});
+
+// ============================================
+// LEVEL COMPLETE
+// ============================================
+scene("levelComplete", ({ score, levelIndex }) => {
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(20, 60, 20),
+    fixed(),
+  ]);
+
+  add([
+    text("Level Complete!", { size: 48 }),
+    pos(width() / 2, 150),
+    anchor("center"),
+    color(255, 215, 0),
+    fixed(),
+  ]);
+
+  add([
+    sprite("rufus"),
+    pos(width() / 2, 280),
+    anchor("center"),
+    scale(5),
+    fixed(),
+  ]);
+
+  add([
+    text(`Treats collected: ${score}`, { size: 24 }),
+    pos(width() / 2, 380),
+    anchor("center"),
+    color(255, 255, 255),
+    fixed(),
+  ]);
+
+  const nextLevel = levelIndex + 1;
+  if (nextLevel < ALL_LEVELS.length) {
+    add([
+      text("Press ENTER for next chapter!", { size: 20 }),
+      pos(width() / 2, 450),
+      anchor("center"),
+      color(255, 200, 100),
+      fixed(),
+    ]);
+    onKeyPress("enter", () => go("memoir", nextLevel));
+  } else {
+    add([
+      text("You've completed all chapters!", { size: 20 }),
+      pos(width() / 2, 440),
+      anchor("center"),
+      color(255, 200, 100),
+      fixed(),
+    ]);
+    add([
+      text("More adventures coming soon...", { size: 16 }),
+      pos(width() / 2, 475),
+      anchor("center"),
+      color(200, 180, 140),
+      fixed(),
+    ]);
+  }
+
+  onKeyPress("escape", () => go("levelSelect"));
+});
+
+// ============================================
+// GAME OVER
+// ============================================
+scene("gameOver", ({ score, levelIndex }) => {
+  add([
+    rect(width(), height()),
+    pos(0, 0),
+    color(60, 20, 20),
+    fixed(),
+  ]);
+
+  add([
+    text("Oh no!", { size: 48 }),
+    pos(width() / 2, 150),
+    anchor("center"),
+    color(255, 100, 100),
+    fixed(),
+  ]);
+
+  add([
+    text("Rufus needs a nap...", { size: 24 }),
+    pos(width() / 2, 220),
+    anchor("center"),
+    color(255, 200, 200),
+    fixed(),
+  ]);
+
+  add([
+    text(`Treats: ${score}`, { size: 28 }),
+    pos(width() / 2, 300),
+    anchor("center"),
+    color(255, 255, 255),
+    fixed(),
+  ]);
+
+  add([
+    text("Press ENTER to try again!", { size: 20 }),
+    pos(width() / 2, 400),
+    anchor("center"),
+    color(255, 165, 0),
+    fixed(),
+  ]);
+
+  onKeyPress("enter", () => go("memoir", levelIndex));
+  onKeyPress("escape", () => go("levelSelect"));
+});
+
+// ============================================
+// START THE GAME!
+// ============================================
+go("title");
+
+</script>
+</body>
+</html>
