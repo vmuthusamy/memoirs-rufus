@@ -205,9 +205,9 @@ describe("Combat system", () => {
     expect(parseFloat(bounceJump[1])).toBeGreaterThan(1.0);
   });
 
-  test("has invincibility frames after being hurt", () => {
-    expect(htmlContent).toContain("rufus.opacity < 1");
-    expect(htmlContent).toContain("rufus.opacity = 0.5");
+  test("has invincibility flag to prevent collision loops", () => {
+    expect(htmlContent).toContain("let isInvincible = false");
+    expect(htmlContent).toContain("if (isInvincible) return");
   });
 
   test("has lives system with game over", () => {
@@ -216,8 +216,24 @@ describe("Combat system", () => {
     expect(htmlContent).toContain('"gameOver"');
   });
 
-  test("has fall detection (respawn when falling off screen)", () => {
+  test("death restarts level with remaining lives", () => {
+    expect(htmlContent).toContain('go("game", levelIndex, lives)');
+  });
+
+  test("game scene accepts starting lives parameter", () => {
+    expect(htmlContent).toContain("scene(\"game\", (levelIndex, startLives)");
+    expect(htmlContent).toContain("startLives !== undefined");
+  });
+
+  test("disarmed enemies do not damage Rufus", () => {
+    expect(htmlContent).toContain("!enemy.isDisarmed");
+  });
+
+  test("has fall detection that calls hurtRufus", () => {
     expect(htmlContent).toMatch(/rufus\.pos\.y\s*>\s*height\(\)\s*\+/);
+    // Fall handler should use hurtRufus, not custom logic
+    const fallSection = htmlContent.match(/FALL OFF SCREEN[\s\S]*?hurtRufus\(\)/);
+    expect(fallSection).not.toBeNull();
   });
 });
 

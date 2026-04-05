@@ -414,6 +414,64 @@ function drawFlag() {
   return c;
 }
 
+// --- DRAW SLEEPING RUFUS (nap time!) ---
+function drawFoxSleeping() {
+  const c = document.createElement("canvas");
+  c.width = 40;
+  c.height = 24;
+  const ctx = c.getContext("2d");
+
+  // Body (lying on side)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(8, 8, 24, 12);
+
+  // Belly
+  ctx.fillStyle = "#F4A460";
+  ctx.fillRect(12, 12, 16, 6);
+
+  // Head (resting)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(4, 4, 12, 10);
+
+  // Ears (flopped)
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(4, 2, 3, 4);
+  ctx.fillRect(12, 2, 3, 4);
+  ctx.fillStyle = "#A0522D";
+  ctx.fillRect(5, 3, 1, 2);
+  ctx.fillRect(13, 3, 1, 2);
+
+  // Closed eyes (sleeping!)
+  ctx.fillStyle = "#000";
+  ctx.fillRect(6, 7, 3, 1);
+  ctx.fillRect(11, 7, 3, 1);
+
+  // Sleepy smile
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(7, 10, 2, 1);
+  ctx.fillRect(9, 10, 2, 1);
+
+  // Nose
+  ctx.fillStyle = "#000";
+  ctx.fillRect(9, 8, 2, 2);
+
+  // Tail curled around body
+  ctx.fillStyle = "#D2691E";
+  ctx.fillRect(30, 6, 6, 4);
+  ctx.fillRect(34, 4, 4, 4);
+  ctx.fillRect(36, 2, 3, 4);
+  // White tail tip
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(37, 2, 2, 3);
+
+  // Little paws tucked in
+  ctx.fillStyle = "#5C3317";
+  ctx.fillRect(8, 18, 4, 4);
+  ctx.fillRect(24, 18, 4, 4);
+
+  return c;
+}
+
 // --- LOAD ALL SPRITES ---
 loadSprite("rufus", drawFoxSprite().toDataURL());
 loadSprite("rufus_spin", drawFoxSpinning().toDataURL());
@@ -423,6 +481,7 @@ loadSprite("walker", drawWalker().toDataURL());
 loadSprite("armored", drawArmored().toDataURL());
 loadSprite("disarmed", drawDisarmed().toDataURL());
 loadSprite("bounceCrate", drawBounceCrate().toDataURL());
+loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
 
 // ============================================
@@ -854,11 +913,11 @@ scene("memoir", (levelIndex) => {
 // ============================================
 // MAIN GAME
 // ============================================
-scene("game", (levelIndex) => {
+scene("game", (levelIndex, startLives) => {
   const level = ALL_LEVELS[levelIndex];
   let score = 0;
   let isSpinning = false;
-  let lives = 3;
+  let lives = (startLives !== undefined) ? startLives : 3;
   let spinCooldown = 0;
 
   // Set gravity
@@ -1359,7 +1418,12 @@ scene("game", (levelIndex) => {
   });
 
   // --- ENEMY INTERACTIONS ---
+  let isInvincible = false;
+
   rufus.onCollide("enemy", (enemy) => {
+    // Skip ALL enemy interactions during invincibility
+    if (isInvincible) return;
+
     // Check if we're spinning (tail attack)
     if (rufus.isSpinning) {
       if (enemy.enemyType === "walker" || enemy.isDisarmed) {
@@ -1373,7 +1437,7 @@ scene("game", (levelIndex) => {
         rufus.use(scale(2));
         rufus.angle = 0;
         // Visual feedback - sparks!
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 2; i++) {
           add([
             rect(3, 3),
             pos(enemy.pos),
@@ -1409,15 +1473,15 @@ scene("game", (levelIndex) => {
         rufus.jump(jumpForce * 0.6); // Bounce off
       }
     }
-    // Enemy hits Rufus (ouch!)
-    else {
+    // Enemy hits Rufus (ouch!) — but disarmed enemies are harmless
+    else if (!enemy.isDisarmed) {
       hurtRufus();
     }
   });
 
   function destroyEnemy(enemy) {
     // Poof effect
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       add([
         rect(rand(4, 8), rand(4, 8)),
         pos(enemy.pos),
@@ -1434,35 +1498,22 @@ scene("game", (levelIndex) => {
   }
 
   function hurtRufus() {
-    if (rufus.opacity < 1) return; // Already hurt (invincibility frames)
+    if (isInvincible) return;
+    isInvincible = true; // Prevent any further damage
     lives--;
-    livesText.text = `Lives: ${"🦊".repeat(Math.max(0, lives))}`;
 
     if (lives <= 0) {
       go("gameOver", { score, levelIndex });
-      return;
+    } else {
+      // Restart the level with remaining lives
+      go("game", levelIndex, lives);
     }
-
-    // Flash Rufus (invincibility frames)
-    rufus.opacity = 0.5;
-    rufus.jump(jumpForce * 0.5);
-    rufus.move(rufus.facingRight ? -150 : 150, 0);
-
-    wait(1.5, () => {
-      if (rufus.exists()) rufus.opacity = 1;
-    });
   }
 
   // --- FALL OFF SCREEN ---
   rufus.onUpdate(() => {
     if (rufus.pos.y > height() + 100) {
-      lives--;
-      if (lives <= 0) {
-        go("gameOver", { score, levelIndex });
-      } else {
-        rufus.pos = vec2(level.playerStart.x, level.playerStart.y);
-        livesText.text = `Lives: ${"🦊".repeat(lives)}`;
-      }
+      hurtRufus();
     }
   });
 
@@ -1520,71 +1571,138 @@ scene("game", (levelIndex) => {
 // LEVEL COMPLETE
 // ============================================
 scene("levelComplete", ({ score, levelIndex }) => {
-  add([
-    rect(width(), height()),
-    pos(0, 0),
-    color(20, 60, 20),
-    fixed(),
-  ]);
+  const level = ALL_LEVELS[levelIndex];
+  const nextLevel = levelIndex + 1;
+  const isTouchLC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
+  // Per-level victory themes
+  const themes = [
+    { // Level 1 - warm sunset backyard victory
+      bg: [255, 200, 100],
+      title: "Backyard Champion!",
+      message: "Rufus conquered the backyard! The squirrels are shaking in their tiny boots.",
+      rufusColor: [255, 165, 0],
+    },
+    { // Level 2 - night sky celebration
+      bg: [20, 20, 60],
+      title: "Neighborhood Hero!",
+      message: "The armored squirrels have been defeated! Rufus rules the neighborhood!",
+      rufusColor: [100, 200, 255],
+    },
+  ];
+  const theme = themes[levelIndex] || themes[0];
+
+  // Background
+  add([rect(width(), height()), pos(0, 0), color(...theme.bg), fixed()]);
+
+  // Stars for level 2 night theme
+  if (levelIndex === 1) {
+    for (let i = 0; i < 40; i++) {
+      add([
+        rect(2, 2),
+        pos(rand(0, width()), rand(0, height() * 0.5)),
+        color(255, 255, rand(200, 255)),
+        fixed(),
+        { t: rand(0, 6.28) },
+      ]).onUpdate(function() {
+        this.t += dt() * rand(1, 3);
+        this.opacity = Math.sin(this.t) * 0.3 + 0.7;
+      });
+    }
+  }
+
+  // Victory title
   add([
-    text("Level Complete!", { size: 48 }),
-    pos(width() / 2, 150),
+    text(theme.title, { size: 44 }),
+    pos(width() / 2, 80),
     anchor("center"),
     color(255, 215, 0),
     fixed(),
   ]);
 
-  add([
+  // Happy Rufus bouncing with joy!
+  const victoryFox = add([
     sprite("rufus"),
-    pos(width() / 2, 280),
+    pos(width() / 2, 220),
     anchor("center"),
     scale(5),
     fixed(),
   ]);
+  // Rufus jumps for joy!
+  victoryFox.onUpdate(() => {
+    victoryFox.pos.y = 220 + Math.abs(Math.sin(time() * 4)) * -30;
+    victoryFox.angle = Math.sin(time() * 3) * 10;
+  });
 
+  // Victory particles
+  loop(0.3, () => {
+    add([
+      rect(rand(4, 8), rand(4, 8)),
+      pos(rand(100, width() - 100), rand(100, 350)),
+      color(255, 215, 0),
+      opacity(0.8),
+      lifespan(0.8),
+      move(rand(0, 360), rand(30, 80)),
+      fixed(),
+    ]);
+  });
+
+  // Score
   add([
     text(`Treats collected: ${score}`, { size: 24 }),
-    pos(width() / 2, 380),
+    pos(width() / 2, 340),
     anchor("center"),
     color(255, 255, 255),
     fixed(),
   ]);
 
-  const nextLevel = levelIndex + 1;
-  const isTouchLC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  // Level-specific message
+  add([
+    text(theme.message, { size: 14, width: 500 }),
+    pos(width() / 2, 390),
+    anchor("center"),
+    color(220, 220, 200),
+    fixed(),
+  ]);
+
+  // Rating based on treats
+  const stars = score >= 300 ? 3 : score >= 150 ? 2 : 1;
+  const starText = "* ".repeat(stars) + ". ".repeat(3 - stars);
+  add([
+    text(starText, { size: 40 }),
+    pos(width() / 2, 440),
+    anchor("center"),
+    color(255, 215, 0),
+    fixed(),
+  ]);
 
   // Full screen tap target
   const tapTarget = add([
-    rect(width(), height()),
-    pos(0, 0),
-    opacity(0),
-    fixed(),
-    area(),
-    z(-1),
+    rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
   ]);
 
   if (nextLevel < ALL_LEVELS.length) {
     add([
       text(isTouchLC ? "Tap for next chapter!" : "Press ENTER for next chapter!", { size: 20 }),
-      pos(width() / 2, 450),
+      pos(width() / 2, 510),
       anchor("center"),
       color(255, 200, 100),
       fixed(),
-    ]);
+      { t: 0 },
+    ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 3) * 0.4 + 0.6; });
     onKeyPress("enter", () => go("memoir", nextLevel));
     tapTarget.onClick(() => go("memoir", nextLevel));
   } else {
     add([
-      text("You've completed all chapters!", { size: 20 }),
-      pos(width() / 2, 440),
+      text("You've completed all chapters!", { size: 22 }),
+      pos(width() / 2, 500),
       anchor("center"),
-      color(255, 200, 100),
+      color(255, 215, 0),
       fixed(),
     ]);
     add([
-      text(isTouchLC ? "Tap to return" : "More adventures coming soon...", { size: 16 }),
-      pos(width() / 2, 475),
+      text("Rufus is the ultimate fox!", { size: 16 }),
+      pos(width() / 2, 535),
       anchor("center"),
       color(200, 180, 140),
       fixed(),
@@ -1599,54 +1717,131 @@ scene("levelComplete", ({ score, levelIndex }) => {
 // GAME OVER
 // ============================================
 scene("gameOver", ({ score, levelIndex }) => {
-  add([
-    rect(width(), height()),
-    pos(0, 0),
-    color(60, 20, 20),
-    fixed(),
-  ]);
-
-  add([
-    text("Oh no!", { size: 48 }),
-    pos(width() / 2, 150),
-    anchor("center"),
-    color(255, 100, 100),
-    fixed(),
-  ]);
-
-  add([
-    text("Rufus needs a nap...", { size: 24 }),
-    pos(width() / 2, 220),
-    anchor("center"),
-    color(255, 200, 200),
-    fixed(),
-  ]);
-
-  add([
-    text(`Treats: ${score}`, { size: 28 }),
-    pos(width() / 2, 300),
-    anchor("center"),
-    color(255, 255, 255),
-    fixed(),
-  ]);
-
   const isTouchGO = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // Dark cozy night background
+  add([rect(width(), height()), pos(0, 0), color(15, 10, 30), fixed()]);
+
+  // Gentle stars
+  for (let i = 0; i < 30; i++) {
+    add([
+      rect(2, 2),
+      pos(rand(0, width()), rand(0, height() * 0.4)),
+      color(255, 255, rand(200, 255)),
+      opacity(rand(0.2, 0.6)),
+      fixed(),
+    ]);
+  }
+
+  // Moon
   add([
-    text(isTouchGO ? "Tap to try again!" : "Press ENTER to try again!", { size: 20 }),
-    pos(width() / 2, 400),
+    rect(60, 60),
+    pos(width() - 120, 60),
+    color(255, 250, 200),
+    opacity(0.3),
+    fixed(),
+  ]);
+  add([
+    rect(50, 50),
+    pos(width() - 115, 65),
+    color(255, 250, 220),
+    opacity(0.5),
+    fixed(),
+  ]);
+
+  // Title
+  add([
+    text("Nap Time...", { size: 48 }),
+    pos(width() / 2, 100),
+    anchor("center"),
+    color(150, 130, 200),
+    fixed(),
+  ]);
+
+  // Sleeping Rufus (big, centered)
+  const sleepyFox = add([
+    sprite("rufus_sleep"),
+    pos(width() / 2, 250),
+    anchor("center"),
+    scale(6),
+    fixed(),
+  ]);
+  // Gentle breathing animation
+  sleepyFox.onUpdate(() => {
+    sleepyFox.scale = vec2(6 + Math.sin(time() * 1.5) * 0.15, 6 - Math.sin(time() * 1.5) * 0.1);
+  });
+
+  // Floating Z's
+  let zTimer = 0;
+  onUpdate(() => {
+    zTimer += dt();
+    if (zTimer > 1.2) {
+      zTimer = 0;
+      const z = add([
+        text("z", { size: rand(16, 28) }),
+        pos(width() / 2 + rand(20, 60), 220),
+        color(180, 170, 220),
+        opacity(0.8),
+        fixed(),
+        lifespan(2.5),
+        { t: 0 },
+      ]);
+      z.onUpdate(() => {
+        z.t += dt();
+        z.pos.x += 15 * dt();
+        z.pos.y -= 30 * dt();
+        z.opacity = Math.max(0, 0.8 - z.t * 0.35);
+      });
+    }
+  });
+
+  // Cozy message
+  add([
+    text("Rufus needs to recharge his tail powers...", { size: 16 }),
+    pos(width() / 2, 340),
+    anchor("center"),
+    color(180, 160, 200),
+    fixed(),
+  ]);
+
+  add([
+    text("He'll be back stronger after a good nap!", { size: 14 }),
+    pos(width() / 2, 370),
+    anchor("center"),
+    color(150, 140, 180),
+    fixed(),
+  ]);
+
+  // Treats collected
+  add([
+    text(`Treats saved: ${score}`, { size: 22 }),
+    pos(width() / 2, 420),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  // Retry prompt
+  add([
+    text(isTouchGO ? "Tap to wake Rufus up!" : "Press ENTER to wake Rufus up!", { size: 18 }),
+    pos(width() / 2, 490),
     anchor("center"),
     color(255, 165, 0),
+    fixed(),
+    { t: 0 },
+  ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 2) * 0.3 + 0.7; });
+
+  // Little ground/blanket for Rufus
+  add([
+    rect(200, 8),
+    pos(width() / 2 - 100, 280),
+    color(80, 60, 40),
     fixed(),
   ]);
 
   // Full screen tap target
   const retryBtn = add([
-    rect(width(), height()),
-    pos(0, 0),
-    opacity(0),
-    fixed(),
-    area(),
-    z(-1),
+    rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
   ]);
   retryBtn.onClick(() => go("memoir", levelIndex));
 
