@@ -225,13 +225,14 @@ describe("Combat system", () => {
     expect(htmlContent).toContain('"gameOver"');
   });
 
-  test("death restarts level with remaining lives", () => {
-    expect(htmlContent).toContain('go("game", levelIndex, lives)');
+  test("death restarts level with remaining lives and checkpoint", () => {
+    expect(htmlContent).toContain('go("game", levelIndex, lives');
   });
 
-  test("game scene accepts starting lives parameter", () => {
-    expect(htmlContent).toContain("scene(\"game\", (levelIndex, startLives)");
+  test("game scene accepts starting lives and spawn position", () => {
+    expect(htmlContent).toContain("scene(\"game\", (levelIndex, startLives, spawnPos)");
     expect(htmlContent).toContain("startLives !== undefined");
+    expect(htmlContent).toContain("playerSpawn");
   });
 
   test("disarmed enemies do not damage Rufus", () => {

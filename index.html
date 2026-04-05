@@ -1441,13 +1441,15 @@ scene("memoir", (levelIndex) => {
 // ============================================
 // MAIN GAME
 // ============================================
-scene("game", (levelIndex, startLives) => {
+scene("game", (levelIndex, startLives, spawnPos) => {
   const level = ALL_LEVELS[levelIndex];
   let score = 0;
   let isSpinning = false;
   let lives = (startLives !== undefined) ? startLives : 3;
   let spinCooldown = 0;
   let nextExtraLife = 200;
+  // Use checkpoint spawn position if provided, otherwise level start
+  const playerSpawn = spawnPos || level.playerStart;
 
   // Set gravity
   setGravity(1600);
@@ -1670,7 +1672,7 @@ scene("game", (levelIndex, startLives) => {
   // =====================
   const rufus = add([
     sprite("rufus"),
-    pos(level.playerStart.x, level.playerStart.y),
+    pos(playerSpawn.x, playerSpawn.y),
     area({ shape: new Rect(vec2(0, 0), 28, 30) }),
     body(),
     anchor("center"),
@@ -1970,6 +1972,7 @@ scene("game", (levelIndex, startLives) => {
           anchor("center"),
           color(255, 215, 0),
           outline(2, rgb(0, 0, 0)),
+          opacity(1),
           lifespan(1.5),
           z(100),
         ]);
@@ -2077,6 +2080,7 @@ scene("game", (levelIndex, startLives) => {
             rect(3, 3),
             pos(enemy.pos),
             color(255, 255, 0),
+            opacity(1),
             lifespan(0.3),
             move(rand(0, 360), rand(100, 200)),
           ]);
@@ -2136,28 +2140,12 @@ scene("game", (levelIndex, startLives) => {
     if (isInvincible) return;
     isInvincible = true;
     lives--;
-    livesText.text = `Lives: ${"🦊".repeat(Math.max(0, lives))}`;
 
     if (lives <= 0) {
       go("gameOver", { score, levelIndex });
-    } else if (lastCheckpoint) {
-      // Respawn at checkpoint!
-      rufus.pos = vec2(lastCheckpoint.x, lastCheckpoint.y - 50);
-      rufus.opacity = 0.5;
-      // Cancel any spin
-      rufus.isSpinning = false;
-      rufus.use(sprite("rufus"));
-      rufus.use(scale(2));
-      rufus.angle = 0;
-      wait(1.5, () => {
-        if (rufus.exists()) {
-          isInvincible = false;
-          rufus.opacity = 1;
-        }
-      });
     } else {
-      // No checkpoint — restart level
-      go("game", levelIndex, lives);
+      // Restart level cleanly — spawn at checkpoint if one was activated
+      go("game", levelIndex, lives, lastCheckpoint || null);
     }
   }
 
