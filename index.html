@@ -536,8 +536,8 @@ scene("title", () => {
     fixed(),
   ]);
 
-  // About Rufus link - bigger tap target on touch
-  add([
+  // About Rufus link - clickable button
+  const aboutBtn = add([
     rect(300, 40),
     pos(width() / 2, 545),
     anchor("center"),
@@ -546,8 +546,9 @@ scene("title", () => {
     outline(1, rgb(255, 165, 0)),
     fixed(),
     area(),
-    "aboutBtn",
   ]);
+  aboutBtn.onClick(() => go("about"));
+
   add([
     text(isTouch ? "Tap here for About Rufus" : "Press A for About Rufus", { size: 14 }),
     pos(width() / 2, 545),
@@ -556,21 +557,23 @@ scene("title", () => {
     fixed(),
   ]);
 
+  // Big "Play" tap area (everything above the about button)
+  const playBtn = add([
+    rect(width(), 500),
+    pos(0, 0),
+    opacity(0),
+    fixed(),
+    area(),
+    z(-1),
+  ]);
+  playBtn.onClick(() => go("levelSelect"));
+
   onKeyPress("enter", () => {
     go("levelSelect");
   });
 
   onKeyPress("a", () => {
     go("about");
-  });
-
-  // Touch/click: tap anywhere to start (about button area goes to about)
-  onClick((pos) => {
-    if (pos.y > 525 && pos.y < 570) {
-      go("about");
-    } else {
-      go("levelSelect");
-    }
   });
 });
 
@@ -654,7 +657,17 @@ scene("about", () => {
   add([ rect(60, 8), pos(width() / 2 - 30, flagY + 8), color(221, 0, 0), fixed() ]);
   add([ rect(60, 8), pos(width() / 2 - 30, flagY + 16), color(255, 206, 0), fixed() ]);
 
-  // Back button
+  // Back button - clickable
+  const backBtn = add([
+    rect(width(), height()),
+    pos(0, 0),
+    opacity(0),
+    fixed(),
+    area(),
+    z(-1),
+  ]);
+  backBtn.onClick(() => go("title"));
+
   add([
     text("Press ESC or tap to go back", { size: 14 }),
     pos(width() / 2, height() - 25),
@@ -666,7 +679,6 @@ scene("about", () => {
 
   onKeyPress("escape", () => go("title"));
   onKeyPress("enter", () => go("title"));
-  onClick(() => go("title"));
 });
 
 // ============================================
@@ -688,19 +700,23 @@ scene("levelSelect", () => {
     fixed(),
   ]);
 
-  // Draw each level as a journal entry
+  // Draw each level as a CLICKABLE journal entry
   ALL_LEVELS.forEach((level, i) => {
     const y = 150 + i * 100;
 
-    // Journal entry background
-    add([
+    // Journal entry background - clickable!
+    const entry = add([
       rect(600, 80),
       pos(width() / 2, y),
       anchor("center"),
       color(60, 50, 35),
       outline(2, rgb(100, 80, 50)),
+      area(),
       fixed(),
     ]);
+
+    // Click/tap this entry to play the level
+    entry.onClick(() => go("memoir", i));
 
     // Chapter number
     add([
@@ -721,9 +737,10 @@ scene("levelSelect", () => {
       fixed(),
     ]);
 
-    // Key to press
+    // Tap/press hint
+    const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
     add([
-      text(`Press ${i + 1}`, { size: 14 }),
+      text(isTouch ? "Tap" : `Press ${i + 1}`, { size: 14 }),
       pos(width() / 2 + 260, y),
       anchor("center"),
       color(255, 165, 0),
@@ -731,16 +748,19 @@ scene("levelSelect", () => {
     ]);
   });
 
-  // "About Me" journal entry at the bottom
+  // "About Me" journal entry at the bottom - clickable!
   const aboutY = 150 + ALL_LEVELS.length * 100;
-  add([
+  const aboutEntry = add([
     rect(600, 80),
     pos(width() / 2, aboutY),
     anchor("center"),
     color(55, 45, 30),
     outline(2, rgb(110, 90, 60)),
+    area(),
     fixed(),
   ]);
+
+  aboutEntry.onClick(() => go("about"));
 
   // Little Rufus icon
   add([
@@ -765,15 +785,16 @@ scene("levelSelect", () => {
     color(200, 180, 140),
     fixed(),
   ]);
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   add([
-    text("Press A", { size: 14 }),
+    text(isTouch ? "Tap" : "Press A", { size: 14 }),
     pos(width() / 2 + 260, aboutY),
     anchor("center"),
     color(255, 165, 0),
     fixed(),
   ]);
 
-  // Listen for level selection
+  // Keyboard controls (for desktop)
   ALL_LEVELS.forEach((_, i) => {
     onKeyPress(`${i + 1}`, () => {
       go("memoir", i);
@@ -781,21 +802,6 @@ scene("levelSelect", () => {
   });
 
   onKeyPress("a", () => go("about"));
-
-  // Touch: tap a journal entry or about me
-  onClick((pos) => {
-    // Check level entries
-    ALL_LEVELS.forEach((_, i) => {
-      const y = 150 + i * 100;
-      if (pos.y > y - 40 && pos.y < y + 40) {
-        go("memoir", i);
-      }
-    });
-    // Check about me
-    if (pos.y > aboutY - 40 && pos.y < aboutY + 40) {
-      go("about");
-    }
-  });
 
   onKeyPress("escape", () => go("title"));
 });
@@ -847,8 +853,9 @@ scene("memoir", (levelIndex) => {
     fixed(),
   ]);
 
+  const isTouchMem = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   add([
-    text("Press ENTER to begin!", { size: 18 }),
+    text(isTouchMem ? "Tap to begin!" : "Press ENTER to begin!", { size: 18 }),
     pos(width() / 2, 450),
     anchor("center"),
     color(255, 165, 0),
@@ -859,12 +866,20 @@ scene("memoir", (levelIndex) => {
     this.opacity = Math.sin(this.flashTimer * 3) * 0.4 + 0.6;
   });
 
+  // Full screen clickable area for touch
+  const startBtn = add([
+    rect(width(), height()),
+    pos(0, 0),
+    opacity(0),
+    fixed(),
+    area(),
+    z(-1),
+  ]);
+  startBtn.onClick(() => go("game", levelIndex));
+
   onKeyPress("enter", () => {
     go("game", levelIndex);
   });
-
-  // Touch: tap to begin
-  onClick(() => go("game", levelIndex));
 });
 
 // ============================================
@@ -1537,16 +1552,28 @@ scene("levelComplete", ({ score, levelIndex }) => {
   ]);
 
   const nextLevel = levelIndex + 1;
+  const isTouchLC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // Full screen tap target
+  const tapTarget = add([
+    rect(width(), height()),
+    pos(0, 0),
+    opacity(0),
+    fixed(),
+    area(),
+    z(-1),
+  ]);
+
   if (nextLevel < ALL_LEVELS.length) {
     add([
-      text("Press ENTER for next chapter!", { size: 20 }),
+      text(isTouchLC ? "Tap for next chapter!" : "Press ENTER for next chapter!", { size: 20 }),
       pos(width() / 2, 450),
       anchor("center"),
       color(255, 200, 100),
       fixed(),
     ]);
     onKeyPress("enter", () => go("memoir", nextLevel));
-    onClick(() => go("memoir", nextLevel));
+    tapTarget.onClick(() => go("memoir", nextLevel));
   } else {
     add([
       text("You've completed all chapters!", { size: 20 }),
@@ -1556,13 +1583,13 @@ scene("levelComplete", ({ score, levelIndex }) => {
       fixed(),
     ]);
     add([
-      text("More adventures coming soon...", { size: 16 }),
+      text(isTouchLC ? "Tap to return" : "More adventures coming soon...", { size: 16 }),
       pos(width() / 2, 475),
       anchor("center"),
       color(200, 180, 140),
       fixed(),
     ]);
-    onClick(() => go("levelSelect"));
+    tapTarget.onClick(() => go("levelSelect"));
   }
 
   onKeyPress("escape", () => go("levelSelect"));
@@ -1603,17 +1630,28 @@ scene("gameOver", ({ score, levelIndex }) => {
     fixed(),
   ]);
 
+  const isTouchGO = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   add([
-    text("Press ENTER to try again!", { size: 20 }),
+    text(isTouchGO ? "Tap to try again!" : "Press ENTER to try again!", { size: 20 }),
     pos(width() / 2, 400),
     anchor("center"),
     color(255, 165, 0),
     fixed(),
   ]);
 
+  // Full screen tap target
+  const retryBtn = add([
+    rect(width(), height()),
+    pos(0, 0),
+    opacity(0),
+    fixed(),
+    area(),
+    z(-1),
+  ]);
+  retryBtn.onClick(() => go("memoir", levelIndex));
+
   onKeyPress("enter", () => go("memoir", levelIndex));
   onKeyPress("escape", () => go("levelSelect"));
-  onClick(() => go("memoir", levelIndex));
 });
 
 // ============================================

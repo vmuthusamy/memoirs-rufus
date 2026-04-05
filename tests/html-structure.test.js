@@ -402,18 +402,19 @@ describe("Navigation flow", () => {
     expect(gameOverScene).toContain('go("memoir"');
   });
 
-  test("all menu scenes have touch/click handler", () => {
-    // Each non-game scene should have onClick for touch support
+  test("all menu scenes have clickable area() objects for touch support", () => {
+    // Each non-game scene should have area() + onClick for touch support
     const scenes = ["title", "about", "levelSelect", "memoir", "levelComplete", "gameOver"];
-    scenes.forEach((scene) => {
+    scenes.forEach((sceneName) => {
       const sceneBlock = htmlContent.slice(
-        htmlContent.indexOf(`scene("${scene}"`)
+        htmlContent.indexOf(`scene("${sceneName}"`)
       );
       const nextSceneStart = sceneBlock.indexOf("scene(", 10);
       const sceneContent = nextSceneStart > 0
         ? sceneBlock.slice(0, nextSceneStart)
         : sceneBlock;
-      expect(sceneContent).toContain("onClick");
+      // Should use .onClick() on game objects (not scene-level onClick with coords)
+      expect(sceneContent).toContain(".onClick(");
     });
   });
 });
