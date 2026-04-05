@@ -1,0 +1,415 @@
+const fs = require("fs");
+const path = require("path");
+
+// Load level files by evaluating them (they define global constants)
+function loadLevel(filename) {
+  const code = fs.readFileSync(
+    path.join(__dirname, "..", "levels", filename),
+    "utf-8"
+  );
+  // Extract the object by running the JS
+  const fn = new Function(code + "\nreturn " + code.match(/const (\w+)/)[1] + ";");
+  return fn();
+}
+
+const LEVEL_1 = loadLevel("level1.js");
+const LEVEL_2 = loadLevel("level2.js");
+const ALL_LEVELS = [LEVEL_1, LEVEL_2];
+
+// Game constants (must match index.html)
+const GAME_HEIGHT = 600;
+const GROUND_Y = GAME_HEIGHT - 40; // 560
+
+// ============================================
+// LEVEL DATA INTEGRITY
+// ============================================
+describe("Level data integrity", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("has all required fields", () => {
+        expect(level.name).toBeDefined();
+        expect(typeof level.name).toBe("string");
+        expect(level.name.length).toBeGreaterThan(0);
+
+        expect(level.memoir).toBeDefined();
+        expect(typeof level.memoir).toBe("string");
+
+        expect(level.skyColor).toHaveLength(3);
+        expect(level.groundColor).toHaveLength(3);
+
+        expect(level.width).toBeGreaterThan(0);
+        expect(level.playerStart).toBeDefined();
+        expect(level.playerStart.x).toBeDefined();
+        expect(level.playerStart.y).toBeDefined();
+        expect(level.exit).toBeDefined();
+        expect(level.exit.x).toBeDefined();
+        expect(level.exit.y).toBeDefined();
+
+        expect(Array.isArray(level.platforms)).toBe(true);
+        expect(Array.isArray(level.treats)).toBe(true);
+        expect(Array.isArray(level.crates)).toBe(true);
+        expect(Array.isArray(level.enemies)).toBe(true);
+      });
+
+      test("colors are valid RGB values (0-255)", () => {
+        level.skyColor.forEach((c) => {
+          expect(c).toBeGreaterThanOrEqual(0);
+          expect(c).toBeLessThanOrEqual(255);
+        });
+        level.groundColor.forEach((c) => {
+          expect(c).toBeGreaterThanOrEqual(0);
+          expect(c).toBeLessThanOrEqual(255);
+        });
+      });
+
+      test("player starts within level bounds", () => {
+        expect(level.playerStart.x).toBeGreaterThanOrEqual(0);
+        expect(level.playerStart.x).toBeLessThan(level.width);
+      });
+
+      test("exit is within level bounds", () => {
+        expect(level.exit.x).toBeGreaterThan(0);
+        expect(level.exit.x).toBeLessThanOrEqual(level.width);
+      });
+
+      test("exit is placed after start (left to right progression)", () => {
+        expect(level.exit.x).toBeGreaterThan(level.playerStart.x);
+      });
+    });
+  });
+});
+
+// ============================================
+// PLATFORM VALIDATION
+// ============================================
+describe("Platform validation", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("all platforms have required dimensions", () => {
+        level.platforms.forEach((p, j) => {
+          expect(p.x).toBeDefined();
+          expect(p.y).toBeDefined();
+          expect(p.width).toBeGreaterThan(0);
+          expect(p.height).toBeGreaterThan(0);
+        });
+      });
+
+      test("all platforms are within level bounds", () => {
+        level.platforms.forEach((p) => {
+          expect(p.x).toBeGreaterThanOrEqual(0);
+          expect(p.x + p.width).toBeLessThanOrEqual(level.width + 50);
+        });
+      });
+
+      test("all platforms are above the ground", () => {
+        level.platforms.forEach((p) => {
+          expect(p.y).toBeLessThan(GROUND_Y);
+        });
+      });
+
+      test("all platforms are visible on screen (not above canvas)", () => {
+        level.platforms.forEach((p) => {
+          expect(p.y).toBeGreaterThan(0);
+        });
+      });
+
+      test("platforms have minimum usable width (at least 80px)", () => {
+        level.platforms.forEach((p) => {
+          expect(p.width).toBeGreaterThanOrEqual(80);
+        });
+      });
+    });
+  });
+});
+
+// ============================================
+// TREAT VALIDATION
+// ============================================
+describe("Treat validation", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("all treats have x,y coordinates", () => {
+        level.treats.forEach((t) => {
+          expect(typeof t.x).toBe("number");
+          expect(typeof t.y).toBe("number");
+        });
+      });
+
+      test("all treats are within level bounds", () => {
+        level.treats.forEach((t) => {
+          expect(t.x).toBeGreaterThanOrEqual(0);
+          expect(t.x).toBeLessThanOrEqual(level.width);
+        });
+      });
+
+      test("all treats are visible (above ground, below top of screen)", () => {
+        level.treats.forEach((t) => {
+          expect(t.y).toBeGreaterThan(0);
+          expect(t.y).toBeLessThanOrEqual(GROUND_Y);
+        });
+      });
+
+      test("has at least 10 treats per level", () => {
+        expect(level.treats.length).toBeGreaterThanOrEqual(10);
+      });
+
+      test("no duplicate treat positions", () => {
+        const positions = level.treats.map((t) => `${t.x},${t.y}`);
+        const unique = new Set(positions);
+        expect(unique.size).toBe(positions.length);
+      });
+    });
+  });
+});
+
+// ============================================
+// CRATE VALIDATION
+// ============================================
+describe("Crate validation", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("all crates have x,y coordinates", () => {
+        level.crates.forEach((c) => {
+          expect(typeof c.x).toBe("number");
+          expect(typeof c.y).toBe("number");
+        });
+      });
+
+      test("all crates are within level bounds", () => {
+        level.crates.forEach((c) => {
+          expect(c.x).toBeGreaterThanOrEqual(0);
+          expect(c.x).toBeLessThanOrEqual(level.width);
+        });
+      });
+
+      test("has at least 3 crates", () => {
+        expect(level.crates.length).toBeGreaterThanOrEqual(3);
+      });
+    });
+  });
+});
+
+// ============================================
+// BOUNCE CRATE VALIDATION
+// ============================================
+describe("Bounce crate validation", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("bounce crates exist", () => {
+        expect(level.bounceCrates).toBeDefined();
+        expect(Array.isArray(level.bounceCrates)).toBe(true);
+        expect(level.bounceCrates.length).toBeGreaterThan(0);
+      });
+
+      test("all bounce crates have x,y coordinates", () => {
+        level.bounceCrates.forEach((bc) => {
+          expect(typeof bc.x).toBe("number");
+          expect(typeof bc.y).toBe("number");
+        });
+      });
+
+      test("bounce crates are on or near the ground", () => {
+        level.bounceCrates.forEach((bc) => {
+          // Bounce crates should be at ground level (y ~560)
+          expect(bc.y).toBeGreaterThanOrEqual(540);
+          expect(bc.y).toBeLessThanOrEqual(580);
+        });
+      });
+
+      test("bounce crates are within level bounds", () => {
+        level.bounceCrates.forEach((bc) => {
+          expect(bc.x).toBeGreaterThanOrEqual(0);
+          expect(bc.x).toBeLessThanOrEqual(level.width);
+        });
+      });
+
+      test("bounce crates are spread across the level", () => {
+        const xs = level.bounceCrates.map((bc) => bc.x).sort((a, b) => a - b);
+        const firstQuarter = level.width * 0.25;
+        const lastQuarter = level.width * 0.75;
+        // At least one in first half and one in second half
+        expect(xs[0]).toBeLessThan(level.width * 0.5);
+        expect(xs[xs.length - 1]).toBeGreaterThan(level.width * 0.5);
+      });
+    });
+  });
+});
+
+// ============================================
+// ENEMY VALIDATION
+// ============================================
+describe("Enemy validation", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("all enemies have required fields", () => {
+        level.enemies.forEach((e) => {
+          expect(["walker", "armored"]).toContain(e.type);
+          expect(typeof e.x).toBe("number");
+          expect(typeof e.y).toBe("number");
+          expect(typeof e.patrol).toBe("number");
+          expect(e.patrol).toBeGreaterThan(0);
+        });
+      });
+
+      test("all enemies are within level bounds", () => {
+        level.enemies.forEach((e) => {
+          expect(e.x).toBeGreaterThanOrEqual(0);
+          expect(e.x).toBeLessThanOrEqual(level.width);
+        });
+      });
+
+      test("enemy patrol range keeps them within level bounds", () => {
+        level.enemies.forEach((e) => {
+          expect(e.x - e.patrol).toBeGreaterThanOrEqual(-50); // small margin
+          expect(e.x + e.patrol).toBeLessThanOrEqual(level.width + 50);
+        });
+      });
+
+      test("no enemy is placed at the player start position", () => {
+        level.enemies.forEach((e) => {
+          const distFromStart = Math.abs(e.x - level.playerStart.x);
+          expect(distFromStart).toBeGreaterThan(50);
+        });
+      });
+
+      test("no enemy is placed at the exit", () => {
+        level.enemies.forEach((e) => {
+          const distFromExit = Math.abs(e.x - level.exit.x);
+          expect(distFromExit).toBeGreaterThan(30);
+        });
+      });
+
+      test("has at least 3 enemies", () => {
+        expect(level.enemies.length).toBeGreaterThanOrEqual(3);
+      });
+    });
+  });
+
+  test("Level 1 has no armored enemies (tutorial level)", () => {
+    const armored = LEVEL_1.enemies.filter((e) => e.type === "armored");
+    expect(armored.length).toBe(0);
+  });
+
+  test("Level 2 has armored enemies", () => {
+    const armored = LEVEL_2.enemies.filter((e) => e.type === "armored");
+    expect(armored.length).toBeGreaterThan(0);
+  });
+
+  test("Level 2 is harder than Level 1 (more enemies)", () => {
+    expect(LEVEL_2.enemies.length).toBeGreaterThan(LEVEL_1.enemies.length);
+  });
+});
+
+// ============================================
+// PLATFORM ENEMY VALIDATION
+// ============================================
+describe("Platform enemy placement", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("has enemies on platforms (not just ground)", () => {
+        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+        expect(platformEnemies.length).toBeGreaterThan(0);
+      });
+
+      test("platform enemies are near actual platforms", () => {
+        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+        platformEnemies.forEach((e) => {
+          // Check that there's a platform near this enemy's y position
+          const nearbyPlatform = level.platforms.some((p) => {
+            const onPlatformY = Math.abs(e.y - p.y) < 30;
+            const withinPlatformX =
+              e.x >= p.x - e.patrol - 20 &&
+              e.x <= p.x + p.width + e.patrol + 20;
+            return onPlatformY && withinPlatformX;
+          });
+          expect(nearbyPlatform).toBe(true);
+        });
+      });
+
+      test("platform enemy patrol range fits on platform", () => {
+        const platformEnemies = level.enemies.filter((e) => e.y < 500);
+        platformEnemies.forEach((e) => {
+          // Find the closest platform to this enemy (by y AND x proximity)
+          const platform = level.platforms.find((p) => {
+            const onPlatformY = Math.abs(e.y - p.y) < 30;
+            const nearPlatformX =
+              e.x >= p.x - 60 && e.x <= p.x + p.width + 60;
+            return onPlatformY && nearPlatformX;
+          });
+          if (platform) {
+            // Enemy patrol should mostly stay on the platform
+            // Allow some overshoot (they can walk a bit off edge)
+            expect(e.x - e.patrol).toBeGreaterThanOrEqual(platform.x - 80);
+            expect(e.x + e.patrol).toBeLessThanOrEqual(
+              platform.x + platform.width + 80
+            );
+          }
+        });
+      });
+    });
+  });
+});
+
+// ============================================
+// LEVEL PROGRESSION
+// ============================================
+describe("Level progression", () => {
+  test("Level 2 is longer than Level 1", () => {
+    expect(LEVEL_2.width).toBeGreaterThan(LEVEL_1.width);
+  });
+
+  test("levels have increasing difficulty (enemy count)", () => {
+    for (let i = 1; i < ALL_LEVELS.length; i++) {
+      expect(ALL_LEVELS[i].enemies.length).toBeGreaterThanOrEqual(
+        ALL_LEVELS[i - 1].enemies.length
+      );
+    }
+  });
+
+  test("all levels have unique names", () => {
+    const names = ALL_LEVELS.map((l) => l.name);
+    const unique = new Set(names);
+    expect(unique.size).toBe(names.length);
+  });
+
+  test("all levels have memoir text", () => {
+    ALL_LEVELS.forEach((level) => {
+      expect(level.memoir.length).toBeGreaterThan(20);
+    });
+  });
+});
+
+// ============================================
+// GAMEPLAY SAFETY
+// ============================================
+describe("Gameplay safety", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("player spawn area is clear of enemies", () => {
+        const spawnZone = 200; // px around spawn
+        const nearbyEnemies = level.enemies.filter(
+          (e) => Math.abs(e.x - level.playerStart.x) < spawnZone
+        );
+        expect(nearbyEnemies.length).toBe(0);
+      });
+
+      test("player spawn area is clear of crates", () => {
+        const spawnZone = 150;
+        const nearbyCrates = level.crates.filter(
+          (c) => Math.abs(c.x - level.playerStart.x) < spawnZone
+        );
+        expect(nearbyCrates.length).toBe(0);
+      });
+
+      test("exit area has no armored enemies (fair ending)", () => {
+        const exitZone = 100;
+        const nearbyArmored = level.enemies.filter(
+          (e) =>
+            e.type === "armored" &&
+            Math.abs(e.x - level.exit.x) < exitZone
+        );
+        expect(nearbyArmored.length).toBe(0);
+      });
+    });
+  });
+});

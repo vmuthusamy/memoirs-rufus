@@ -1,0 +1,25 @@
+{
+  "name": "adventures-of-rufus",
+  "version": "1.0.0",
+  "description": "A 2D platformer game starring **Rufus**, a happy-go-loving fox from Germany with a legendary toothy grin and a tail that can take out anything in his path.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vmuthusamy/memoirs-rufus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vmuthusamy/memoirs-rufus/issues"
+  },
+  "homepage": "https://github.com/vmuthusamy/memoirs-rufus#readme",
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "jsdom": "^29.0.1"
+  }
+}
