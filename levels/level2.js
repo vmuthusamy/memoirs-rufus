@@ -16,8 +16,9 @@ const LEVEL_2 = {
   playerStart: { x: 100, y: 0 },
   exit: { x: 4650, y: 300 },
 
-  // Hidden golden paw! Behind the start — who goes LEFT at the beginning?
-  secretPaw: { x: 30, y: 530 },
+  // Hidden golden paw! Floating in the gap between staircase top and high road
+  // You have to jump from the staircase (x:2450 y:240) and aim LEFT of the high road
+  secretPaw: { x: 2600, y: 150 },
 
   platforms: [
     // Opening section - teaches jump-disarm with space to breathe
