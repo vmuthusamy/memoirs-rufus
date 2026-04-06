@@ -1,97 +1,89 @@
-# How to Create a Level 🦊
+# How to Create Your Own Level
 
-Want to add a new adventure for Rufus? It's easy!
+## Quick Start
 
-## Step 1: Create a new file
+1. Copy `template.js` and rename it (like `level5.js`)
+2. Change the level name, story, colors, and everything inside
+3. Wire it up in `index.html` (instructions are at the bottom of the template)
+4. Open `index.html` in your browser and play!
 
-Make a new file in this folder called `level3.js` (or whatever number is next).
+## Understanding the Grid
 
-## Step 2: Copy this template and change it!
+The game screen is **800 pixels wide** and **600 pixels tall**.
+Levels scroll sideways, so they can be thousands of pixels wide!
 
-```javascript
-const LEVEL_3 = {
-  // Give your level a cool name!
-  name: "The Spooky Forest",
-
-  // Write a diary entry for Rufus
-  memoir: "Dear Diary, I found a dark forest today...",
-
-  // Sky color [red, green, blue] - each number is 0 to 255
-  skyColor: [50, 50, 80],
-
-  // Ground color
-  groundColor: [40, 80, 20],
-
-  // How long is the level?
-  width: 3200,
-
-  // Where does Rufus start?
-  playerStart: { x: 100, y: 0 },
-
-  // Where is the exit flag?
-  exit: { x: 3050, y: 300 },
-
-  // PLATFORMS - things Rufus can stand on
-  // { x, y, width, height }
-  platforms: [
-    { x: 400, y: 450, width: 150, height: 30 },
-  ],
-
-  // TREATS - yummy things to collect!
-  // { x, y }
-  treats: [
-    { x: 300, y: 530 },
-  ],
-
-  // CRATES - smash them with tail spin!
-  // { x, y }
-  crates: [
-    { x: 500, y: 535 },
-  ],
-
-  // ENEMIES
-  // type: "walker" = basic enemy, tail spin works
-  // type: "armored" = jump on first to remove helmet, then tail spin
-  // patrol = how far they walk back and forth
-  enemies: [
-    { type: "walker", x: 800, y: 535, patrol: 100 },
-    { type: "armored", x: 1500, y: 535, patrol: 80 },
-  ],
-};
+```
+y = 0    +-----------------------+  TOP
+         |                       |
+y = 200  |   wasps fly here      |
+         |                       |
+y = 350  |   platforms go here   |
+         |                       |
+y = 530  |   treats on ground    |
+y = 560  | ===================== |  GROUND
+y = 600  +-----------------------+  BOTTOM
 ```
 
-## Step 3: Add it to the game
+Rufus can jump about **200 pixels up** and **250 pixels across**.
+So don't put platforms further apart than that!
 
-Open `index.html` and add two things:
+## What Goes in a Level
 
-1. Near the top, add a script tag to load your level:
-```html
-<script src="levels/level3.js"></script>
-```
+| Thing          | What it does                           | Where to put y |
+|----------------|----------------------------------------|----------------|
+| **platforms**  | Rufus stands and jumps on these        | 200 - 500      |
+| **treats**     | Berries to collect (10 points each)    | 530 (ground) or 40 above a platform |
+| **crates**     | Smash with tail spin!                  | 535             |
+| **bounceCrates** | Spring crate - super high jump!      | 560             |
+| **checkpoints** | Save point if Rufus dies              | 560             |
+| **enemies**    | The bad guys (see types below)         | depends on type |
 
-2. Find the line that says `const ALL_LEVELS = [LEVEL_1, LEVEL_2]` and add your level:
-```javascript
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3];
-```
+## Enemy Types
 
-## Tips for great levels
+| Type            | What it does                              | y position |
+|-----------------|-------------------------------------------|------------|
+| `"walker"`      | Walks back and forth. Tail spin to defeat | 535 (ground) or platform y minus 25 |
+| `"armored"`     | Has a helmet! Jump on it first, then spin | 535 (ground) or platform y minus 25 |
+| `"wasp_patrol"` | Flies in a wave pattern                   | 200 - 300 (in the air) |
+| `"wasp_dive"`   | Dives at Rufus when close! Scary!         | 150 - 200 (high up) |
 
-- **Start easy** - put some treats near the start so the player feels good
-- **Teach then test** - show a new enemy alone first, then combine with others
+## Colors Cheat Sheet
+
+Sky colors to try:
+- `[135, 206, 235]` - blue sky
+- `[20, 20, 60]` - night
+- `[255, 150, 100]` - sunset
+- `[200, 195, 185]` - cloudy/indoor
+
+Ground colors to try:
+- `[34, 139, 34]` - green grass
+- `[160, 120, 60]` - wood floor
+- `[100, 100, 120]` - stone
+- `[200, 180, 140]` - sand
+
+## Tips for Great Levels
+
+- **Start easy** - give the player room to breathe at the beginning
+- **Teach then test** - show a new enemy alone, then combine with others
 - **Reward explorers** - put treats in hard-to-reach places
-- **Don't be too mean!** - make sure the player can always see where to go
+- **Use comments** - write notes with `//` so you remember what things do
+- **Experiment!** - change numbers and refresh your browser to see what happens
 
-## Fun ideas to try
+## How to Experiment
 
-- A level with TONS of crates to smash
-- A level with only armored enemies
-- A really tall level with lots of vertical platforms
-- A short but really hard level
-- A level where treats spell out a word!
+The fastest way to learn is to **change one number and see what happens**:
 
-## Need help?
+1. Open your level file in VS Code
+2. Change a platform's `y` from `400` to `200` (moves it way up!)
+3. Save the file
+4. Refresh your browser
+5. See the difference!
 
-Just ask Claude Code! Try saying things like:
-- "Make me a level with lots of armored enemies and high platforms"
-- "Create an underwater-themed level"
-- "Add more treats to level 2"
+Try changing:
+- A platform's `y` to make it higher or lower
+- An enemy's `patrol` to make it walk further
+- The `skyColor` to change the whole mood
+- Add `speed: 100` to an armored enemy to make it faster
+
+You literally cannot break anything. If the level doesn't load,
+check for missing commas or typos - VS Code will underline errors in red.

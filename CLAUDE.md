@@ -18,6 +18,9 @@ adventures-of-rufus/
 ├── index.html          # Game engine, sprites, and core mechanics
 ├── levels/             # Level definitions (this is where YOU add levels!)
 │   ├── level1.js       # "The Backyard" - tutorial level
+│   ├── level2.js       # "The Neighborhood" - armored enemies
+│   ├── level3.js       # "The School Gym" - wasps!
+│   ├── template.js     # COPY THIS to make a new level!
 │   └── README.md       # How to create your own level
 ├── CLAUDE.md           # You're reading this
 └── README.md           # Project info
@@ -25,18 +28,15 @@ adventures-of-rufus/
 
 ## How to add a new level
 
-Levels live in `levels/` as `.js` files. Each level is a simple object describing the map.
+**Start here: `levels/template.js`** — it has a ready-to-copy level with comments explaining every piece.
 
-To add a level, either:
-1. Copy an existing level file and modify it
-2. Ask Claude Code: "Create a new level called [name] with [description]"
+1. Copy `levels/template.js` to a new file like `levels/level5.js`
+2. Change the variable name from `LEVEL_5` to match your file number
+3. Edit the name, story, platforms, enemies, and everything inside
+4. Wire it into `index.html` (instructions at the bottom of the template)
+5. Open `index.html` in your browser and play!
 
-Example things to ask Claude Code:
-- "Add a level with lots of high platforms and flying enemies"
-- "Make a water level where Rufus has to jump across lily pads"
-- "Add a boss fight at the end of level 3"
-- "Make the enemies faster in level 2"
-- "Add a secret area with bonus treats in level 1"
+See `levels/README.md` for the full grid guide, enemy types, and color cheat sheet.
 
 ## Game mechanics
 - **Arrow keys**: Move Rufus left/right
@@ -65,9 +65,11 @@ Example things to ask Claude Code:
 - Every level should be completable!
 
 ## For Claude Code
-When helping with this project:
-- Keep code simple and readable — a 9-year-old is learning from this
-- Add comments explaining what code does in plain English
-- When adding features, explain what changed and why
-- Test suggestions by describing what the player will see
-- Use simple variable names (foxSpeed, jumpHeight, not velocity.y)
+The primary user of this project is a 9-year-old learning to code. When helping:
+- **Teach, don't just do** — explain what each piece does so they learn
+- **Point to the template first** — if they want a new level, show them `levels/template.js` and help them modify it rather than generating a whole level from scratch
+- **Keep code simple** — use plain variable names and add comments in plain English
+- **Encourage experiments** — suggest they change one number and refresh to see what happens
+- **Describe what they'll see** — "this makes the platform higher" is better than "this changes the y coordinate"
+- If they ask "how do I make a level", point them to `levels/README.md` and `levels/template.js`
+- If they ask for a tour, walk them through `levels/level1.js` line by line explaining what each part does
