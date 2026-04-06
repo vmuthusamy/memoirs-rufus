@@ -46,6 +46,14 @@ const LEVEL_5 = {
   exit: { x: 3350, y: 300 },
 
 
+  // ---- SECRET GOLDEN PAW (optional) ----
+  // Hide one golden paw per level in a hard-to-reach spot!
+  // Players who find all of them unlock a secret level
+  // Put it somewhere tricky — high up, behind enemies, off the main path
+  // Delete this line if you don't want one in your level
+  secretPaw: { x: 1400, y: 150 },
+
+
   // ---- CHECKPOINTS (optional) ----
   // If Rufus dies, he restarts here instead of the beginning!
   // Put these about 1/3 and 2/3 through your level

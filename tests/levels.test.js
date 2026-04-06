@@ -16,6 +16,7 @@ const LEVEL_1 = loadLevel("level1.js");
 const LEVEL_2 = loadLevel("level2.js");
 const LEVEL_3 = loadLevel("level3.js");
 const LEVEL_4 = loadLevel("level4.js");
+const SECRET_LEVEL = loadLevel("secret.js");
 const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4];
 
 // Game constants (must match index.html)
@@ -470,6 +471,110 @@ describe("Gameplay safety", () => {
         );
         expect(nearbyArmored.length).toBe(0);
       });
+    });
+  });
+});
+
+// ============================================
+// GOLDEN PAW PLACEMENT
+// ============================================
+describe("Golden paw placement", () => {
+  ALL_LEVELS.forEach((level, i) => {
+    describe(`Level ${i + 1}: ${level.name}`, () => {
+      test("has a secretPaw defined", () => {
+        expect(level.secretPaw).toBeDefined();
+        expect(typeof level.secretPaw.x).toBe("number");
+        expect(typeof level.secretPaw.y).toBe("number");
+      });
+
+      test("secretPaw is within level bounds", () => {
+        expect(level.secretPaw.x).toBeGreaterThanOrEqual(0);
+        expect(level.secretPaw.x).toBeLessThanOrEqual(level.width + 200);
+      });
+
+      test("secretPaw is visible on screen", () => {
+        expect(level.secretPaw.y).toBeGreaterThan(0);
+        expect(level.secretPaw.y).toBeLessThanOrEqual(GROUND_Y);
+      });
+    });
+  });
+});
+
+// ============================================
+// SECRET LEVEL DATA
+// ============================================
+describe("Secret level data", () => {
+  test("has all required fields", () => {
+    expect(SECRET_LEVEL.name).toBe("Rufus's Treat Party");
+    expect(SECRET_LEVEL.memoir).toBeDefined();
+    expect(SECRET_LEVEL.skyColor).toHaveLength(3);
+    expect(SECRET_LEVEL.groundColor).toHaveLength(3);
+    expect(SECRET_LEVEL.width).toBeGreaterThan(0);
+    expect(SECRET_LEVEL.playerStart).toBeDefined();
+    expect(SECRET_LEVEL.exit).toBeDefined();
+    expect(Array.isArray(SECRET_LEVEL.platforms)).toBe(true);
+    expect(Array.isArray(SECRET_LEVEL.treats)).toBe(true);
+    expect(Array.isArray(SECRET_LEVEL.crates)).toBe(true);
+    expect(Array.isArray(SECRET_LEVEL.enemies)).toBe(true);
+  });
+
+  test("has no checkpoints (hardcore mode)", () => {
+    expect(SECRET_LEVEL.checkpoints).toBeUndefined();
+  });
+
+  test("has NPC friends list", () => {
+    expect(SECRET_LEVEL.npcFriends).toBeDefined();
+    expect(SECRET_LEVEL.npcFriends).toContain("marthina");
+    expect(SECRET_LEVEL.npcFriends).toContain("renard");
+    expect(SECRET_LEVEL.npcFriends).toContain("fiery");
+  });
+
+  test("is marked as secret level", () => {
+    expect(SECRET_LEVEL.isSecretLevel).toBe(true);
+  });
+
+  test("is marked as magical", () => {
+    expect(SECRET_LEVEL.isMagical).toBe(true);
+  });
+
+  test("has no secretPaw (it IS the secret)", () => {
+    expect(SECRET_LEVEL.secretPaw).toBeUndefined();
+  });
+
+  test("has mix of all enemy types", () => {
+    const types = new Set(SECRET_LEVEL.enemies.map((e) => e.type));
+    expect(types.has("walker")).toBe(true);
+    expect(types.has("armored")).toBe(true);
+    expect(types.has("wasp_patrol")).toBe(true);
+    expect(types.has("wasp_dive")).toBe(true);
+    expect(types.has("bookworm")).toBe(true);
+  });
+
+  test("is challenging (lots of enemies)", () => {
+    expect(SECRET_LEVEL.enemies.length).toBeGreaterThan(20);
+  });
+
+  test("has lots of treats (it's a party!)", () => {
+    expect(SECRET_LEVEL.treats.length).toBeGreaterThan(30);
+  });
+
+  test("exit is after start", () => {
+    expect(SECRET_LEVEL.exit.x).toBeGreaterThan(SECRET_LEVEL.playerStart.x);
+  });
+
+  test("platforms are within bounds and above ground", () => {
+    SECRET_LEVEL.platforms.forEach((p) => {
+      expect(p.x).toBeGreaterThanOrEqual(0);
+      expect(p.y).toBeLessThan(GROUND_Y);
+      expect(p.y).toBeGreaterThan(0);
+      expect(p.width).toBeGreaterThanOrEqual(80);
+    });
+  });
+
+  test("all enemies are within bounds", () => {
+    SECRET_LEVEL.enemies.forEach((e) => {
+      expect(e.x).toBeGreaterThanOrEqual(0);
+      expect(e.x).toBeLessThanOrEqual(SECRET_LEVEL.width);
     });
   });
 });

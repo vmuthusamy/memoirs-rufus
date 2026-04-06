@@ -18,6 +18,7 @@
 <script src="levels/level1.js"></script>
 <script src="levels/level2.js"></script>
 <script src="levels/level3.js"></script>
+<script src="levels/secret.js"></script>
 <script src="levels/level4.js"></script>
 
 <!-- Load Kaplay game engine -->
@@ -817,6 +818,86 @@ function drawFoxSleeping() {
   return c;
 }
 
+// --- DRAW A GOLDEN PAW (secret collectible!) ---
+function drawGoldenPaw() {
+  const c = document.createElement("canvas");
+  c.width = 20;
+  c.height = 20;
+  const ctx = c.getContext("2d");
+
+  // Glow background (soft gold)
+  ctx.fillStyle = "#FFF8B0";
+  ctx.fillRect(4, 3, 12, 14);
+
+  // Main pad (big center pad)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(6, 10, 8, 6);
+  ctx.fillRect(5, 11, 10, 4);
+
+  // Toe pads (three little ones on top)
+  ctx.fillRect(4, 5, 4, 4);
+  ctx.fillRect(8, 3, 4, 4);
+  ctx.fillRect(12, 5, 4, 4);
+
+  // Shine highlights (white)
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(7, 11, 2, 2);
+  ctx.fillRect(5, 6, 1, 1);
+  ctx.fillRect(9, 4, 1, 1);
+  ctx.fillRect(13, 6, 1, 1);
+
+  // Sparkle dots at corners
+  ctx.fillStyle = "#FFF8B0";
+  ctx.fillRect(1, 1, 2, 2);
+  ctx.fillRect(17, 1, 2, 2);
+  ctx.fillRect(1, 17, 2, 2);
+  ctx.fillRect(17, 17, 2, 2);
+
+  // Outline detail (darker gold)
+  ctx.fillStyle = "#DAA520";
+  ctx.fillRect(6, 16, 8, 1);
+  ctx.fillRect(4, 9, 1, 1);
+  ctx.fillRect(15, 9, 1, 1);
+
+  return c;
+}
+
+// --- DRAW A GEM (no-death award) ---
+function drawGem() {
+  const c = document.createElement("canvas");
+  c.width = 16;
+  c.height = 16;
+  const ctx = c.getContext("2d");
+
+  // Diamond shape (cyan gem)
+  ctx.fillStyle = "#00CED1";
+  // Top triangle
+  ctx.fillRect(6, 2, 4, 2);
+  ctx.fillRect(4, 4, 8, 2);
+  // Middle (widest)
+  ctx.fillRect(2, 6, 12, 4);
+  // Bottom triangle
+  ctx.fillRect(4, 10, 8, 2);
+  ctx.fillRect(6, 12, 4, 2);
+
+  // Shine (lighter)
+  ctx.fillStyle = "#7FFFD4";
+  ctx.fillRect(5, 5, 3, 3);
+  ctx.fillRect(7, 3, 2, 2);
+
+  // White sparkle
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(6, 5, 1, 1);
+  ctx.fillRect(8, 3, 1, 1);
+
+  // Dark edge detail
+  ctx.fillStyle = "#008B8B";
+  ctx.fillRect(2, 9, 12, 1);
+  ctx.fillRect(6, 13, 4, 1);
+
+  return c;
+}
+
 // --- LOAD ALL SPRITES ---
 loadSprite("rufus", drawFoxSprite().toDataURL());
 loadSprite("rufus_spin", drawFoxSpinning().toDataURL());
@@ -835,6 +916,8 @@ loadSprite("renard", drawRenard().toDataURL());
 loadSprite("fiery", drawFirey().toDataURL());
 loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
+loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
+loadSprite("gem", drawGem().toDataURL());
 
 // ============================================
 // LEADERBOARD - saves high scores for each level
@@ -887,9 +970,60 @@ function getScores(levelIndex) {
 }
 
 // ============================================
+// COLLECTIBLES - gems (no-death) and golden paws (hidden)
+// ============================================
+
+// Load collectibles from localStorage
+function getCollectibles() {
+  try {
+    return JSON.parse(localStorage.getItem("rufus_collectibles")) || { gems: {}, paws: {} };
+  } catch (e) {
+    return { gems: {}, paws: {} };
+  }
+}
+
+// Save collectibles back to localStorage
+function saveCollectibles(data) {
+  localStorage.setItem("rufus_collectibles", JSON.stringify(data));
+}
+
+// Award a gem for completing a level without dying
+function awardGem(levelIndex) {
+  const data = getCollectibles();
+  data.gems[levelIndex] = true;
+  saveCollectibles(data);
+}
+
+// Award a golden paw (hidden collectible found!)
+function awardPaw(levelIndex) {
+  const data = getCollectibles();
+  data.paws[levelIndex] = true;
+  saveCollectibles(data);
+}
+
+// Check if player already has the gem for a level
+function hasGem(levelIndex) {
+  return getCollectibles().gems[levelIndex] === true;
+}
+
+// Check if player already has the golden paw for a level
+function hasPaw(levelIndex) {
+  return getCollectibles().paws[levelIndex] === true;
+}
+
+// Check if ALL golden paws have been collected (unlocks secret level!)
+function allPawsCollected() {
+  const data = getCollectibles();
+  for (let i = 0; i < ALL_LEVELS.length; i++) {
+    if (!data.paws[i]) return false;
+  }
+  return true;
+}
+
+// ============================================
 // NAME ENTRY SCENE - arcade-style initials!
 // ============================================
-scene("nameEntry", ({ score, levelIndex, nextScene }) => {
+scene("nameEntry", ({ score, levelIndex, nextScene, earnedGem, pawCollectedThisRun }) => {
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   // Background
@@ -986,7 +1120,7 @@ scene("nameEntry", ({ score, levelIndex, nextScene }) => {
   // Submit with Enter
   function submitScore() {
     addScore(levelIndex, name.join(""), score);
-    go(nextScene, { score, levelIndex });
+    go(nextScene, { score, levelIndex, earnedGem, pawCollectedThisRun });
   }
   onKeyPress("enter", submitScore);
 
@@ -1764,10 +1898,77 @@ scene("levelSelect", () => {
       color(255, 165, 0),
       fixed(),
     ]);
+
+    // Gem indicator (cyan diamond if earned, gray outline if not)
+    const gemEarned = hasGem(i);
+    add([
+      sprite("gem"),
+      pos(width() / 2 - 280, y - 8),
+      anchor("center"),
+      scale(1.2),
+      opacity(gemEarned ? 1 : 0.2),
+      fixed(),
+    ]);
+
+    // Golden paw indicator (gold if found, gray outline if not)
+    const pawFound = hasPaw(i);
+    add([
+      sprite("goldenPaw"),
+      pos(width() / 2 - 280, y + 12),
+      anchor("center"),
+      scale(1),
+      opacity(pawFound ? 1 : 0.2),
+      fixed(),
+    ]);
   });
 
+  // Secret level entry (only visible when all paws collected!)
+  if (allPawsCollected()) {
+    const secretY = 150 + ALL_LEVELS.length * 100;
+    const secretEntry = add([
+      rect(600, 80),
+      pos(width() / 2, secretY),
+      anchor("center"),
+      color(50, 40, 25),
+      outline(2, rgb(255, 215, 0)),
+      area(),
+      fixed(),
+    ]);
+    // Golden glow pulse
+    secretEntry.onUpdate(function() {
+      this.opacity = Math.sin(time() * 3) * 0.15 + 0.85;
+    });
+
+    secretEntry.onClick(() => go("memoir", "secret"));
+
+    add([
+      text("??? Secret Chapter ???", { size: 22 }),
+      pos(width() / 2, secretY - 15),
+      anchor("center"),
+      color(255, 215, 0),
+      fixed(),
+      { t: 0 },
+    ]).onUpdate(function() {
+      this.t += dt();
+      this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8;
+    });
+
+    add([
+      text("All golden paws collected... a new adventure awaits!", { size: 12 }),
+      pos(width() / 2, secretY + 15),
+      anchor("center"),
+      color(200, 180, 100),
+      fixed(),
+    ]);
+
+    // Golden paw icons
+    add([ sprite("goldenPaw"), pos(width() / 2 - 260, secretY), anchor("center"), scale(1.5), fixed() ]);
+    add([ sprite("goldenPaw"), pos(width() / 2 + 250, secretY), anchor("center"), scale(1.5), fixed() ]);
+  }
+
   // Bottom row: About Me and High Scores side by side
-  const bottomY = 150 + ALL_LEVELS.length * 100;
+  const hasSecretEntry = allPawsCollected();
+  const bottomY = 150 + ALL_LEVELS.length * 100 + (hasSecretEntry ? 100 : 0);
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   // "About Me" journal entry - left side
@@ -1841,7 +2042,8 @@ scene("levelSelect", () => {
 // MEMOIR SCREEN (shows before each level)
 // ============================================
 scene("memoir", (levelIndex) => {
-  const level = ALL_LEVELS[levelIndex];
+  const isSecret = (levelIndex === "secret");
+  const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
 
   add([
     rect(width(), height()),
@@ -1861,7 +2063,7 @@ scene("memoir", (levelIndex) => {
   ]);
 
   add([
-    text(`Chapter ${levelIndex + 1}`, { size: 20 }),
+    text(isSecret ? "Secret Chapter" : `Chapter ${levelIndex + 1}`, { size: 20 }),
     pos(width() / 2, 120),
     anchor("center"),
     color(200, 160, 100),
@@ -1916,13 +2118,28 @@ scene("memoir", (levelIndex) => {
 // ============================================
 // MAIN GAME
 // ============================================
-scene("game", (levelIndex, startLives, spawnPos) => {
-  const level = ALL_LEVELS[levelIndex];
+scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
+  const isSecret = (levelIndex === "secret");
+  const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
   let score = 0;
   let isSpinning = false;
-  let lives = (startLives !== undefined) ? startLives : 3;
+  let lives = isSecret ? 3 : ((startLives !== undefined) ? startLives : 3);
   let spinCooldown = 0;
   let nextExtraLife = 200;
+  let deathsThisRun = deathCount || 0;
+  let pawCollectedThisRun = false;
+
+  // Power cycling (secret level only)
+  const POWERS = ["spin", "fire", "float"];
+  let currentPowerIndex = 0;
+  let currentPower = "spin";
+  let isFloating = false;
+  let floatTimer = 0;
+  const floatDuration = 1.5;
+  let powerHUD = null;
+  let powerIcon = null;
+  let spinBtnLabel = null;
+  let spinBtnRef = null;
   // Use checkpoint spawn position if provided, otherwise level start
   const playerSpawn = spawnPos || level.playerStart;
 
@@ -1942,15 +2159,63 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     z(-10),
   ]);
 
-  // Draw some background clouds
-  for (let i = 0; i < 8; i++) {
-    add([
-      rect(rand(60, 120), rand(20, 40)),
-      pos(rand(0, level.width), rand(30, 200)),
-      color(255, 255, 255),
-      opacity(0.3),
-      z(-5),
-    ]);
+  // Draw some background clouds (or magical particles for secret level)
+  if (level.isMagical) {
+    // Magical floating sparkles across the whole sky
+    for (let i = 0; i < 30; i++) {
+      const sparkle = add([
+        rect(rand(2, 5), rand(2, 5)),
+        pos(rand(0, level.width), rand(20, 500)),
+        color(255, 215, rand(100, 255)),
+        opacity(rand(0.2, 0.6)),
+        z(-4),
+        { t: rand(0, 6.28), sparkleSpeed: rand(1, 3), driftSpeed: rand(5, 15) },
+      ]);
+      sparkle.onUpdate(() => {
+        sparkle.t += dt() * sparkle.sparkleSpeed;
+        sparkle.opacity = Math.sin(sparkle.t) * 0.25 + 0.35;
+        sparkle.pos.y += Math.sin(sparkle.t * 0.5) * sparkle.driftSpeed * dt();
+      });
+    }
+    // Purple/gold gradient bands in the sky
+    for (let sy = 0; sy < 5; sy++) {
+      const bandY = sy * 120;
+      const r = 140 + sy * 20;
+      const g = 100 - sy * 10;
+      const b = 180 - sy * 20;
+      add([
+        rect(level.width, 120),
+        pos(0, bandY),
+        color(r, g, b),
+        opacity(0.15),
+        z(-8),
+      ]);
+    }
+    // Stars twinkling in the twilight
+    for (let i = 0; i < 20; i++) {
+      const star = add([
+        rect(2, 2),
+        pos(rand(0, level.width), rand(0, 250)),
+        color(255, 255, rand(200, 255)),
+        opacity(rand(0.3, 0.7)),
+        z(-6),
+        { t: rand(0, 6.28) },
+      ]);
+      star.onUpdate(() => {
+        star.t += dt() * rand(1, 3);
+        star.opacity = Math.sin(star.t) * 0.3 + 0.4;
+      });
+    }
+  } else {
+    for (let i = 0; i < 8; i++) {
+      add([
+        rect(rand(60, 120), rand(20, 40)),
+        pos(rand(0, level.width), rand(30, 200)),
+        color(255, 255, 255),
+        opacity(0.3),
+        z(-5),
+      ]);
+    }
   }
 
   // Ground
@@ -1958,7 +2223,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     rect(level.width, 40),
     pos(0, height() - 40),
     color(...level.groundColor),
-    outline(2, isGym ? rgb(130, 95, 45) : rgb(0, 100, 0)),
+    outline(2, isGym ? rgb(130, 95, 45) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
     area(),
     body({ isStatic: true }),
     "ground",
@@ -1975,6 +2240,32 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     // Wood plank grain on the floor
     for (let gx = 0; gx < level.width; gx += rand(30, 60)) {
       add([ rect(rand(20, 40), 2), pos(gx, height() - 40 + rand(5, 30)), color(140, 105, 45), opacity(0.3), z(-1) ]);
+    }
+  } else if (isSecret) {
+    // Magical golden sparkle tufts!
+    for (let gx = 0; gx < level.width; gx += rand(25, 55)) {
+      add([
+        rect(3, rand(6, 12)),
+        pos(gx, height() - 40 - rand(4, 10)),
+        color(255, 215, rand(50, 150)),
+        opacity(rand(0.4, 0.8)),
+        z(-1),
+      ]);
+    }
+    // Floating sparkle particles above ground
+    for (let gx = 0; gx < level.width; gx += rand(80, 160)) {
+      const groundSparkle = add([
+        rect(2, 2),
+        pos(gx, height() - 50 - rand(0, 20)),
+        color(255, 230, rand(150, 255)),
+        opacity(0.4),
+        z(-1),
+        { t: rand(0, 6.28) },
+      ]);
+      groundSparkle.onUpdate(() => {
+        groundSparkle.t += dt() * 2;
+        groundSparkle.opacity = Math.sin(groundSparkle.t) * 0.2 + 0.3;
+      });
     }
   } else {
     // Draw grass tufts on ground (not in gym!)
@@ -2188,6 +2479,94 @@ scene("game", (levelIndex, startLives, spawnPos) => {
         // Flat top cap
         add([ rect(p.width, 4), pos(p.x, p.y - 2), color(150, 90, 60), z(1) ]);
       }
+    } else if (isSecret) {
+      // Magical platforms! Rainbow bridges, clouds, crystals, moonbeams, stars
+      const magicType = idx % 5;
+
+      if (magicType === 0) {
+        // RAINBOW BRIDGE — multicolored stripes with shimmer
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(200, 100, 150),
+          outline(2, rgb(180, 80, 130)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        const rainbowColors = [[255,80,80],[255,165,0],[255,255,80],[80,220,80],[80,150,255],[180,80,255]];
+        const stripeH = Math.max(2, Math.floor(p.height / rainbowColors.length));
+        rainbowColors.forEach((c, i) => {
+          add([rect(p.width - 4, stripeH), pos(p.x + 2, p.y + i * stripeH), color(...c), opacity(0.8), z(1)]);
+        });
+        add([rect(p.width - 8, 3), pos(p.x + 4, p.y + 2), color(255, 255, 255), opacity(0.4), z(2)]);
+
+      } else if (magicType === 1) {
+        // FLUFFY CLOUD — white/light blue with puffy top
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(230, 240, 255),
+          outline(2, rgb(200, 215, 240)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        for (let cx = p.x + 10; cx < p.x + p.width - 10; cx += 18) {
+          const puffSize = rand(14, 22);
+          add([rect(puffSize, puffSize * 0.7), pos(cx, p.y - puffSize * 0.3), color(240, 248, 255), opacity(0.9), z(0)]);
+        }
+        add([rect(p.width - 10, p.height - 8), pos(p.x + 5, p.y + 4), color(245, 250, 255), opacity(0.5), z(1)]);
+
+      } else if (magicType === 2) {
+        // CRYSTAL PLATFORM — translucent purple, sparkly facets
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(150, 120, 220),
+          opacity(0.85),
+          outline(2, rgb(180, 150, 255)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        add([rect(p.width * 0.4, p.height - 6), pos(p.x + 4, p.y + 3), color(180, 160, 240), opacity(0.6), z(1)]);
+        add([rect(p.width * 0.3, p.height - 6), pos(p.x + p.width * 0.5, p.y + 3), color(200, 180, 255), opacity(0.5), z(1)]);
+        for (let i = 0; i < 3; i++) {
+          add([rect(2, 2), pos(p.x + rand(5, p.width - 5), p.y + rand(3, p.height - 3)), color(255, 255, 255), opacity(0.8), z(2)]);
+        }
+
+      } else if (magicType === 3) {
+        // MOONBEAM PATH — silver/gold with soft glow
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(210, 200, 170),
+          outline(2, rgb(190, 180, 140)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        add([rect(p.width - 4, 4), pos(p.x + 2, p.y + 1), color(240, 235, 210), opacity(0.7), z(1)]);
+        add([rect(p.width + 10, 8), pos(p.x - 5, p.y + p.height), color(255, 245, 200), opacity(0.2), z(-1)]);
+        add([rect(3, 3), pos(p.x + p.width * 0.3, p.y + 5), color(255, 255, 230), opacity(0.6), z(2)]);
+        add([rect(3, 3), pos(p.x + p.width * 0.7, p.y + 5), color(255, 255, 230), opacity(0.6), z(2)]);
+
+      } else {
+        // STAR PLATFORM — golden with animated twinkling
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(220, 180, 50),
+          outline(2, rgb(180, 140, 30)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        add([rect(p.width - 6, 3), pos(p.x + 3, p.y + 3), color(255, 220, 80), opacity(0.6), z(1)]);
+        for (let i = 0; i < 2; i++) {
+          const sparkle = add([
+            rect(3, 3),
+            pos(p.x + rand(8, p.width - 8), p.y + rand(4, p.height - 4)),
+            color(255, 255, 200), opacity(0.5), z(2),
+            { t: rand(0, 6.28) },
+          ]);
+          sparkle.onUpdate(() => {
+            sparkle.t += dt() * 3;
+            sparkle.opacity = Math.sin(sparkle.t) * 0.3 + 0.5;
+          });
+        }
+      }
     } else {
       // Default platforms — books in library, wood/earth elsewhere
       add([
@@ -2237,6 +2616,26 @@ scene("game", (levelIndex, startLives, spawnPos) => {
   // Bob the treats up and down
   onUpdate("treat", (t) => {
     t.pos.y += Math.sin(time() * 3 + t.bobOffset) * 0.3;
+  });
+
+  // --- GOLDEN PAW (secret collectible!) ---
+  if (level.secretPaw && !hasPaw(levelIndex)) {
+    add([
+      sprite("goldenPaw"),
+      pos(level.secretPaw.x, level.secretPaw.y),
+      area(),
+      anchor("center"),
+      scale(1.5),
+      z(2),
+      "goldenPaw",
+      { collected: false, bobOffset: rand(0, 6.28) },
+    ]);
+  }
+
+  // Bob and sparkle the golden paw
+  onUpdate("goldenPaw", (p) => {
+    p.pos.y += Math.sin(time() * 2 + p.bobOffset) * 0.5;
+    p.angle = Math.sin(time() * 3) * 8;
   });
 
   // --- CRATES ---
@@ -2506,7 +2905,8 @@ scene("game", (levelIndex, startLives, spawnPos) => {
       area(),
       "touchBtn",
     ]);
-    add([
+    spinBtnRef = btnSpin;
+    spinBtnLabel = add([
       text("SPIN", { size: 22 }),
       pos(width() - 50, height() - 55),
       anchor("center"),
@@ -2514,6 +2914,29 @@ scene("game", (levelIndex, startLives, spawnPos) => {
       fixed(),
       z(201),
     ]);
+
+    // Swap power button (secret level only, sits above the spin button)
+    if (isSecret) {
+      add([
+        rect(90, 45),
+        pos(width() - 95, height() - 150),
+        color(0, 0, 0),
+        opacity(0.5),
+        outline(2, rgb(255, 215, 0)),
+        fixed(),
+        z(200),
+        area(),
+        "touchBtn",
+      ]);
+      add([
+        text("SWAP", { size: 16 }),
+        pos(width() - 50, height() - 128),
+        anchor("center"),
+        color(255, 215, 0),
+        fixed(),
+        z(201),
+      ]);
+    }
 
     // --- MULTI-TOUCH INPUT ---
     // Raw touch events with proper letterbox coordinate conversion.
@@ -2574,23 +2997,19 @@ scene("game", (levelIndex, startLives, spawnPos) => {
         else if (g.x > gameW - 195 && g.x < gameW - 105 && g.y > gameH - 100) {
           if (rufus.isGrounded()) rufus.jump(jumpForce);
         }
-        // Spin button area
+        // Spin/Power button area
         else if (g.x > gameW - 95 && g.y > gameH - 100) {
-          if (!rufus.isSpinning && spinCooldown <= 0) {
-            rufus.isSpinning = true;
-            rufus.spinTimer = tailSpinDuration;
-            rufus.use(sprite("rufus_spin"));
-            rufus.use(scale(2));
-            spinCooldown = 0.3;
-            for (let i = 0; i < 6; i++) {
-              add([
-                rect(4, 4),
-                pos(rufus.pos.x + rand(-30, 30), rufus.pos.y + rand(-20, 20)),
-                color(255, 165, 0), opacity(0.8), lifespan(0.3),
-                move(rand(0, 360), rand(50, 150)), z(9),
-              ]);
-            }
+          if (isSecret) {
+            if (currentPower === "spin") doTailSpin();
+            else if (currentPower === "fire") fireBreath();
+            else if (currentPower === "float") activateFloat();
+          } else {
+            doTailSpin();
           }
+        }
+        // Swap power button (secret level only, above the spin button)
+        else if (isSecret && g.x > gameW - 95 && g.y > gameH - 155 && g.y < gameH - 105) {
+          cyclePower();
         }
       }
     }, { passive: false });
@@ -2625,15 +3044,16 @@ scene("game", (levelIndex, startLives, spawnPos) => {
   }
 
   // --- TAIL SPIN ATTACK ---
-  onKeyPress("space", () => {
+  // --- POWER FUNCTIONS (secret level) ---
+
+  // Tail spin (shared between normal and secret)
+  function doTailSpin() {
     if (!rufus.isSpinning && spinCooldown <= 0) {
       rufus.isSpinning = true;
       rufus.spinTimer = tailSpinDuration;
       rufus.use(sprite("rufus_spin"));
       rufus.use(scale(2));
       spinCooldown = 0.3;
-
-      // Spin effect - create whirl particles
       for (let i = 0; i < 6; i++) {
         add([
           rect(4, 4),
@@ -2646,13 +3066,162 @@ scene("game", (levelIndex, startLives, spawnPos) => {
         ]);
       }
     }
+  }
+
+  // Fire breath (secret level only)
+  function fireBreath() {
+    if (spinCooldown > 0) return;
+    spinCooldown = 0.5;
+    const dir = rufus.flipX ? -1 : 1;
+
+    // Fire particles from Rufus
+    for (let i = 0; i < 6; i++) {
+      add([
+        rect(rand(4, 8), rand(4, 8)),
+        pos(rufus.pos.x + dir * 25, rufus.pos.y - 10 + rand(-8, 8)),
+        color(255, rand(50, 150), 0),
+        opacity(0.9),
+        lifespan(0.5),
+        move(dir > 0 ? 0 : 180, rand(150, 280)),
+        z(9),
+      ]);
+    }
+
+    // Use onUpdate to check proximity instead of area() collisions
+    // This avoids freezes from colliding with platforms/ground/etc.
+    const fireball = add([
+      rect(12, 8),
+      pos(rufus.pos.x + dir * 30, rufus.pos.y - 5),
+      color(255, 100, 0),
+      opacity(0.9),
+      lifespan(0.6),
+      z(9),
+      "fireball",
+      { dir: dir, hit: false },
+    ]);
+
+    fireball.onUpdate(() => {
+      if (!fireball.exists() || fireball.hit) return;
+      // Move the fireball manually
+      fireball.pos.x += dir * 300 * dt();
+
+      // Check enemy hits by proximity
+      const enemies = get("enemy");
+      for (const enemy of enemies) {
+        if (!enemy.exists()) continue;
+        const dx = Math.abs(fireball.pos.x - enemy.pos.x);
+        const dy = Math.abs(fireball.pos.y - enemy.pos.y);
+        if (dx < 25 && dy < 25) {
+          fireball.hit = true;
+          // Save position before destroying
+          const hitX = enemy.pos.x;
+          const hitY = enemy.pos.y;
+          if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
+            enemy.isDisarmed = true;
+            enemy.use(sprite("disarmed"));
+          } else {
+            destroyEnemy(enemy);
+          }
+          for (let j = 0; j < 4; j++) {
+            add([
+              rect(rand(3, 6), rand(3, 6)),
+              pos(hitX, hitY),
+              color(255, rand(100, 200), 0),
+              opacity(1),
+              lifespan(0.3),
+              move(rand(0, 360), rand(80, 150)),
+              z(5),
+            ]);
+          }
+          destroy(fireball);
+          return;
+        }
+      }
+
+      // Check crate hits by proximity
+      const crates = get("destructible");
+      for (const crate of crates) {
+        if (!crate.exists()) continue;
+        const dx = Math.abs(fireball.pos.x - crate.pos.x);
+        const dy = Math.abs(fireball.pos.y - crate.pos.y);
+        if (dx < 25 && dy < 25) {
+          fireball.hit = true;
+          const hitX = crate.pos.x;
+          const hitY = crate.pos.y;
+          for (let i = 0; i < 6; i++) {
+            add([
+              rect(rand(4, 8), rand(4, 8)),
+              pos(hitX, hitY),
+              color(255, rand(80, 160), 0),
+              opacity(1),
+              lifespan(0.4),
+              move(rand(0, 360), rand(100, 250)),
+              z(5),
+            ]);
+          }
+          score += 25;
+          scoreText.text = `Treats: ${score}`;
+          destroy(crate);
+          destroy(fireball);
+          return;
+        }
+      }
+    });
+  }
+
+  // Float/glide (secret level only)
+  function activateFloat() {
+    if (isFloating || rufus.isGrounded()) return;
+    isFloating = true;
+    floatTimer = floatDuration;
+  }
+
+  // Advance to next power (secret level only)
+  function cyclePower() {
+    currentPowerIndex = (currentPowerIndex + 1) % POWERS.length;
+    currentPower = POWERS[currentPowerIndex];
+    updatePowerHUD();
+  }
+
+  // Update power HUD display
+  function updatePowerHUD() {
+    if (!powerIcon || !powerIcon.exists()) return;
+    const names = { spin: "SPIN", fire: "FIRE", float: "FLOAT" };
+    const colors = { spin: [255, 165, 0], fire: [255, 80, 0], float: [150, 200, 255] };
+    powerIcon.text = `Power: ${names[currentPower]}`;
+    powerIcon.color = rgb(...colors[currentPower]);
+    if (powerHUD && powerHUD.exists()) {
+      powerHUD.color = rgb(colors[currentPower][0] * 0.15, colors[currentPower][1] * 0.15, colors[currentPower][2] * 0.15);
+    }
+    // Update touch button label
+    if (spinBtnLabel && spinBtnLabel.exists()) {
+      const labels = { spin: "SPIN", fire: "FIRE", float: "GLIDE" };
+      spinBtnLabel.text = labels[currentPower];
+      spinBtnLabel.color = rgb(...colors[currentPower]);
+    }
+  }
+
+  // --- SPACE KEY HANDLER ---
+  // Space: use current power
+  onKeyPress("space", () => {
+    if (isSecret) {
+      if (currentPower === "spin") doTailSpin();
+      else if (currentPower === "fire") fireBreath();
+      else if (currentPower === "float") activateFloat();
+    } else {
+      doTailSpin();
+    }
   });
 
-  // Spin timer
+  // Tab: cycle to next power (secret level only)
+  onKeyPress("tab", () => {
+    if (isSecret) cyclePower();
+  });
+
+  // Spin timer and float timer
   rufus.onUpdate(() => {
     if (rufus.isSpinning) {
       rufus.spinTimer -= dt();
-      // Rotate during spin
       rufus.angle += 1200 * dt();
       if (rufus.spinTimer <= 0) {
         rufus.isSpinning = false;
@@ -2664,6 +3233,29 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     if (spinCooldown > 0) {
       spinCooldown -= dt();
     }
+    // Float mechanic
+    if (isFloating) {
+      floatTimer -= dt();
+      // Slow descent by capping fall speed
+      if (rufus.vel && rufus.vel.y > 40) {
+        rufus.vel.y = 40;
+      }
+      // Sparkle trail while floating
+      if (Math.random() < 0.3) {
+        add([
+          rect(rand(2, 4), rand(2, 4)),
+          pos(rufus.pos.x + rand(-15, 15), rufus.pos.y + rand(10, 25)),
+          color(200, 200, 255),
+          opacity(0.7),
+          lifespan(0.3),
+          move(270, rand(30, 80)),
+          z(9),
+        ]);
+      }
+      if (floatTimer <= 0 || rufus.isGrounded()) {
+        isFloating = false;
+      }
+    }
   });
 
   // --- COLLECT TREATS ---
@@ -2673,8 +3265,8 @@ scene("game", (levelIndex, startLives, spawnPos) => {
       score += 10;
       scoreText.text = `Treats: ${score}`;
 
-      // Extra life every 200 points! (max 5 lives)
-      if (score >= nextExtraLife && lives < 5) {
+      // Extra life every 200 points! (max 5 lives, not in secret level)
+      if (!isSecret && score >= nextExtraLife && lives < 5) {
         lives++;
         nextExtraLife += 200;
         livesText.text = `Lives: ${"🦊".repeat(lives)}`;
@@ -2704,6 +3296,43 @@ scene("game", (levelIndex, startLives, spawnPos) => {
         ]);
       }
       destroy(treat);
+    }
+  });
+
+  // --- COLLECT GOLDEN PAW ---
+  rufus.onCollide("goldenPaw", (paw) => {
+    if (!paw.collected) {
+      paw.collected = true;
+      pawCollectedThisRun = true;
+      awardPaw(levelIndex);
+
+      // Big gold sparkle burst!
+      for (let i = 0; i < 15; i++) {
+        add([
+          rect(rand(3, 6), rand(3, 6)),
+          pos(paw.pos),
+          color(255, 215, 0),
+          opacity(1),
+          lifespan(0.8),
+          move(rand(0, 360), rand(80, 250)),
+          z(100),
+        ]);
+      }
+
+      // "GOLDEN PAW!" popup
+      const popup = add([
+        text("GOLDEN PAW!", { size: 32 }),
+        pos(paw.pos.x, paw.pos.y - 40),
+        anchor("center"),
+        color(255, 215, 0),
+        outline(2, rgb(150, 100, 0)),
+        opacity(1),
+        lifespan(2),
+        z(100),
+      ]);
+      popup.onUpdate(() => { if (popup.exists()) popup.pos.y -= 25 * dt(); });
+
+      destroy(paw);
     }
   });
 
@@ -2853,17 +3482,18 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     if (isInvincible) return;
     isInvincible = true;
     lives--;
+    deathsThisRun++;
 
     if (lives <= 0) {
-      // Check if this score makes the leaderboard!
-      if (isHighScore(levelIndex, score)) {
+      // Check if this score makes the leaderboard! (not for secret level)
+      if (!isSecret && isHighScore(levelIndex, score)) {
         go("nameEntry", { score, levelIndex, nextScene: "gameOver" });
       } else {
         go("gameOver", { score, levelIndex });
       }
     } else {
       // Restart level cleanly — spawn at checkpoint if one was activated
-      go("game", levelIndex, lives, lastCheckpoint || null);
+      go("game", levelIndex, lives, lastCheckpoint || null, deathsThisRun);
     }
   }
 
@@ -2876,11 +3506,22 @@ scene("game", (levelIndex, startLives, spawnPos) => {
 
   // --- REACH EXIT ---
   rufus.onCollide("exit", () => {
+    // Award gem if player didn't die (not for secret level)
+    const earnedGem = (deathsThisRun === 0 && !isSecret);
+    if (earnedGem) awardGem(levelIndex);
+
+    // Secret level goes to its own celebration scene
+    if (isSecret) {
+      go("secretComplete", { score });
+      return;
+    }
+
+    const payload = { score, levelIndex, earnedGem, pawCollectedThisRun };
     // Check if this score makes the leaderboard!
     if (isHighScore(levelIndex, score)) {
-      go("nameEntry", { score, levelIndex, nextScene: "levelComplete" });
+      go("nameEntry", { ...payload, nextScene: "levelComplete" });
     } else {
-      go("levelComplete", { score, levelIndex });
+      go("levelComplete", payload);
     }
   });
 
@@ -3086,6 +3727,35 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     }
   });
 
+  // --- NPC FRIENDS (Secret level: all friends join!) ---
+  if (level.npcFriends) {
+    const friendSprites = { marthina: "marthina", renard: "renard", fiery: "fiery" };
+    const friendOffsets = { marthina: -70, renard: -140, fiery: -210 };
+    level.npcFriends.forEach((name) => {
+      const npc = add([
+        sprite(friendSprites[name]),
+        pos(playerSpawn.x + friendOffsets[name], playerSpawn.y || 0),
+        anchor("center"),
+        scale(2),
+        z(9),
+        "friendNPC",
+        { friendName: name },
+      ]);
+    });
+
+    // Friends follow Rufus with a lag (each at different distance)
+    let friendIdx = 0;
+    onUpdate("friendNPC", (f) => {
+      if (!rufus.exists()) return;
+      const offset = f.friendName === "marthina" ? -70 : f.friendName === "renard" ? -140 : -210;
+      const targetX = rufus.pos.x + offset;
+      const targetY = rufus.pos.y;
+      f.pos.x += (targetX - f.pos.x) * 2.5 * dt();
+      f.pos.y += (targetY - f.pos.y) * 2.5 * dt();
+      f.flipX = rufus.flipX;
+    });
+  }
+
   // --- HUD (Heads Up Display) ---
   const scoreText = add([
     text(`Treats: ${score}`, { size: 20 }),
@@ -3106,7 +3776,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
   ]);
 
   const levelText = add([
-    text(`Ch.${levelIndex + 1}: ${level.name}`, { size: 16 }),
+    text(isSecret ? "SECRET LEVEL" : `Ch.${levelIndex + 1}: ${level.name}`, { size: 16 }),
     pos(width() - 20, 20),
     anchor("topright"),
     color(255, 200, 100),
@@ -3115,9 +3785,30 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     z(100),
   ]);
 
+  // Power indicator (secret level only)
+  if (isSecret) {
+    powerHUD = add([
+      rect(130, 28),
+      pos(20, 80),
+      color(40, 12, 0),
+      opacity(0.6),
+      outline(2, rgb(255, 165, 0)),
+      fixed(),
+      z(100),
+    ]);
+    powerIcon = add([
+      text("Power: SPIN", { size: 14 }),
+      pos(26, 86),
+      color(255, 165, 0),
+      outline(1, rgb(0, 0, 0)),
+      fixed(),
+      z(101),
+    ]);
+  }
+
   // Controls hint (fades away)
   const hint = add([
-    text("Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
+    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap Power" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
     pos(width() / 2, height() - 30),
     anchor("center"),
     color(255, 255, 255),
@@ -3134,7 +3825,7 @@ scene("game", (levelIndex, startLives, spawnPos) => {
 // ============================================
 // LEVEL COMPLETE
 // ============================================
-scene("levelComplete", ({ score, levelIndex }) => {
+scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) => {
   const level = ALL_LEVELS[levelIndex];
   const nextLevel = levelIndex + 1;
   const isTouchLC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
@@ -3252,6 +3943,69 @@ scene("levelComplete", ({ score, levelIndex }) => {
     fixed(),
   ]);
 
+  // Gem and paw awards
+  let awardY = 470;
+  if (earnedGem) {
+    add([
+      text("GEM EARNED! No deaths!", { size: 18 }),
+      pos(width() / 2, awardY),
+      anchor("center"),
+      color(0, 206, 209),
+      fixed(),
+    ]);
+    // Gem sparkle
+    add([ sprite("gem"), pos(width() / 2 - 130, awardY), anchor("center"), scale(2), fixed() ]);
+    awardY += 25;
+  } else if (hasGem(levelIndex)) {
+    add([
+      text("Gem: Collected", { size: 14 }),
+      pos(width() / 2, awardY),
+      anchor("center"),
+      color(100, 150, 150),
+      opacity(0.6),
+      fixed(),
+    ]);
+    awardY += 25;
+  }
+
+  if (pawCollectedThisRun) {
+    add([
+      text("GOLDEN PAW FOUND!", { size: 18 }),
+      pos(width() / 2, awardY),
+      anchor("center"),
+      color(255, 215, 0),
+      fixed(),
+    ]);
+    add([ sprite("goldenPaw"), pos(width() / 2 - 120, awardY), anchor("center"), scale(2), fixed() ]);
+    awardY += 25;
+  } else if (hasPaw(levelIndex)) {
+    add([
+      text("Golden Paw: Found", { size: 14 }),
+      pos(width() / 2, awardY),
+      anchor("center"),
+      color(150, 130, 80),
+      opacity(0.6),
+      fixed(),
+    ]);
+    awardY += 25;
+  }
+
+  // Check if all paws just got collected — secret unlock!
+  if (pawCollectedThisRun && allPawsCollected()) {
+    const secretMsg = add([
+      text("Something secret has been unlocked...", { size: 16 }),
+      pos(width() / 2, awardY + 5),
+      anchor("center"),
+      color(255, 215, 0),
+      fixed(),
+      { t: 0 },
+    ]);
+    secretMsg.onUpdate(function() {
+      this.t += dt();
+      this.opacity = Math.sin(this.t * 2) * 0.3 + 0.7;
+    });
+  }
+
   // Full screen tap target
   const tapTarget = add([
     rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
@@ -3326,8 +4080,9 @@ scene("gameOver", ({ score, levelIndex }) => {
   ]);
 
   // Title
+  const isSecretGO = (levelIndex === "secret");
   add([
-    text("Nap Time...", { size: 48 }),
+    text(isSecretGO ? "Party's Over..." : "Nap Time...", { size: 48 }),
     pos(width() / 2, 100),
     anchor("center"),
     color(150, 130, 200),
@@ -3423,6 +4178,119 @@ scene("gameOver", ({ score, levelIndex }) => {
   retryBtn.onClick(() => go("memoir", levelIndex));
 
   onKeyPress("enter", () => go("memoir", levelIndex));
+  onKeyPress("escape", () => go("levelSelect"));
+});
+
+// ============================================
+// SECRET LEVEL COMPLETE - The Ultimate Fox Party!
+// ============================================
+scene("secretComplete", ({ score }) => {
+  const isTouchSC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // Warm golden background
+  add([rect(width(), height()), pos(0, 0), color(255, 230, 150), fixed()]);
+
+  // Confetti particles
+  loop(0.2, () => {
+    const colors = [[255,100,100],[100,100,255],[100,255,100],[255,215,0],[255,150,255]];
+    const c = colors[Math.floor(rand(0, colors.length))];
+    add([
+      rect(rand(4, 10), rand(4, 10)),
+      pos(rand(0, width()), -10),
+      color(...c),
+      opacity(0.9),
+      lifespan(3),
+      move(rand(70, 110), rand(60, 150)),
+      fixed(),
+    ]);
+  });
+
+  // Title
+  add([
+    text("The Ultimate Fox Party!", { size: 40 }),
+    pos(width() / 2, 60),
+    anchor("center"),
+    color(200, 80, 0),
+    fixed(),
+  ]);
+
+  // All four friends bouncing together!
+  const characters = [
+    { sprite: "rufus", x: width() / 2 - 120, phase: 0 },
+    { sprite: "marthina", x: width() / 2 - 40, phase: 1 },
+    { sprite: "renard", x: width() / 2 + 40, phase: 2 },
+    { sprite: "fiery", x: width() / 2 + 120, phase: 3 },
+  ];
+
+  characters.forEach((ch) => {
+    const spr = add([
+      sprite(ch.sprite),
+      pos(ch.x, 220),
+      anchor("center"),
+      scale(4),
+      fixed(),
+    ]);
+    spr.onUpdate(() => {
+      spr.pos.y = 220 + Math.abs(Math.sin(time() * 3 + ch.phase)) * -25;
+      spr.angle = Math.sin(time() * 2 + ch.phase) * 8;
+    });
+  });
+
+  // Party message
+  add([
+    text("Rufus and all his friends are together at last!", { size: 16, width: 500 }),
+    pos(width() / 2, 340),
+    anchor("center"),
+    color(120, 60, 0),
+    fixed(),
+  ]);
+
+  add([
+    text("The best adventure is the one with friends by your side.", { size: 14, width: 500 }),
+    pos(width() / 2, 380),
+    anchor("center"),
+    color(150, 100, 50),
+    fixed(),
+  ]);
+
+  // Score
+  add([
+    text(`Party treats collected: ${score}`, { size: 22 }),
+    pos(width() / 2, 430),
+    anchor("center"),
+    color(200, 100, 0),
+    fixed(),
+  ]);
+
+  // Special badge
+  add([
+    text("SECRET LEVEL COMPLETE!", { size: 28 }),
+    pos(width() / 2, 480),
+    anchor("center"),
+    color(255, 215, 0),
+    outline(2, rgb(150, 100, 0)),
+    fixed(),
+    { t: 0 },
+  ]).onUpdate(function() {
+    this.t += dt();
+    this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8;
+  });
+
+  // Back button
+  add([
+    text(isTouchSC ? "Tap to return to Journal" : "Press ENTER to return to Journal", { size: 16 }),
+    pos(width() / 2, 540),
+    anchor("center"),
+    color(180, 120, 50),
+    fixed(),
+    { t: 0 },
+  ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 3) * 0.3 + 0.7; });
+
+  const tapTarget = add([
+    rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
+  ]);
+  tapTarget.onClick(() => go("levelSelect"));
+  onKeyPress("enter", () => go("levelSelect"));
   onKeyPress("escape", () => go("levelSelect"));
 });
 

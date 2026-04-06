@@ -16,6 +16,9 @@ const LEVEL_2 = {
   playerStart: { x: 100, y: 0 },
   exit: { x: 4650, y: 300 },
 
+  // Hidden golden paw! Behind the start — who goes LEFT at the beginning?
+  secretPaw: { x: 30, y: 530 },
+
   platforms: [
     // Opening section - teaches jump-disarm with space to breathe
     { x: 300, y: 450, width: 180, height: 30 },

@@ -19,6 +19,10 @@ const LEVEL_4 = {
   playerStart: { x: 100, y: 0 },
   exit: { x: 5850, y: 300 },
 
+  // Hidden golden paw! Past the exit flag — who keeps going when the exit is RIGHT THERE?
+  // Exit is at x:5850, paw is further right — you have to ignore the exit!
+  secretPaw: { x: 5950, y: 530 },
+
   // Checkpoints
   checkpoints: [
     { x: 1900, y: 560 },   // Before the swarm

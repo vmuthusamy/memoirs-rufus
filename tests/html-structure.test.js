@@ -230,10 +230,11 @@ describe("Combat system", () => {
     expect(htmlContent).toContain('go("game", levelIndex, lives');
   });
 
-  test("game scene accepts starting lives and spawn position", () => {
-    expect(htmlContent).toContain("scene(\"game\", (levelIndex, startLives, spawnPos)");
+  test("game scene accepts starting lives, spawn position, and death count", () => {
+    expect(htmlContent).toContain("scene(\"game\", (levelIndex, startLives, spawnPos, deathCount)");
     expect(htmlContent).toContain("startLives !== undefined");
     expect(htmlContent).toContain("playerSpawn");
+    expect(htmlContent).toContain("deathsThisRun");
   });
 
   test("disarmed enemies do not damage Rufus", () => {
@@ -324,11 +325,12 @@ describe("Touch controls", () => {
     expect(htmlContent).toContain('"SPIN"');
   });
 
-  test("touch spin triggers the same spin mechanics as keyboard", () => {
-    // Count occurrences of spin activation
-    const spinActivations = htmlContent.match(/rufus\.isSpinning = true/g);
-    // Should appear at least twice: once for keyboard, once for touch
-    expect(spinActivations.length).toBeGreaterThanOrEqual(2);
+  test("touch and keyboard both use doTailSpin function", () => {
+    // The refactored code uses a shared doTailSpin() function
+    expect(htmlContent).toContain("function doTailSpin()");
+    // Both keyboard and touch handlers call it
+    const doTailSpinCalls = htmlContent.match(/doTailSpin\(\)/g);
+    expect(doTailSpinCalls.length).toBeGreaterThanOrEqual(3);
   });
 
   test("shows touch-friendly text on touch devices", () => {
@@ -592,5 +594,198 @@ describe("File integrity", () => {
     expect(
       fs.existsSync(path.join(__dirname, "..", "levels", "README.md"))
     ).toBe(true);
+  });
+
+  test("secret.js exists and is valid JS", () => {
+    const code = fs.readFileSync(
+      path.join(__dirname, "..", "levels", "secret.js"),
+      "utf-8"
+    );
+    expect(() => new Function(code)).not.toThrow();
+  });
+
+  test("template.js exists", () => {
+    expect(
+      fs.existsSync(path.join(__dirname, "..", "levels", "template.js"))
+    ).toBe(true);
+  });
+});
+
+// ============================================
+// COLLECTIBLES SYSTEM (gems + golden paws)
+// ============================================
+describe("Collectibles system", () => {
+  test("has localStorage collectibles functions", () => {
+    expect(htmlContent).toContain("function getCollectibles()");
+    expect(htmlContent).toContain("function saveCollectibles(");
+    expect(htmlContent).toContain("function awardGem(");
+    expect(htmlContent).toContain("function awardPaw(");
+    expect(htmlContent).toContain("function hasGem(");
+    expect(htmlContent).toContain("function hasPaw(");
+    expect(htmlContent).toContain("function allPawsCollected()");
+  });
+
+  test("has golden paw sprite", () => {
+    expect(htmlContent).toContain("function drawGoldenPaw()");
+    expect(htmlContent).toContain('loadSprite("goldenPaw"');
+  });
+
+  test("has gem sprite", () => {
+    expect(htmlContent).toContain("function drawGem()");
+    expect(htmlContent).toContain('loadSprite("gem"');
+  });
+
+  test("golden paw spawning checks if already collected", () => {
+    expect(htmlContent).toContain("!hasPaw(levelIndex)");
+  });
+
+  test("golden paw collection handler exists", () => {
+    expect(htmlContent).toContain('onCollide("goldenPaw"');
+    expect(htmlContent).toContain("awardPaw(levelIndex)");
+  });
+
+  test("gem is awarded on no-death completion", () => {
+    expect(htmlContent).toContain("deathsThisRun === 0");
+    expect(htmlContent).toContain("awardGem(levelIndex)");
+  });
+
+  test("death counter is threaded through respawns", () => {
+    expect(htmlContent).toContain("deathsThisRun++");
+    expect(htmlContent).toMatch(/go\("game",\s*levelIndex,\s*lives,.*deathsThisRun\)/);
+  });
+
+  test("level complete shows gem and paw awards", () => {
+    expect(htmlContent).toContain("GEM EARNED!");
+    expect(htmlContent).toContain("GOLDEN PAW FOUND!");
+  });
+
+  test("secret level unlock message on all paws collected", () => {
+    expect(htmlContent).toContain("Something secret has been unlocked");
+    expect(htmlContent).toContain("allPawsCollected()");
+  });
+
+  test("level select shows gem and paw indicators", () => {
+    expect(htmlContent).toContain("hasGem(i)");
+    expect(htmlContent).toContain("hasPaw(i)");
+  });
+});
+
+// ============================================
+// SECRET LEVEL
+// ============================================
+describe("Secret level", () => {
+  test("secret level is loaded but not in ALL_LEVELS", () => {
+    expect(htmlContent).toContain('src="levels/secret.js"');
+    expect(htmlContent).not.toMatch(/ALL_LEVELS\s*=.*SECRET_LEVEL/);
+  });
+
+  test("game scene handles secret level index", () => {
+    expect(htmlContent).toContain('levelIndex === "secret"');
+    expect(htmlContent).toContain("isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex]");
+  });
+
+  test("secret level disables extra lives", () => {
+    expect(htmlContent).toContain("!isSecret && score >= nextExtraLife");
+  });
+
+  test("secret level skips leaderboard on death", () => {
+    expect(htmlContent).toContain("!isSecret && isHighScore");
+  });
+
+  test("secret level routes to secretComplete on exit", () => {
+    expect(htmlContent).toContain('go("secretComplete"');
+  });
+
+  test("has secretComplete scene", () => {
+    expect(htmlContent).toContain('scene("secretComplete"');
+  });
+
+  test("has nameEntry scene", () => {
+    expect(htmlContent).toContain('scene("nameEntry"');
+  });
+
+  test("has leaderboard scene", () => {
+    expect(htmlContent).toContain('scene("leaderboard"');
+  });
+
+  test("secret level entry appears when all paws collected", () => {
+    expect(htmlContent).toContain("??? Secret Chapter ???");
+    expect(htmlContent).toContain('go("memoir", "secret")');
+  });
+
+  test("memoir scene handles secret level", () => {
+    expect(htmlContent).toContain('isSecret ? "Secret Chapter"');
+  });
+
+  test("game over shows special title for secret level", () => {
+    expect(htmlContent).toContain("Party's Over...");
+  });
+
+  test("secret level has NPC friends", () => {
+    expect(htmlContent).toContain("level.npcFriends");
+    expect(htmlContent).toContain('"friendNPC"');
+  });
+});
+
+// ============================================
+// POWER SYSTEM (secret level)
+// ============================================
+describe("Power system", () => {
+  test("has power cycling state", () => {
+    expect(htmlContent).toContain('const POWERS = ["spin", "fire", "float"]');
+    expect(htmlContent).toContain("currentPower");
+    expect(htmlContent).toContain("currentPowerIndex");
+  });
+
+  test("Tab key cycles powers in secret level", () => {
+    expect(htmlContent).toContain('onKeyPress("tab"');
+    expect(htmlContent).toContain("cyclePower()");
+  });
+
+  test("has fire breath function", () => {
+    expect(htmlContent).toContain("function fireBreath()");
+  });
+
+  test("fire breath uses proximity checks not area collisions", () => {
+    // Fireball should use onUpdate proximity, not area() component
+    const fireBreathBlock = htmlContent.slice(
+      htmlContent.indexOf("function fireBreath()"),
+      htmlContent.indexOf("function activateFloat()")
+    );
+    expect(fireBreathBlock).toContain("fireball.onUpdate");
+    // The fireball add() block should not contain area() as a component
+    const fireballAdd = fireBreathBlock.slice(
+      fireBreathBlock.indexOf("const fireball = add("),
+      fireBreathBlock.indexOf("fireball.onUpdate")
+    );
+    expect(fireballAdd).not.toMatch(/\barea\(\)/);
+  });
+
+  test("has float/glide function", () => {
+    expect(htmlContent).toContain("function activateFloat()");
+    expect(htmlContent).toContain("isFloating");
+    expect(htmlContent).toContain("floatTimer");
+  });
+
+  test("float only activates mid-air", () => {
+    expect(htmlContent).toContain("rufus.isGrounded()");
+  });
+
+  test("has power HUD indicator for secret level", () => {
+    expect(htmlContent).toContain("powerHUD");
+    expect(htmlContent).toContain("powerIcon");
+    expect(htmlContent).toContain("function updatePowerHUD()");
+  });
+
+  test("touch swap button exists for secret level", () => {
+    expect(htmlContent).toContain('"SWAP"');
+  });
+
+  test("magical platforms for secret level", () => {
+    expect(htmlContent).toContain("RAINBOW BRIDGE");
+    expect(htmlContent).toContain("FLUFFY CLOUD");
+    expect(htmlContent).toContain("CRYSTAL PLATFORM");
+    expect(htmlContent).toContain("MOONBEAM PATH");
+    expect(htmlContent).toContain("STAR PLATFORM");
   });
 });

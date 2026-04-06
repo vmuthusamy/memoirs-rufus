@@ -19,6 +19,10 @@ const LEVEL_3 = {
   playerStart: { x: 100, y: 0 },
   exit: { x: 5350, y: 300 },
 
+  // Hidden golden paw! Below the gap between two platforms — drop down to grab it mid-air!
+  // Between platforms at x:2650 y:350 and x:2850 y:420 — float in the gap below
+  secretPaw: { x: 2750, y: 520 },
+
   // Checkpoints (flag posts)
   checkpoints: [
     { x: 1800, y: 560 },

@@ -25,6 +25,9 @@ const LEVEL_1 = {
   // Where is the level exit? (the flag/door)
   exit: { x: 3050, y: 300 },
 
+  // Hidden golden paw! Way above the high ledge — need a perfect jump
+  secretPaw: { x: 1260, y: 160 },
+
   // ---- PLATFORMS ----
   // Each platform: { x, y, width, height }
   // x,y = position, width/height = size
