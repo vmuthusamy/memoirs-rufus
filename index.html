@@ -1929,6 +1929,10 @@ scene("game", (levelIndex, startLives, spawnPos) => {
   // Set gravity
   setGravity(1600);
 
+  // Level theme flags
+  const isGym = level.name === "The School Gym";
+  const isNeighborhood = level.name === "The Neighborhood";
+
   // Background sky
   add([
     rect(level.width, height()),
@@ -1954,54 +1958,267 @@ scene("game", (levelIndex, startLives, spawnPos) => {
     rect(level.width, 40),
     pos(0, height() - 40),
     color(...level.groundColor),
-    outline(2, rgb(0, 100, 0)),
+    outline(2, isGym ? rgb(130, 95, 45) : rgb(0, 100, 0)),
     area(),
     body({ isStatic: true }),
     "ground",
   ]);
 
-  // Draw grass tufts on ground
-  for (let gx = 0; gx < level.width; gx += rand(20, 50)) {
-    add([
-      rect(4, rand(6, 14)),
-      pos(gx, height() - 40 - rand(4, 10)),
-      color(0, rand(140, 200), 0),
-      z(-1),
-    ]);
+  if (isGym) {
+    // Gym floor lines — like court markings on a wooden gym floor
+    for (let gx = 0; gx < level.width; gx += 200) {
+      // Court line markings (white dashes)
+      add([ rect(2, 30), pos(gx, height() - 38), color(220, 210, 180), opacity(0.3), z(-1) ]);
+    }
+    // Long center court line
+    add([ rect(level.width, 2), pos(0, height() - 22), color(200, 50, 50), opacity(0.4), z(-1) ]);
+    // Wood plank grain on the floor
+    for (let gx = 0; gx < level.width; gx += rand(30, 60)) {
+      add([ rect(rand(20, 40), 2), pos(gx, height() - 40 + rand(5, 30)), color(140, 105, 45), opacity(0.3), z(-1) ]);
+    }
+  } else {
+    // Draw grass tufts on ground (not in gym!)
+    for (let gx = 0; gx < level.width; gx += rand(20, 50)) {
+      add([
+        rect(4, rand(6, 14)),
+        pos(gx, height() - 40 - rand(4, 10)),
+        color(0, rand(140, 200), 0),
+        z(-1),
+      ]);
+    }
   }
 
   // --- PLATFORMS ---
   const isLibrary = level.name === "The Library";
-  level.platforms.forEach((p) => {
-    // Platform body — books in library, wood/earth elsewhere
-    add([
-      rect(p.width, p.height),
-      pos(p.x, p.y),
-      color(isLibrary ? 120 : 101, isLibrary ? 50 : 67, isLibrary ? 50 : 33),
-      outline(2, rgb(isLibrary ? 80 : 60, isLibrary ? 30 : 40, isLibrary ? 30 : 20)),
-      area(),
-      body({ isStatic: true }),
-      "platform",
-    ]);
-    if (isLibrary) {
-      // Book spines on platforms (colorful stripes!)
-      const bookColors = [[200,50,50],[50,50,200],[50,150,50],[200,200,50],[180,80,180]];
-      for (let bx = p.x + 4; bx < p.x + p.width - 8; bx += rand(12, 20)) {
-        const bc = bookColors[Math.floor(rand(0, bookColors.length))];
+  level.platforms.forEach((p, idx) => {
+    if (isGym) {
+      // Gym equipment! Each platform looks like a different piece of gym gear
+      const gymType = idx % 5; // Cycle through equipment types
+
+      if (gymType === 0) {
+        // HORIZONTAL BAR — silver metal bar with support posts
+        // Support posts on each end
+        add([ rect(6, 60), pos(p.x + 2, p.y), color(120, 120, 130), z(0) ]);
+        add([ rect(6, 60), pos(p.x + p.width - 8, p.y), color(120, 120, 130), z(0) ]);
+        // Metal bar on top (the platform you stand on)
         add([
-          rect(rand(6, 12), p.height - 4),
-          pos(bx, p.y + 2),
-          color(...bc),
-          z(0),
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(180, 185, 195),
+          outline(2, rgb(140, 145, 155)),
+          area(), body({ isStatic: true }), "platform",
         ]);
+        // Chrome shine on the bar
+        add([ rect(p.width - 10, 4), pos(p.x + 5, p.y + 3), color(220, 225, 235), z(1) ]);
+        // Bolts at the ends
+        add([ rect(4, 4), pos(p.x + 4, p.y + 8), color(100, 100, 110), z(1) ]);
+        add([ rect(4, 4), pos(p.x + p.width - 8, p.y + 8), color(100, 100, 110), z(1) ]);
+
+      } else if (gymType === 1) {
+        // BALANCE BEAM — narrow, padded top, wooden legs
+        // Wooden legs
+        add([ rect(8, 50), pos(p.x + 10, p.y + 5), color(140, 100, 50) ]);
+        add([ rect(8, 50), pos(p.x + p.width - 18, p.y + 5), color(140, 100, 50) ]);
+        // Beam body (padded leather)
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(160, 130, 90),
+          outline(2, rgb(130, 100, 65)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Suede/leather pad on top
+        add([ rect(p.width - 8, 6), pos(p.x + 4, p.y - 2), color(190, 160, 110), z(1) ]);
+        // Center line
+        add([ rect(p.width - 16, 2), pos(p.x + 8, p.y + 12), color(140, 110, 70), z(1) ]);
+
+      } else if (gymType === 2) {
+        // VAULTING TABLE — padded blue top, chunky metal base
+        // Metal base (wider at bottom)
+        add([ rect(p.width - 30, 40), pos(p.x + 15, p.y + 10), color(100, 100, 110) ]);
+        // Padded top
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(60, 90, 180),
+          outline(2, rgb(40, 65, 140)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Padding lines
+        add([ rect(p.width - 6, 2), pos(p.x + 3, p.y + 5), color(80, 110, 200), z(1) ]);
+        add([ rect(p.width - 6, 2), pos(p.x + 3, p.y + 15), color(80, 110, 200), z(1) ]);
+        // White center stripe
+        add([ rect(4, p.height - 4), pos(p.x + p.width / 2 - 2, p.y + 2), color(200, 210, 240), z(1) ]);
+
+      } else if (gymType === 3) {
+        // CLIMBING ROPE PLATFORM — wooden plank tied with ropes from above
+        // Ropes hanging from above
+        add([ rect(4, 80), pos(p.x + 10, p.y - 75), color(160, 130, 70) ]);
+        add([ rect(4, 80), pos(p.x + p.width - 14, p.y - 75), color(160, 130, 70) ]);
+        // Rope knots at top
+        add([ rect(8, 6), pos(p.x + 8, p.y - 75), color(140, 110, 50) ]);
+        add([ rect(8, 6), pos(p.x + p.width - 16, p.y - 75), color(140, 110, 50) ]);
+        // Wooden plank
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(170, 130, 70),
+          outline(2, rgb(130, 95, 45)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Wood grain lines
+        add([ rect(p.width - 4, 2), pos(p.x + 2, p.y + 8), color(150, 115, 55), z(1) ]);
+        add([ rect(p.width - 4, 2), pos(p.x + 2, p.y + 18), color(150, 115, 55), z(1) ]);
+
+      } else {
+        // POMMEL HORSE — curved look with handles
+        // Legs
+        add([ rect(6, 40), pos(p.x + 15, p.y + 10), color(120, 120, 130) ]);
+        add([ rect(6, 40), pos(p.x + p.width - 21, p.y + 10), color(120, 120, 130) ]);
+        // Body (padded leather)
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(160, 120, 80),
+          outline(2, rgb(130, 90, 55)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Leather pad top
+        add([ rect(p.width - 4, 5), pos(p.x + 2, p.y - 1), color(180, 140, 95), z(1) ]);
+        // Handles (pommels!)
+        add([ rect(6, 12), pos(p.x + p.width / 3, p.y - 10), color(140, 140, 150), z(1) ]);
+        add([ rect(6, 12), pos(p.x + 2 * p.width / 3, p.y - 10), color(140, 140, 150), z(1) ]);
+        // Handle tops
+        add([ rect(10, 4), pos(p.x + p.width / 3 - 2, p.y - 12), color(170, 170, 180), z(1) ]);
+        add([ rect(10, 4), pos(p.x + 2 * p.width / 3 - 2, p.y - 12), color(170, 170, 180), z(1) ]);
       }
+    } else if (isNeighborhood) {
+      // Neighborhood objects! Fences, car roofs, rooftops, benches, mailboxes
+      const hoodType = idx % 5;
+
+      if (hoodType === 0) {
+        // PICKET FENCE — white fence with pointed tops
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(230, 225, 215),
+          outline(2, rgb(200, 195, 185)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Picket tops (little triangles as rectangles)
+        for (let fx = p.x + 4; fx < p.x + p.width - 6; fx += 14) {
+          add([ rect(8, p.height + 8), pos(fx, p.y - 6), color(240, 235, 225), z(0) ]);
+          add([ rect(4, 6), pos(fx + 2, p.y - 10), color(240, 235, 225), z(0) ]);
+        }
+        // Horizontal rail
+        add([ rect(p.width, 4), pos(p.x, p.y + 8), color(210, 205, 195), z(1) ]);
+
+      } else if (hoodType === 1) {
+        // CAR ROOF — colored car top with windshield
+        const carColors = [[180,40,40],[40,80,180],[60,160,60],[200,180,40],[140,40,180]];
+        const cc = carColors[idx % carColors.length];
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(...cc),
+          outline(2, rgb(cc[0]*0.7, cc[1]*0.7, cc[2]*0.7)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Windshield (blue-ish glass at front)
+        add([ rect(Math.min(30, p.width / 3), p.height - 6), pos(p.x + 4, p.y + 3), color(150, 200, 240), z(1) ]);
+        // Rear window
+        add([ rect(Math.min(25, p.width / 4), p.height - 6), pos(p.x + p.width - 28, p.y + 3), color(150, 200, 240), z(1) ]);
+        // Roof shine
+        add([ rect(p.width - 20, 3), pos(p.x + 10, p.y + 2), color(255, 255, 255), opacity(0.3), z(1) ]);
+
+      } else if (hoodType === 2) {
+        // ROOFTOP — brick/shingle roof with a little chimney
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(160, 80, 60),
+          outline(2, rgb(130, 60, 40)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Shingle lines
+        for (let sy = p.y + 6; sy < p.y + p.height - 2; sy += 8) {
+          add([ rect(p.width - 4, 1), pos(p.x + 2, sy), color(140, 65, 45), z(1) ]);
+        }
+        // Chimney on one side
+        add([ rect(14, 20), pos(p.x + p.width - 30, p.y - 18), color(120, 70, 50) ]);
+        add([ rect(18, 4), pos(p.x + p.width - 32, p.y - 20), color(100, 55, 35) ]);
+
+      } else if (hoodType === 3) {
+        // PARK BENCH — green wooden bench with armrests
+        // Legs
+        add([ rect(6, 30), pos(p.x + 8, p.y + 8), color(60, 60, 60) ]);
+        add([ rect(6, 30), pos(p.x + p.width - 14, p.y + 8), color(60, 60, 60) ]);
+        // Seat
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(60, 130, 60),
+          outline(2, rgb(40, 100, 40)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Slats on the bench
+        for (let sx = p.x + 3; sx < p.x + p.width - 4; sx += Math.max(10, p.width / 6)) {
+          add([ rect(p.width / 7, p.height - 4), pos(sx, p.y + 2), color(50, 115, 50), z(1) ]);
+        }
+        // Armrests
+        add([ rect(8, 10), pos(p.x - 2, p.y - 8), color(70, 70, 70), z(1) ]);
+        add([ rect(8, 10), pos(p.x + p.width - 6, p.y - 8), color(70, 70, 70), z(1) ]);
+
+      } else {
+        // BRICK WALL — like a garden wall with mortar lines
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(170, 100, 70),
+          outline(2, rgb(140, 75, 50)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Brick pattern
+        for (let by = 0; by < p.height - 4; by += 10) {
+          const offset = (by / 10) % 2 === 0 ? 0 : 12;
+          for (let bx = offset; bx < p.width - 4; bx += 24) {
+            add([ rect(20, 7), pos(p.x + bx + 2, p.y + by + 2), color(185, 110, 80), z(0) ]);
+          }
+        }
+        // Flat top cap
+        add([ rect(p.width, 4), pos(p.x, p.y - 2), color(150, 90, 60), z(1) ]);
+      }
+    } else {
+      // Default platforms — books in library, wood/earth elsewhere
+      add([
+        rect(p.width, p.height),
+        pos(p.x, p.y),
+        color(isLibrary ? 120 : 101, isLibrary ? 50 : 67, isLibrary ? 50 : 33),
+        outline(2, rgb(isLibrary ? 80 : 60, isLibrary ? 30 : 40, isLibrary ? 30 : 20)),
+        area(),
+        body({ isStatic: true }),
+        "platform",
+      ]);
+      if (isLibrary) {
+        // Book spines on platforms (colorful stripes!)
+        const bookColors = [[200,50,50],[50,50,200],[50,150,50],[200,200,50],[180,80,180]];
+        for (let bx = p.x + 4; bx < p.x + p.width - 8; bx += rand(12, 20)) {
+          const bc = bookColors[Math.floor(rand(0, bookColors.length))];
+          add([
+            rect(rand(6, 12), p.height - 4),
+            pos(bx, p.y + 2),
+            color(...bc),
+            z(0),
+          ]);
+        }
+      }
+      // Grass/shelf top
+      add([
+        rect(p.width, 6),
+        pos(p.x, p.y - 3),
+        color(0, 160, 0),
+      ]);
     }
-    // Grass/shelf top
-    add([
-      rect(p.width, 6),
-      pos(p.x, p.y - 3),
-      color(0, 160, 0),
-    ]);
   });
 
   // --- TREATS ---
