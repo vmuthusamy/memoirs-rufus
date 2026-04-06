@@ -1425,6 +1425,7 @@ scene("about", (pageIndex) => {
       accent: [100, 130, 255],
       sprite: "renard",
       flag: [[0,35,149], [255,255,255], [239,65,53]], // French
+      flagDirection: "vertical",
       flagLabel: "France",
       bio: [
         "Hmph. I'm Renard. Don't touch me.",
@@ -1458,6 +1459,7 @@ scene("about", (pageIndex) => {
       accent: [255, 150, 100],
       sprite: "marthina",
       flag: [[0,140,69], [255,255,255], [206,43,55]], // Italian
+      flagDirection: "vertical",
       flagLabel: "Italia",
       bio: [
         "Ciao, darlings! I'm Marthina!",
@@ -1574,9 +1576,17 @@ scene("about", (pageIndex) => {
   // Flag decoration (if they have a country)
   if (p.flag) {
     const flagY = 530;
-    add([ rect(60, 8), pos(width() / 2 - 60, flagY), color(...p.flag[0]), fixed() ]);
-    add([ rect(60, 8), pos(width() / 2 - 60, flagY + 8), color(...p.flag[1]), fixed() ]);
-    add([ rect(60, 8), pos(width() / 2 - 60, flagY + 16), color(...p.flag[2]), fixed() ]);
+    if (p.flagDirection === "vertical") {
+      // Vertical stripes (France, Italy)
+      add([ rect(20, 24), pos(width() / 2 - 60, flagY), color(...p.flag[0]), fixed() ]);
+      add([ rect(20, 24), pos(width() / 2 - 40, flagY), color(...p.flag[1]), fixed() ]);
+      add([ rect(20, 24), pos(width() / 2 - 20, flagY), color(...p.flag[2]), fixed() ]);
+    } else {
+      // Horizontal stripes (Germany)
+      add([ rect(60, 8), pos(width() / 2 - 60, flagY), color(...p.flag[0]), fixed() ]);
+      add([ rect(60, 8), pos(width() / 2 - 60, flagY + 8), color(...p.flag[1]), fixed() ]);
+      add([ rect(60, 8), pos(width() / 2 - 60, flagY + 16), color(...p.flag[2]), fixed() ]);
+    }
     add([
       text(p.flagLabel, { size: 12 }),
       pos(width() / 2 + 15, flagY + 8),
