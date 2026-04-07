@@ -1901,107 +1901,99 @@ scene("levelSelect", () => {
 
   add([
     text("Rufus's Journal", { size: 40 }),
-    pos(width() / 2, 60),
+    pos(width() / 2, 40),
     anchor("center"),
     color(255, 200, 100),
     fixed(),
   ]);
 
-  // Draw each level as a CLICKABLE journal entry
-  ALL_LEVELS.forEach((level, i) => {
-    const y = 150 + i * 100;
+  // Scrollable journal — entries use camera, title stays fixed
+  const entrySpacing = 90;
+  const entryHeight = 75;
+  // Calculate total content height
+  let scrollY = height() / 2;
+  const hasSecretEntry = allPawsCollected();
+  const totalEntries = ALL_LEVELS.length + (hasSecretEntry ? 1 : 0) + 1; // +1 for bottom row
+  const contentHeight = 120 + totalEntries * entrySpacing;
+  const minScrollY = height() / 2;
+  const maxScrollY = Math.max(minScrollY, contentHeight - height() / 2);
 
-    // Journal entry background - clickable!
+  ALL_LEVELS.forEach((level, i) => {
+    const y = 120 + i * entrySpacing;
+
     const entry = add([
-      rect(600, 80),
+      rect(600, entryHeight),
       pos(width() / 2, y),
       anchor("center"),
       color(60, 50, 35),
       outline(2, rgb(100, 80, 50)),
       area(),
-      fixed(),
     ]);
-
-    // Click/tap this entry to play the level
     entry.onClick(() => go("memoir", i));
 
-    // Chapter number
     add([
-      text(`Chapter ${i + 1}: ${level.name}`, { size: 22 }),
-      pos(width() / 2, y - 15),
+      text(`Chapter ${i + 1}: ${level.name}`, { size: 20 }),
+      pos(width() / 2, y - 12),
       anchor("center"),
       color(255, 200, 100),
-      fixed(),
     ]);
 
-    // Memoir preview
-    const preview = level.memoir.substring(0, 60) + "...";
+    const preview = level.memoir.substring(0, 55) + "...";
     add([
-      text(preview, { size: 12, width: 550 }),
-      pos(width() / 2, y + 15),
+      text(preview, { size: 11, width: 520 }),
+      pos(width() / 2, y + 12),
       anchor("center"),
       color(200, 180, 140),
-      fixed(),
     ]);
 
-    // Tap/press hint
     const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
     add([
-      text(isTouch ? "Tap" : `Press ${i + 1}`, { size: 14 }),
+      text(isTouch ? "Tap" : `Press ${i + 1}`, { size: 13 }),
       pos(width() / 2 + 260, y),
       anchor("center"),
       color(255, 165, 0),
-      fixed(),
     ]);
 
-    // Gem indicator (cyan diamond if earned, gray outline if not)
     const gemEarned = hasGem(i);
     add([
       sprite("gem"),
-      pos(width() / 2 - 280, y - 8),
+      pos(width() / 2 - 280, y - 6),
       anchor("center"),
       scale(1.2),
       opacity(gemEarned ? 1 : 0.2),
-      fixed(),
     ]);
 
-    // Golden paw indicator (gold if found, gray outline if not)
     const pawFound = hasPaw(i);
     add([
       sprite("goldenPaw"),
-      pos(width() / 2 - 280, y + 12),
+      pos(width() / 2 - 280, y + 10),
       anchor("center"),
       scale(1),
       opacity(pawFound ? 1 : 0.2),
-      fixed(),
     ]);
   });
 
   // Secret level entry (only visible when all paws collected!)
-  if (allPawsCollected()) {
-    const secretY = 150 + ALL_LEVELS.length * 100;
+  if (hasSecretEntry) {
+    const secretY = 120 + ALL_LEVELS.length * entrySpacing;
     const secretEntry = add([
-      rect(600, 80),
+      rect(600, entryHeight),
       pos(width() / 2, secretY),
       anchor("center"),
       color(50, 40, 25),
       outline(2, rgb(255, 215, 0)),
       area(),
-      fixed(),
     ]);
-    // Golden glow pulse
     secretEntry.onUpdate(function() {
       this.opacity = Math.sin(time() * 3) * 0.15 + 0.85;
     });
-
     secretEntry.onClick(() => go("memoir", "secret"));
 
     add([
-      text("??? Secret Chapter ???", { size: 22 }),
-      pos(width() / 2, secretY - 15),
+      text("??? Secret Chapter ???", { size: 20 }),
+      pos(width() / 2, secretY - 12),
       anchor("center"),
       color(255, 215, 0),
-      fixed(),
       { t: 0 },
     ]).onUpdate(function() {
       this.t += dt();
@@ -2009,78 +2001,85 @@ scene("levelSelect", () => {
     });
 
     add([
-      text("All golden paws collected... a new adventure awaits!", { size: 12 }),
-      pos(width() / 2, secretY + 15),
+      text("All golden paws collected... a new adventure awaits!", { size: 11 }),
+      pos(width() / 2, secretY + 12),
       anchor("center"),
       color(200, 180, 100),
-      fixed(),
     ]);
 
-    // Golden paw icons
-    add([ sprite("goldenPaw"), pos(width() / 2 - 260, secretY), anchor("center"), scale(1.5), fixed() ]);
-    add([ sprite("goldenPaw"), pos(width() / 2 + 250, secretY), anchor("center"), scale(1.5), fixed() ]);
+    add([ sprite("goldenPaw"), pos(width() / 2 - 260, secretY), anchor("center"), scale(1.5) ]);
+    add([ sprite("goldenPaw"), pos(width() / 2 + 250, secretY), anchor("center"), scale(1.5) ]);
   }
 
-  // Bottom row: About Me and High Scores side by side
-  const hasSecretEntry = allPawsCollected();
-  const bottomY = 150 + ALL_LEVELS.length * 100 + (hasSecretEntry ? 100 : 0);
+  // Bottom row: About Me and High Scores
+  const bottomY = 120 + (ALL_LEVELS.length + (hasSecretEntry ? 1 : 0)) * entrySpacing;
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
-  // "About Me" journal entry - left side
   const aboutEntry = add([
-    rect(290, 70),
+    rect(290, 60),
     pos(width() / 2 - 155, bottomY),
     anchor("center"),
     color(55, 45, 30),
     outline(2, rgb(110, 90, 60)),
     area(),
-    fixed(),
   ]);
   aboutEntry.onClick(() => go("about"));
+  add([ text("About Rufus", { size: 16 }), pos(width() / 2 - 155, bottomY - 10), anchor("center"), color(255, 165, 0) ]);
+  add([ text(isTouch ? "Tap to read" : "Press A", { size: 11 }), pos(width() / 2 - 155, bottomY + 12), anchor("center"), color(200, 180, 140) ]);
 
-  add([
-    text("About Rufus", { size: 18 }),
-    pos(width() / 2 - 155, bottomY - 12),
-    anchor("center"),
-    color(255, 165, 0),
-    fixed(),
-  ]);
-  add([
-    text(isTouch ? "Tap to read" : "Press A", { size: 12 }),
-    pos(width() / 2 - 155, bottomY + 15),
-    anchor("center"),
-    color(200, 180, 140),
-    fixed(),
-  ]);
-
-  // "High Scores" journal entry - right side
   const scoresEntry = add([
-    rect(290, 70),
+    rect(290, 60),
     pos(width() / 2 + 155, bottomY),
     anchor("center"),
     color(45, 35, 50),
     outline(2, rgb(120, 100, 60)),
     area(),
-    fixed(),
   ]);
   scoresEntry.onClick(() => go("leaderboard"));
+  add([ text("High Scores", { size: 16 }), pos(width() / 2 + 155, bottomY - 10), anchor("center"), color(255, 215, 0) ]);
+  add([ text(isTouch ? "Tap to view" : "Press H", { size: 11 }), pos(width() / 2 + 155, bottomY + 12), anchor("center"), color(200, 180, 140) ]);
 
-  add([
-    text("High Scores", { size: 18 }),
-    pos(width() / 2 + 155, bottomY - 12),
-    anchor("center"),
-    color(255, 215, 0),
-    fixed(),
-  ]);
-  add([
-    text(isTouch ? "Tap to view" : "Press H", { size: 12 }),
-    pos(width() / 2 + 155, bottomY + 15),
-    anchor("center"),
-    color(200, 180, 140),
-    fixed(),
-  ]);
+  // Scroll hint (only if content overflows)
+  if (maxScrollY > minScrollY) {
+    add([
+      text(isTouch ? "Swipe to scroll" : "Up/Down to scroll", { size: 12 }),
+      pos(width() / 2, height() - 15),
+      anchor("center"),
+      color(150, 130, 100),
+      opacity(0.6),
+      fixed(),
+    ]);
+  }
 
-  // Keyboard controls (for desktop)
+  // Scroll with keyboard
+  onKeyDown("down", () => {
+    scrollY = Math.min(maxScrollY, scrollY + 300 * dt());
+  });
+  onKeyDown("up", () => {
+    scrollY = Math.max(minScrollY, scrollY - 300 * dt());
+  });
+
+  // Scroll with touch drag
+  let touchStartY = null;
+  let touchScrollStart = 0;
+  onTouchStart((tpos) => {
+    touchStartY = tpos.y;
+    touchScrollStart = scrollY;
+  });
+  onTouchMove((tpos) => {
+    if (touchStartY !== null) {
+      const delta = touchStartY - tpos.y;
+      scrollY = Math.max(minScrollY, Math.min(maxScrollY, touchScrollStart + delta));
+    }
+  });
+  onTouchEnd(() => { touchStartY = null; });
+
+  // Update camera to scroll position
+  onUpdate(() => {
+    camPos(width() / 2, scrollY);
+  });
+
+  // Keyboard controls
   ALL_LEVELS.forEach((_, i) => {
     onKeyPress(`${i + 1}`, () => {
       go("memoir", i);
@@ -2089,7 +2088,6 @@ scene("levelSelect", () => {
 
   onKeyPress("a", () => go("about"));
   onKeyPress("h", () => go("leaderboard"));
-
   onKeyPress("escape", () => go("title"));
 });
 
