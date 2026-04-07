@@ -246,7 +246,7 @@ describe("Enemy validation", () => {
     describe(`Level ${i + 1}: ${level.name}`, () => {
       test("all enemies have required fields", () => {
         level.enemies.forEach((e) => {
-          expect(["walker", "armored", "wasp_patrol", "wasp_dive", "bookworm"]).toContain(e.type);
+          expect(["walker", "armored", "wasp_patrol", "wasp_dive", "bookworm", "clown"]).toContain(e.type);
           expect(typeof e.x).toBe("number");
           expect(typeof e.y).toBe("number");
           expect(typeof e.patrol).toBe("number");

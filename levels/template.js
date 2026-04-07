@@ -12,6 +12,14 @@ const LEVEL_5 = {
   // ---- THE BASICS ----
 
   // Give your level a cool name (this shows in the journal)
+  // THEMED PLATFORMS: If you use one of these exact names, the platforms
+  // will automatically look like that theme:
+  //   "The Backyard"      = default earthy/grass style
+  //   "The Neighborhood"  = fences, car roofs, rooftops, benches, brick walls
+  //   "The School Gym"    = horizontal bars, balance beams, vaulting tables, pommel horses
+  //   "The Library"       = bookshelves with colorful book spines
+  //   "The Theme Park"    = roller coaster rails, bumper cars, carousel, ticket booths, ferris wheel
+  // Or use any other name for the default grass-top style!
   name: "My Awesome Level",
 
   // Write Rufus's diary entry for this chapter
@@ -160,6 +168,10 @@ const LEVEL_5 = {
   //
   // "wasp_dive"    = wasp that DIVES at Rufus when he gets close!
   //                  Much scarier! Put y around 150-200 (very high up)
+  //
+  // "clown"        = circus clown! Can't be killed by spin or fire!
+  //                  ONLY way to beat them is JUMP ON THEIR HEAD
+  //                  They explode in confetti when stomped!
   //
   // patrol = how far they walk/fly back and forth (in pixels)
   // Ground enemies: y: 535    Platform enemies: y = platform's y - 25

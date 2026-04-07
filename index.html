@@ -20,6 +20,7 @@
 <script src="levels/level3.js"></script>
 <script src="levels/secret.js"></script>
 <script src="levels/level4.js"></script>
+<script src="levels/level5.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -59,7 +60,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -664,6 +665,59 @@ function drawFirey() {
 }
 
 // --- DRAW BOOKWORM (small brown worm, wiggly) ---
+// --- DRAW A CLOWN SQUIRREL (theme park enemy!) ---
+function drawClown() {
+  const c = document.createElement("canvas");
+  c.width = 28;
+  c.height = 28;
+  const ctx = c.getContext("2d");
+
+  // Big red afro hair
+  ctx.fillStyle = "#DD2222";
+  ctx.fillRect(4, 0, 20, 10);
+  ctx.fillRect(2, 2, 24, 8);
+  ctx.fillRect(6, 0, 16, 4);
+
+  // Face (white)
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(6, 8, 16, 12);
+  ctx.fillRect(8, 6, 12, 14);
+
+  // Big red nose
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(11, 12, 6, 5);
+  ctx.fillRect(12, 11, 4, 7);
+
+  // Eyes (beady, mischievous)
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(9, 10, 3, 3);
+  ctx.fillRect(16, 10, 3, 3);
+  // Eye shine
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(10, 10, 1, 1);
+  ctx.fillRect(17, 10, 1, 1);
+
+  // Big goofy grin
+  ctx.fillStyle = "#FF4444";
+  ctx.fillRect(9, 17, 10, 2);
+  ctx.fillRect(10, 16, 8, 1);
+
+  // Body (colorful jumpsuit)
+  ctx.fillStyle = "#4488FF";
+  ctx.fillRect(8, 20, 12, 6);
+  // Polka dots
+  ctx.fillStyle = "#FFFF00";
+  ctx.fillRect(10, 21, 2, 2);
+  ctx.fillRect(16, 22, 2, 2);
+
+  // Big floppy shoes
+  ctx.fillStyle = "#FF6600";
+  ctx.fillRect(4, 26, 8, 2);
+  ctx.fillRect(16, 26, 8, 2);
+
+  return c;
+}
+
 function drawBookworm() {
   const c = document.createElement("canvas");
   c.width = 20;
@@ -916,6 +970,7 @@ loadSprite("renard", drawRenard().toDataURL());
 loadSprite("fiery", drawFirey().toDataURL());
 loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
+loadSprite("clown", drawClown().toDataURL());
 loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
@@ -2123,7 +2178,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
   let score = 0;
   let isSpinning = false;
-  let lives = isSecret ? 3 : ((startLives !== undefined) ? startLives : 3);
+  const defaultLives = isSecret ? 3 : (level.startLives || 3);
+  let lives = (startLives !== undefined) ? startLives : defaultLives;
   let spinCooldown = 0;
   let nextExtraLife = 200;
   let deathsThisRun = deathCount || 0;
@@ -2149,6 +2205,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // Level theme flags
   const isGym = level.name === "The School Gym";
   const isNeighborhood = level.name === "The Neighborhood";
+  const isThemePark = level.name === "The Theme Park";
 
   // Background sky
   add([
@@ -2159,8 +2216,71 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     z(-10),
   ]);
 
-  // Draw some background clouds (or magical particles for secret level)
-  if (level.isMagical) {
+  // Draw some background clouds (or themed backgrounds)
+  if (isThemePark) {
+    // === CARNIVAL TENT INTERIOR ===
+
+    // Red and white vertical stripes across the whole tent canopy
+    const stripeWidth = 80;
+    for (let sx = 0; sx < level.width; sx += stripeWidth) {
+      const isWhite = (sx / stripeWidth) % 2 === 0;
+      add([
+        rect(stripeWidth, height()),
+        pos(sx, 0),
+        color(isWhite ? 220 : 160, isWhite ? 200 : 30, isWhite ? 200 : 30),
+        opacity(isWhite ? 0.08 : 0.12),
+        z(-9),
+      ]);
+    }
+
+    // Tent peak lines — diagonal folds radiating from tent poles
+    for (let pole = 0; pole < level.width; pole += 800) {
+      // Tent pole
+      add([ rect(6, height()), pos(pole + 397, 0), color(140, 100, 40), opacity(0.15), z(-8) ]);
+      // Gold ball on top of pole
+      add([ rect(12, 12), pos(pole + 391, 10), color(220, 180, 50), opacity(0.2), z(-8) ]);
+      // Draping fabric lines from each pole (V shapes)
+      for (let d = -3; d <= 3; d++) {
+        const dx = d * 60;
+        add([ rect(2, 200), pos(pole + 400 + dx, 20), color(120, 20, 20), opacity(0.08), z(-9) ]);
+      }
+    }
+
+    // String lights — twinkling bulbs hanging across the tent
+    for (let lx = 0; lx < level.width; lx += 35) {
+      const droop = Math.sin(lx * 0.015) * 20;
+      const ly = 55 + droop;
+      // Wire
+      if (lx % 70 === 0) {
+        add([ rect(70, 1), pos(lx, ly), color(60, 40, 30), opacity(0.3), z(-7) ]);
+      }
+      // Colorful bulb
+      const bulbColors = [[255,60,60],[255,220,50],[60,220,60],[60,150,255],[255,100,220]];
+      const bc = bulbColors[Math.floor(lx / 35) % bulbColors.length];
+      const bulb = add([
+        rect(5, 5),
+        pos(lx, ly + 2),
+        color(...bc),
+        opacity(0.5),
+        z(-7),
+        { t: rand(0, 6.28) },
+      ]);
+      bulb.onUpdate(() => {
+        bulb.t += dt() * 2;
+        bulb.opacity = Math.sin(bulb.t) * 0.2 + 0.45;
+      });
+    }
+
+    // Bunting flags — little triangular pennants
+    for (let bx = 0; bx < level.width; bx += 50) {
+      const buntingColors = [[200,40,40],[255,255,255],[40,40,200],[255,200,50]];
+      const fc = buntingColors[Math.floor(bx / 50) % buntingColors.length];
+      // Triangle approximation (small rects stacked)
+      add([ rect(12, 4), pos(bx, 85), color(...fc), opacity(0.25), z(-8) ]);
+      add([ rect(8, 4), pos(bx + 2, 89), color(...fc), opacity(0.25), z(-8) ]);
+      add([ rect(4, 4), pos(bx + 4, 93), color(...fc), opacity(0.25), z(-8) ]);
+    }
+  } else if (level.isMagical) {
     // Magical floating sparkles across the whole sky
     for (let i = 0; i < 30; i++) {
       const sparkle = add([
@@ -2218,12 +2338,92 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
   }
 
+  // Background roller coaster with squirrel riders (Theme Park only!)
+  if (isThemePark) {
+    // The roller coaster track — a wavy line in the background
+    const trackPoints = [];
+    for (let tx = 0; tx < level.width; tx += 40) {
+      // Wavy track with hills and dips
+      const hill1 = Math.sin(tx * 0.003) * 80;
+      const hill2 = Math.sin(tx * 0.007 + 1) * 40;
+      const ty = 150 + hill1 + hill2;
+      trackPoints.push({ x: tx, y: ty });
+      // Draw track segment
+      add([ rect(42, 4), pos(tx, ty), color(120, 120, 130), opacity(0.35), z(-7) ]);
+      // Track supports (vertical poles going down)
+      if (tx % 160 === 0) {
+        add([ rect(3, 400 - ty), pos(tx + 19, ty + 4), color(100, 100, 110), opacity(0.2), z(-8) ]);
+      }
+      // Cross ties on track
+      if (tx % 80 === 0) {
+        add([ rect(6, 8), pos(tx + 17, ty - 2), color(140, 140, 150), opacity(0.25), z(-7) ]);
+      }
+    }
+
+    // Squirrel riders! A new cart spawns every 5 seconds
+    const cartColors = [[220,50,50],[50,50,220],[50,180,50],[220,180,50],[220,50,220],[50,200,200]];
+    let cartCount = 0;
+
+    function spawnRiderCart() {
+      const ci = cartCount % cartColors.length;
+      const cc = cartColors[ci];
+      const startX = rand(200, 800);
+      const cartSpeed = rand(70, 130);
+      cartCount++;
+
+      const cart = add([
+        rect(20, 12),
+        pos(startX, 150),
+        color(...cc),
+        opacity(0.5),
+        z(-6),
+        "riderCart",
+        { trackX: startX, speed: cartSpeed, dir: 1 },
+      ]);
+      const rider = add([
+        sprite("walker"),
+        pos(startX, 140),
+        anchor("bot"),
+        scale(1),
+        opacity(0.5),
+        z(-6),
+        "riderSquirrel",
+        { cart: cart },
+      ]);
+    }
+
+    // Start with 2 carts, then spawn one every 5 seconds
+    spawnRiderCart();
+    spawnRiderCart();
+    loop(5, () => { spawnRiderCart(); });
+
+    // All carts follow the wavy track
+    onUpdate("riderCart", (cart) => {
+      cart.trackX += cart.speed * cart.dir * dt();
+      if (cart.trackX > level.width - 200) cart.dir = -1;
+      if (cart.trackX < 200) cart.dir = 1;
+      const hill1 = Math.sin(cart.trackX * 0.003) * 80;
+      const hill2 = Math.sin(cart.trackX * 0.007 + 1) * 40;
+      const trackY = 150 + hill1 + hill2;
+      cart.pos.x = cart.trackX;
+      cart.pos.y = trackY;
+    });
+
+    // Squirrels follow their carts
+    onUpdate("riderSquirrel", (rider) => {
+      if (!rider.cart || !rider.cart.exists()) { destroy(rider); return; }
+      rider.pos.x = rider.cart.pos.x + 4;
+      rider.pos.y = rider.cart.pos.y - 2;
+      rider.flipX = rider.cart.dir < 0;
+    });
+  }
+
   // Ground
   const ground = add([
     rect(level.width, 40),
     pos(0, height() - 40),
     color(...level.groundColor),
-    outline(2, isGym ? rgb(130, 95, 45) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
+    outline(2, isGym ? rgb(130, 95, 45) : isThemePark ? rgb(120, 115, 100) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
     area(),
     body({ isStatic: true }),
     "ground",
@@ -2240,6 +2440,18 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     // Wood plank grain on the floor
     for (let gx = 0; gx < level.width; gx += rand(30, 60)) {
       add([ rect(rand(20, 40), 2), pos(gx, height() - 40 + rand(5, 30)), color(140, 105, 45), opacity(0.3), z(-1) ]);
+    }
+  } else if (isThemePark) {
+    // Theme park path — paved with lane markings and confetti
+    for (let gx = 0; gx < level.width; gx += 150) {
+      // Path lane dashes (yellow center line like a road)
+      add([ rect(40, 3), pos(gx, height() - 22), color(255, 220, 50), opacity(0.5), z(-1) ]);
+    }
+    // Confetti on the ground (colorful scraps)
+    const confettiColors = [[255,80,80],[80,180,255],[255,220,50],[80,255,120],[255,120,220]];
+    for (let gx = 0; gx < level.width; gx += rand(40, 80)) {
+      const cc = confettiColors[Math.floor(rand(0, confettiColors.length))];
+      add([ rect(rand(3, 7), rand(2, 4)), pos(gx, height() - 40 + rand(5, 30)), color(...cc), opacity(0.4), z(-1) ]);
     }
   } else if (isSecret) {
     // Magical golden sparkle tufts!
@@ -2479,6 +2691,106 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         // Flat top cap
         add([ rect(p.width, 4), pos(p.x, p.y - 2), color(150, 90, 60), z(1) ]);
       }
+    } else if (isThemePark) {
+      // Theme park rides! Roller coaster rails, bumper cars, carousel, ticket booths, ferris wheel
+      const rideType = idx % 5;
+
+      if (rideType === 0) {
+        // ROLLER COASTER RAIL — metal track with cross ties
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(100, 100, 110),
+          outline(2, rgb(70, 70, 80)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Rail tracks (two parallel lines on top)
+        add([ rect(p.width - 4, 3), pos(p.x + 2, p.y + 2), color(160, 160, 170), z(1) ]);
+        add([ rect(p.width - 4, 3), pos(p.x + 2, p.y + p.height - 5), color(160, 160, 170), z(1) ]);
+        // Cross ties
+        for (let tx = p.x + 8; tx < p.x + p.width - 8; tx += 18) {
+          add([ rect(4, p.height - 4), pos(tx, p.y + 2), color(130, 130, 140), z(0) ]);
+        }
+        // Bolts at ends
+        add([ rect(6, 6), pos(p.x + 2, p.y + p.height / 2 - 3), color(200, 180, 50), z(2) ]);
+        add([ rect(6, 6), pos(p.x + p.width - 8, p.y + p.height / 2 - 3), color(200, 180, 50), z(2) ]);
+
+      } else if (rideType === 1) {
+        // BUMPER CAR PLATFORM — colorful rubber bumper edges
+        const bumperColors = [[220,50,50],[50,50,220],[50,180,50],[220,180,50],[220,50,220]];
+        const bc = bumperColors[idx % bumperColors.length];
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(...bc),
+          outline(3, rgb(bc[0]*0.6, bc[1]*0.6, bc[2]*0.6)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Chrome bumper strip around edge
+        add([ rect(p.width - 6, 4), pos(p.x + 3, p.y + 2), color(200, 200, 210), z(1) ]);
+        add([ rect(p.width - 6, 4), pos(p.x + 3, p.y + p.height - 6), color(200, 200, 210), z(1) ]);
+        // Headlight dots
+        add([ rect(4, 4), pos(p.x + 8, p.y + p.height / 2 - 2), color(255, 255, 200), z(2) ]);
+        add([ rect(4, 4), pos(p.x + p.width - 12, p.y + p.height / 2 - 2), color(255, 255, 200), z(2) ]);
+
+      } else if (rideType === 2) {
+        // CAROUSEL PLATFORM — ornate, striped red and gold
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(180, 50, 50),
+          outline(2, rgb(140, 30, 30)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Gold decorative stripes
+        for (let sx = p.x + 6; sx < p.x + p.width - 6; sx += 16) {
+          add([ rect(8, p.height - 4), pos(sx, p.y + 2), color(220, 180, 50), opacity(0.7), z(1) ]);
+        }
+        // Ornate top edge (gold trim)
+        add([ rect(p.width + 6, 5), pos(p.x - 3, p.y - 3), color(220, 180, 50), z(1) ]);
+        // Center pole hint
+        add([ rect(4, 14), pos(p.x + p.width / 2 - 2, p.y - 14), color(200, 170, 40), z(0) ]);
+
+      } else if (rideType === 3) {
+        // TICKET BOOTH — striped canopy with wooden counter
+        // Wooden counter base
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(160, 120, 70),
+          outline(2, rgb(120, 85, 40)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Striped canopy above (red and white)
+        for (let sx = p.x; sx < p.x + p.width; sx += 20) {
+          const isRed = ((sx - p.x) / 20) % 2 === 0;
+          add([ rect(20, 8), pos(sx, p.y - 8), color(isRed ? 220 : 240, isRed ? 40 : 230, isRed ? 40 : 230), z(0) ]);
+        }
+        // Counter window
+        add([ rect(p.width - 20, p.height - 10), pos(p.x + 10, p.y + 5), color(80, 60, 35), z(1) ]);
+        // "TICKETS" text area
+        add([ rect(p.width - 30, 8), pos(p.x + 15, p.y + 8), color(255, 220, 100), z(2) ]);
+
+      } else {
+        // FERRIS WHEEL GONDOLA — hanging seat with support cables
+        // Support cables from above
+        add([ rect(3, 50), pos(p.x + 10, p.y - 48), color(120, 120, 130) ]);
+        add([ rect(3, 50), pos(p.x + p.width - 13, p.y - 48), color(120, 120, 130) ]);
+        // Cross cable
+        add([ rect(p.width - 20, 2), pos(p.x + 10, p.y - 48), color(100, 100, 110) ]);
+        // Gondola seat
+        add([
+          rect(p.width, p.height),
+          pos(p.x, p.y),
+          color(60, 120, 200),
+          outline(2, rgb(40, 90, 160)),
+          area(), body({ isStatic: true }), "platform",
+        ]);
+        // Safety bar
+        add([ rect(p.width - 10, 3), pos(p.x + 5, p.y + 4), color(180, 180, 190), z(1) ]);
+        // Seat cushion
+        add([ rect(p.width - 8, 8), pos(p.x + 4, p.y + p.height - 10), color(80, 140, 220), z(1) ]);
+      }
     } else if (isSecret) {
       // Magical platforms! Rainbow bridges, clouds, crystals, moonbeams, stars
       const magicType = idx % 5;
@@ -2669,12 +2981,14 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // --- ENEMIES ---
   level.enemies.forEach((e) => {
     const isWasp = e.type === "wasp_patrol" || e.type === "wasp_dive";
+    const isClown = e.type === "clown";
     const spriteMap = {
       walker: "walker",
       armored: "armored",
       wasp_patrol: "wasp",
       wasp_dive: "wasp",
       bookworm: "bookworm",
+      clown: "clown",
     };
     const en = add([
       sprite(spriteMap[e.type] || "walker"),
@@ -2693,6 +3007,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         enemyType: e.type,
         isDisarmed: false,
         isWasp: isWasp,
+        isClown: isClown,
         isDiving: false,
         diveTimer: 0,
       },
@@ -3116,7 +3431,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
           // Save position before destroying
           const hitX = enemy.pos.x;
           const hitY = enemy.pos.y;
-          if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
+          if (enemy.isClown) {
+            // Fire bounces off clowns! Confetti splash
+          } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
             enemy.isDisarmed = true;
             enemy.use(sprite("disarmed"));
           } else {
@@ -3406,7 +3723,27 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
     // Check if we're spinning (tail attack)
     if (rufus.isSpinning) {
-      if (enemy.enemyType === "walker" || enemy.enemyType === "bookworm" || enemy.isWasp || enemy.isDisarmed) {
+      if (enemy.isClown) {
+        // Can't spin a clown! They honk and Rufus bounces off!
+        rufus.isSpinning = false;
+        rufus.use(sprite("rufus"));
+        rufus.use(scale(2));
+        rufus.angle = 0;
+        // Honk effect — colorful confetti instead of sparks
+        for (let i = 0; i < 5; i++) {
+          const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200]][i];
+          add([
+            rect(rand(3, 6), rand(3, 6)),
+            pos(enemy.pos),
+            color(...cc),
+            opacity(1),
+            lifespan(0.4),
+            move(rand(0, 360), rand(100, 200)),
+            z(10),
+          ]);
+        }
+        hurtRufus();
+      } else if (enemy.enemyType === "walker" || enemy.enemyType === "bookworm" || enemy.isWasp || enemy.isDisarmed) {
         // Tail spin kills walkers and disarmed enemies!
         destroyEnemy(enemy);
       } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
@@ -3432,7 +3769,25 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
     // Check if we're jumping on top of enemy (wasps can't be stomped!)
     else if (!enemy.isWasp && rufus.pos.y < enemy.pos.y - 20 && !rufus.isGrounded()) {
-      if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
+      if (enemy.isClown) {
+        // Stomp the clown! Squash with a big confetti burst!
+        for (let i = 0; i < 10; i++) {
+          const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200],[255,165,0]][i % 6];
+          add([
+            rect(rand(4, 8), rand(4, 8)),
+            pos(enemy.pos),
+            color(...cc),
+            opacity(1),
+            lifespan(0.6),
+            move(rand(0, 360), rand(100, 300)),
+            z(10),
+          ]);
+        }
+        score += 50;
+        scoreText.text = `Treats: ${score}`;
+        destroy(enemy);
+        rufus.jump(jumpForce * 0.7); // Big bounce!
+      } else if (enemy.enemyType === "armored" && !enemy.isDisarmed) {
         // Jump disarms armored enemy! Helmet pops off!
         enemy.isDisarmed = true;
         enemy.use(sprite("disarmed"));
@@ -3855,6 +4210,12 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
       title: "Library Heroes!",
       message: "Rufus and Fiery saved the books! RAWR means 'we did it' in dinosaur!",
       rufusColor: [255, 150, 50],
+    },
+    { // Level 5 - theme park victory, neon carnival lights
+      bg: [40, 20, 60],
+      title: "Theme Park Legend!",
+      message: "The clowns, the acrobat wasps, the bumper car squirrels — ALL defeated! Rufus is the ringmaster now!",
+      rufusColor: [255, 200, 50],
     },
   ];
   const theme = themes[levelIndex] || themes[0];
