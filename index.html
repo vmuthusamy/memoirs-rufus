@@ -3361,7 +3361,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // Jetpack state
   let jetpackFuel = 0;
   const jetpackMaxFuel = 3; // seconds of boost
-  const jetpackUnlocked = hasJetpack();
+  // Jetpack only works in levels AFTER chapter 6 (level index 6+)
+  const jetpackUnlocked = hasJetpack() && !isSecret && typeof levelIndex === "number" && levelIndex >= 6;
 
   onKeyPress("up", () => {
     if (rufus.isGrounded()) {
