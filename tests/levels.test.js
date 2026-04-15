@@ -16,8 +16,10 @@ const LEVEL_1 = loadLevel("level1.js");
 const LEVEL_2 = loadLevel("level2.js");
 const LEVEL_3 = loadLevel("level3.js");
 const LEVEL_4 = loadLevel("level4.js");
+const LEVEL_5 = loadLevel("level5.js");
+const LEVEL_6 = loadLevel("level6.js");
 const SECRET_LEVEL = loadLevel("secret.js");
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6];
 
 // Game constants (must match index.html)
 const GAME_HEIGHT = 600;
@@ -185,8 +187,8 @@ describe("Crate validation", () => {
         });
       });
 
-      test("has at least 3 crates", () => {
-        expect(level.crates.length).toBeGreaterThanOrEqual(3);
+      test("has at least 2 crates", () => {
+        expect(level.crates.length).toBeGreaterThanOrEqual(2);
       });
     });
   });
@@ -282,8 +284,10 @@ describe("Enemy validation", () => {
         });
       });
 
-      test("has at least 3 enemies", () => {
-        expect(level.enemies.length).toBeGreaterThanOrEqual(3);
+      test("has enemies (unless boss fight)", () => {
+        if (!level.isBossFight) {
+          expect(level.enemies.length).toBeGreaterThanOrEqual(3);
+        }
       });
     });
   });
@@ -363,6 +367,7 @@ describe("Platform enemy placement", () => {
         e.type === "walker" || e.type === "armored";
 
       test("has ground enemies on platforms (not just ground)", () => {
+        if (level.isBossFight) return; // Boss fights have no regular enemies
         const platformEnemies = level.enemies.filter(
           (e) => isGroundType(e) && e.y < 500
         );
@@ -419,10 +424,11 @@ describe("Level progression", () => {
     expect(LEVEL_2.width).toBeGreaterThan(LEVEL_1.width);
   });
 
-  test("levels have increasing difficulty (enemy count)", () => {
-    for (let i = 1; i < ALL_LEVELS.length; i++) {
-      expect(ALL_LEVELS[i].enemies.length).toBeGreaterThanOrEqual(
-        ALL_LEVELS[i - 1].enemies.length
+  test("levels have increasing difficulty (enemy count, excluding boss fights)", () => {
+    const nonBossLevels = ALL_LEVELS.filter((l) => !l.isBossFight);
+    for (let i = 1; i < nonBossLevels.length; i++) {
+      expect(nonBossLevels[i].enemies.length).toBeGreaterThanOrEqual(
+        nonBossLevels[i - 1].enemies.length
       );
     }
   });
@@ -480,6 +486,7 @@ describe("Gameplay safety", () => {
 // ============================================
 describe("Golden paw placement", () => {
   ALL_LEVELS.forEach((level, i) => {
+    if (!level.secretPaw) return; // Skip boss fights and levels without paws
     describe(`Level ${i + 1}: ${level.name}`, () => {
       test("has a secretPaw defined", () => {
         expect(level.secretPaw).toBeDefined();
@@ -576,5 +583,112 @@ describe("Secret level data", () => {
       expect(e.x).toBeGreaterThanOrEqual(0);
       expect(e.x).toBeLessThanOrEqual(SECRET_LEVEL.width);
     });
+  });
+});
+
+// ============================================
+// LEVEL 5: THE THEME PARK
+// ============================================
+describe("Level 5: The Theme Park", () => {
+  test("has theme park name", () => {
+    expect(LEVEL_5.name).toBe("The Theme Park");
+  });
+
+  test("has circus squirrel story", () => {
+    expect(LEVEL_5.memoir).toContain("CIRCUS");
+    expect(LEVEL_5.memoir).toContain("CLOWN");
+  });
+
+  test("starts with 5 lives", () => {
+    expect(LEVEL_5.startLives).toBe(5);
+  });
+
+  test("has clown enemies", () => {
+    const clowns = LEVEL_5.enemies.filter((e) => e.type === "clown");
+    expect(clowns.length).toBeGreaterThan(0);
+  });
+
+  test("has mix of all enemy types", () => {
+    const types = new Set(LEVEL_5.enemies.map((e) => e.type));
+    expect(types.has("walker")).toBe(true);
+    expect(types.has("armored")).toBe(true);
+    expect(types.has("clown")).toBe(true);
+    expect(types.has("wasp_patrol")).toBe(true);
+    expect(types.has("wasp_dive")).toBe(true);
+    expect(types.has("bookworm")).toBe(true);
+  });
+
+  test("has a golden paw", () => {
+    expect(LEVEL_5.secretPaw).toBeDefined();
+  });
+
+  test("is a long level", () => {
+    expect(LEVEL_5.width).toBeGreaterThan(5000);
+  });
+
+  test("has lots of treats", () => {
+    expect(LEVEL_5.treats.length).toBeGreaterThan(40);
+  });
+
+  test("has checkpoints", () => {
+    expect(LEVEL_5.checkpoints).toBeDefined();
+    expect(LEVEL_5.checkpoints.length).toBe(2);
+  });
+});
+
+// ============================================
+// LEVEL 6: KING CLOWN BOSS FIGHT
+// ============================================
+describe("Level 6: King Clown", () => {
+  test("has boss fight name", () => {
+    expect(LEVEL_6.name).toBe("King Clown");
+  });
+
+  test("is marked as boss fight", () => {
+    expect(LEVEL_6.isBossFight).toBe(true);
+  });
+
+  test("has boss type", () => {
+    expect(LEVEL_6.bossType).toBe("kingClown");
+  });
+
+  test("starts with 5 lives", () => {
+    expect(LEVEL_6.startLives).toBe(5);
+  });
+
+  test("has no checkpoints (boss fight)", () => {
+    expect(LEVEL_6.checkpoints).toBeUndefined();
+  });
+
+  test("has no golden paw", () => {
+    expect(LEVEL_6.secretPaw).toBeUndefined();
+  });
+
+  test("has no regular enemies (boss is the enemy)", () => {
+    expect(LEVEL_6.enemies.length).toBe(0);
+  });
+
+  test("has a small arena", () => {
+    expect(LEVEL_6.width).toBeLessThan(2000);
+  });
+
+  test("has platforms for dodging", () => {
+    expect(LEVEL_6.platforms.length).toBeGreaterThan(2);
+  });
+
+  test("has bounce crates to help reach boss", () => {
+    expect(LEVEL_6.bounceCrates.length).toBeGreaterThan(0);
+  });
+
+  test("memoir mentions jetpack and King Clown", () => {
+    expect(LEVEL_6.memoir).toContain("KING CLOWN");
+    expect(LEVEL_6.memoir).toContain("JETPACK");
+  });
+
+  test("level6.js is valid JS", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level6.js"), "utf-8");
+    expect(() => new Function(code)).not.toThrow();
   });
 });

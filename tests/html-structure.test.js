@@ -36,6 +36,8 @@ describe("HTML structure", () => {
     expect(htmlContent).toContain('src="levels/level2.js"');
     expect(htmlContent).toContain('src="levels/level3.js"');
     expect(htmlContent).toContain('src="levels/level4.js"');
+    expect(htmlContent).toContain('src="levels/level5.js"');
+    expect(htmlContent).toContain('src="levels/level6.js"');
   });
 
   test("level scripts are loaded before Kaplay", () => {
@@ -539,7 +541,7 @@ describe("ALL_LEVELS configuration", () => {
   test("ALL_LEVELS array includes all level files", () => {
     expect(htmlContent).toContain("LEVEL_1");
     expect(htmlContent).toContain("LEVEL_2");
-    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*LEVEL_4.*\]/);
+    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*LEVEL_4.*LEVEL_5.*LEVEL_6.*\]/);
   });
 
   test("level script tags match ALL_LEVELS entries", () => {
@@ -787,5 +789,207 @@ describe("Power system", () => {
     expect(htmlContent).toContain("CRYSTAL PLATFORM");
     expect(htmlContent).toContain("MOONBEAM PATH");
     expect(htmlContent).toContain("STAR PLATFORM");
+  });
+});
+
+// ============================================
+// THEME PARK (Level 5)
+// ============================================
+describe("Theme Park level", () => {
+  test("has theme park platform detection", () => {
+    expect(htmlContent).toContain('level.name === "The Theme Park"');
+  });
+
+  test("has theme park platform types", () => {
+    expect(htmlContent).toContain("ROLLER COASTER RAIL");
+    expect(htmlContent).toContain("BUMPER CAR PLATFORM");
+    expect(htmlContent).toContain("CAROUSEL PLATFORM");
+    expect(htmlContent).toContain("TICKET BOOTH");
+    expect(htmlContent).toContain("FERRIS WHEEL GONDOLA");
+  });
+
+  test("has carnival tent background", () => {
+    expect(htmlContent).toContain("CARNIVAL TENT INTERIOR");
+    expect(htmlContent).toContain("isThemePark");
+  });
+
+  test("has roller coaster background with riders", () => {
+    expect(htmlContent).toContain("bossCoasterCart");
+    expect(htmlContent).toContain("bossCoasterRider");
+  });
+});
+
+// ============================================
+// CLOWN ENEMY
+// ============================================
+describe("Clown enemy", () => {
+  test("has clown sprite", () => {
+    expect(htmlContent).toContain("function drawClown()");
+    expect(htmlContent).toContain('loadSprite("clown"');
+  });
+
+  test("clown is immune to tail spin", () => {
+    expect(htmlContent).toContain("enemy.isClown");
+    // Spinning into clown should hurt Rufus
+    const clownSpinBlock = htmlContent.match(/isClown[\s\S]*?hurtRufus\(\)/);
+    expect(clownSpinBlock).not.toBeNull();
+  });
+
+  test("clown can be stomped by jumping on head", () => {
+    const clownStompBlock = htmlContent.match(/isClown[\s\S]*?Stomp the clown/);
+    expect(clownStompBlock).not.toBeNull();
+  });
+
+  test("clown explodes in confetti when defeated", () => {
+    // The clown stomp section should have colorful particles
+    expect(htmlContent).toContain("Stomp the clown");
+  });
+});
+
+// ============================================
+// BOSS FIGHT (Level 6)
+// ============================================
+describe("Boss fight", () => {
+  test("has boss clown sprite", () => {
+    expect(htmlContent).toContain("function drawBossClown()");
+    expect(htmlContent).toContain('loadSprite("bossClown"');
+  });
+
+  test("has boss fight engine code", () => {
+    expect(htmlContent).toContain("level.isBossFight");
+    expect(htmlContent).toContain("bossState");
+    expect(htmlContent).toContain("bossHP");
+  });
+
+  test("boss has three states: flying, diving, stunned", () => {
+    expect(htmlContent).toContain('"flying"');
+    expect(htmlContent).toContain('"diving"');
+    expect(htmlContent).toContain('"stunned"');
+  });
+
+  test("boss can be hit while stunned by stomp or spin", () => {
+    expect(htmlContent).toContain("rufus.isSpinning");
+    expect(htmlContent).toContain('bossState === "stunned"');
+  });
+
+  test("exit is destroyed until boss is defeated", () => {
+    expect(htmlContent).toContain("Destroy the exit flag");
+  });
+
+  test("exit spawns after boss is defeated", () => {
+    expect(htmlContent).toContain("Spawn the exit flag");
+  });
+
+  test("boss spawns clown minions between hits", () => {
+    expect(htmlContent).toContain("swarmEnemy");
+    // Boss should spawn clowns after recovering
+    const minionSpawn = htmlContent.match(/bossHP[\s\S]*?sprite\("clown"\)/);
+    expect(minionSpawn).not.toBeNull();
+  });
+
+  test("boss fight respawns in place without resetting boss", () => {
+    expect(htmlContent).toContain("level.isBossFight");
+    expect(htmlContent).toContain("Boss fight: respawn in place");
+  });
+
+  test("has boss HP bar", () => {
+    expect(htmlContent).toContain("bossBarBG");
+    expect(htmlContent).toContain("bossBarFill");
+    expect(htmlContent).toContain("KING CLOWN");
+  });
+
+  test("has mega confetti on boss defeat", () => {
+    expect(htmlContent).toContain("CONFETTI EXPLOSION");
+    expect(htmlContent).toContain("MEGA confetti rain");
+  });
+
+  test("has victory text on boss defeat", () => {
+    expect(htmlContent).toContain("VICTORY!");
+  });
+});
+
+// ============================================
+// JETPACK SYSTEM
+// ============================================
+describe("Jetpack system", () => {
+  test("has jetpack localStorage functions", () => {
+    expect(htmlContent).toContain("function hasJetpack()");
+    expect(htmlContent).toContain("function unlockJetpack()");
+    expect(htmlContent).toContain("rufus_jetpack");
+  });
+
+  test("has jetpack unlock scene", () => {
+    expect(htmlContent).toContain('scene("jetpackUnlock"');
+    expect(htmlContent).toContain("JETPACK UNLOCKED!");
+  });
+
+  test("boss fight triggers jetpack unlock", () => {
+    expect(htmlContent).toContain("level.isBossFight");
+    expect(htmlContent).toContain('go("jetpackUnlock"');
+  });
+
+  test("jetpack boost works mid-air with fuel system", () => {
+    expect(htmlContent).toContain("jetpackFuel");
+    expect(htmlContent).toContain("jetpackMaxFuel");
+    expect(htmlContent).toContain("jetpackUnlocked");
+  });
+
+  test("jetpack has fire particles", () => {
+    // Jetpack boost should create fire particles below Rufus
+    const jetpackParticles = htmlContent.match(/jetpackUnlocked[\s\S]*?color\(255, rand\(50, 150\), 0\)/);
+    expect(jetpackParticles).not.toBeNull();
+  });
+
+  test("jetpack works on touch controls too", () => {
+    // Jump button area should have jetpack logic
+    const touchJump = htmlContent.match(/Jump button area[\s\S]*?jetpackUnlocked/);
+    expect(touchJump).not.toBeNull();
+  });
+});
+
+// ============================================
+// PER-LEVEL START LIVES
+// ============================================
+describe("Per-level start lives", () => {
+  test("supports level.startLives config", () => {
+    expect(htmlContent).toContain("level.startLives");
+  });
+
+  test("defaults to 3 lives when not specified", () => {
+    expect(htmlContent).toContain("level.startLives || 3");
+  });
+});
+
+// ============================================
+// TITLE SCREEN
+// ============================================
+describe("Title screen", () => {
+  test("has all four characters on title", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain('sprite("rufus")');
+    expect(titleScene).toContain('sprite("marthina")');
+    expect(titleScene).toContain('sprite("renard")');
+    expect(titleScene).toContain('sprite("fiery")');
+  });
+
+  test("has shooting stars", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Shooting");
+  });
+
+  test("has fireworks", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Fireworks");
+  });
+
+  test("has enemies marching across bottom", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("marching");
+  });
+
+  test("has about and high scores buttons", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain('go("about")');
+    expect(titleScene).toContain('go("leaderboard")');
   });
 });

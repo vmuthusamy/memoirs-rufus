@@ -21,6 +21,7 @@
 <script src="levels/secret.js"></script>
 <script src="levels/level4.js"></script>
 <script src="levels/level5.js"></script>
+<script src="levels/level6.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -60,7 +61,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -718,6 +719,88 @@ function drawClown() {
   return c;
 }
 
+// --- DRAW THE BOSS CLOWN (giant jetpack clown!) ---
+function drawBossClown() {
+  const c = document.createElement("canvas");
+  c.width = 48;
+  c.height = 52;
+  const ctx = c.getContext("2d");
+
+  // GIANT red afro hair
+  ctx.fillStyle = "#DD2222";
+  ctx.fillRect(6, 0, 36, 16);
+  ctx.fillRect(2, 4, 44, 12);
+  ctx.fillRect(10, 0, 28, 6);
+
+  // Face (white, big!)
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(10, 14, 28, 18);
+  ctx.fillRect(8, 16, 32, 14);
+
+  // HUGE red nose
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(18, 20, 12, 8);
+  ctx.fillRect(20, 18, 8, 12);
+
+  // Evil eyes
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(14, 17, 5, 5);
+  ctx.fillRect(29, 17, 5, 5);
+  // Red angry eye glow
+  ctx.fillStyle = "#FF4444";
+  ctx.fillRect(15, 18, 2, 2);
+  ctx.fillRect(30, 18, 2, 2);
+
+  // Evil grin (wider, scarier)
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(14, 28, 20, 3);
+  ctx.fillRect(12, 27, 24, 2);
+  // Teeth
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(16, 28, 3, 2);
+  ctx.fillRect(21, 28, 3, 2);
+  ctx.fillRect(26, 28, 3, 2);
+
+  // Body (purple jumpsuit with gold buttons)
+  ctx.fillStyle = "#6622CC";
+  ctx.fillRect(12, 32, 24, 12);
+  // Gold buttons
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(22, 34, 4, 4);
+  ctx.fillRect(22, 40, 4, 4);
+
+  // JETPACK on the back!
+  ctx.fillStyle = "#888888";
+  ctx.fillRect(2, 30, 8, 14);
+  ctx.fillRect(38, 30, 8, 14);
+  // Jetpack flames
+  ctx.fillStyle = "#FF6600";
+  ctx.fillRect(3, 44, 6, 6);
+  ctx.fillRect(39, 44, 6, 6);
+  ctx.fillStyle = "#FFFF00";
+  ctx.fillRect(4, 46, 4, 4);
+  ctx.fillRect(40, 46, 4, 4);
+
+  // Big floppy shoes
+  ctx.fillStyle = "#FF6600";
+  ctx.fillRect(6, 44, 12, 4);
+  ctx.fillRect(30, 44, 12, 4);
+
+  // Crown (he's the KING clown!)
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(14, 0, 20, 4);
+  ctx.fillRect(16, -2, 4, 4);
+  ctx.fillRect(22, -3, 4, 5);
+  ctx.fillRect(28, -2, 4, 4);
+  // Crown jewels
+  ctx.fillStyle = "#FF0000";
+  ctx.fillRect(17, -1, 2, 2);
+  ctx.fillRect(23, -2, 2, 2);
+  ctx.fillRect(29, -1, 2, 2);
+
+  return c;
+}
+
 function drawBookworm() {
   const c = document.createElement("canvas");
   c.width = 20;
@@ -971,6 +1054,7 @@ loadSprite("fiery", drawFirey().toDataURL());
 loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
 loadSprite("clown", drawClown().toDataURL());
+loadSprite("bossClown", drawBossClown().toDataURL());
 loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
@@ -1073,6 +1157,16 @@ function allPawsCollected() {
     if (!data.paws[i]) return false;
   }
   return true;
+}
+
+// Check if jetpack is unlocked
+function hasJetpack() {
+  return localStorage.getItem("rufus_jetpack") === "true";
+}
+
+// Unlock the jetpack!
+function unlockJetpack() {
+  localStorage.setItem("rufus_jetpack", "true");
 }
 
 // ============================================
@@ -1425,64 +1519,206 @@ scene("leaderboard", () => {
 // TITLE SCREEN
 // ============================================
 scene("title", () => {
-  // Sky background
+  // Dark sky background
   add([
     rect(width(), height()),
     pos(0, 0),
-    color(20, 20, 60),
+    color(15, 10, 40),
     fixed(),
   ]);
 
-  // Stars
-  for (let i = 0; i < 50; i++) {
-    add([
-      rect(2, 2),
+  // TONS of twinkling stars
+  for (let i = 0; i < 80; i++) {
+    const star = add([
+      rect(rand(1, 3), rand(1, 3)),
       pos(rand(0, width()), rand(0, height() * 0.6)),
       color(255, 255, rand(150, 255)),
+      opacity(rand(0.3, 0.9)),
       fixed(),
-      { twinkleSpeed: rand(1, 3) },
+      { t: rand(0, 6.28), speed: rand(1, 4) },
     ]);
+    star.onUpdate(() => {
+      star.t += dt() * star.speed;
+      star.opacity = Math.sin(star.t) * 0.35 + 0.55;
+    });
   }
 
-  // Title
+  // Shooting stars flying across!
+  loop(2, () => {
+    const sy = rand(20, 200);
+    const star = add([
+      rect(rand(3, 6), 2),
+      pos(-10, sy),
+      color(255, 255, rand(200, 255)),
+      opacity(0.8),
+      lifespan(1.5),
+      fixed(),
+      { t: 0 },
+    ]);
+    star.onUpdate(() => {
+      star.t += dt();
+      star.pos.x += 400 * dt();
+      star.pos.y += 100 * dt();
+      star.opacity = Math.max(0, 0.8 - star.t * 0.5);
+      // Trail
+      if (Math.random() < 0.5) {
+        add([
+          rect(2, 2),
+          pos(star.pos.x - rand(5, 15), star.pos.y - rand(2, 5)),
+          color(255, 255, 200),
+          opacity(0.4),
+          lifespan(0.3),
+          fixed(),
+        ]);
+      }
+    });
+  });
+
+  // Fireworks!
+  loop(1.5, () => {
+    const fx = rand(50, width() - 50);
+    const fy = rand(30, 200);
+    const fcolor = [[255,50,50],[50,255,50],[50,100,255],[255,255,50],[255,50,255],[50,255,255]][Math.floor(rand(0, 6))];
+    // Burst!
+    for (let i = 0; i < 20; i++) {
+      add([
+        rect(rand(2, 5), rand(2, 5)),
+        pos(fx, fy),
+        color(...fcolor),
+        opacity(0.9),
+        lifespan(0.8),
+        move(rand(0, 360), rand(40, 180)),
+        fixed(),
+      ]);
+    }
+  });
+
+  // Title with glow effect
   add([
-    text("Adventures of Rufus", { size: 48 }),
-    pos(width() / 2, 120),
+    text("Adventures of Rufus", { size: 50 }),
+    pos(width() / 2, 80),
     anchor("center"),
     color(255, 165, 0),
+    outline(3, rgb(150, 80, 0)),
     fixed(),
-  ]);
+    { t: 0 },
+  ]).onUpdate(function() {
+    this.t += dt();
+    this.scale = vec2(1 + Math.sin(this.t * 1.5) * 0.03);
+  });
 
   // Subtitle
   add([
-    text("Memoirs of a Fox", { size: 24 }),
-    pos(width() / 2, 170),
+    text("Memoirs of a Fox", { size: 22 }),
+    pos(width() / 2, 130),
     anchor("center"),
-    color(255, 200, 100),
+    color(255, 220, 150),
     fixed(),
   ]);
 
-  // Rufus sprite
+  // === ALL CHARACTERS DANCING! ===
+  // Rufus in the center — doing tricks!
   const titleFox = add([
     sprite("rufus"),
-    pos(width() / 2, 300),
+    pos(width() / 2, 280),
     anchor("center"),
-    scale(6),
+    scale(5),
     fixed(),
   ]);
-
-  // Bounce Rufus
   titleFox.onUpdate(() => {
-    titleFox.pos.y = 300 + Math.sin(time() * 2) * 15;
+    titleFox.pos.y = 280 + Math.sin(time() * 3) * 20;
+    titleFox.angle = Math.sin(time() * 2) * 10;
   });
+
+  // Marthina on the left — bouncing happily
+  const titleMarthina = add([
+    sprite("marthina"),
+    pos(width() / 2 - 160, 310),
+    anchor("center"),
+    scale(3.5),
+    fixed(),
+  ]);
+  titleMarthina.onUpdate(() => {
+    titleMarthina.pos.y = 310 + Math.abs(Math.sin(time() * 2.5 + 1)) * -15;
+    titleMarthina.angle = Math.sin(time() * 1.5) * 8;
+  });
+
+  // Renard on the right — barely moving (he's grumpy)
+  const titleRenard = add([
+    sprite("renard"),
+    pos(width() / 2 + 160, 315),
+    anchor("center"),
+    scale(3.5),
+    fixed(),
+  ]);
+  titleRenard.onUpdate(() => {
+    titleRenard.pos.y = 315 + Math.sin(time() * 0.8) * 5;
+    titleRenard.angle = Math.sin(time() * 0.5) * 3;
+  });
+
+  // Fiery in the top-left corner — flying around with fire particles!
+  const titleFirey = add([
+    sprite("fiery"),
+    pos(60, 170),
+    anchor("center"),
+    scale(2.5),
+    fixed(),
+  ]);
+  titleFirey.onUpdate(() => {
+    titleFirey.pos.x = 60 + Math.sin(time() * 1.2) * 20;
+    titleFirey.pos.y = 170 + Math.sin(time() * 2) * 10;
+    // Fire particles from Fiery!
+    if (Math.random() < 0.3) {
+      add([
+        rect(rand(2, 4), rand(2, 4)),
+        pos(titleFirey.pos.x + rand(-8, 8), titleFirey.pos.y + 15),
+        color(255, rand(50, 150), 0),
+        opacity(0.6),
+        lifespan(0.3),
+        move(270, rand(30, 80)),
+        fixed(),
+      ]);
+    }
+  });
+
+  // Enemies marching across the bottom!
+  loop(1.2, () => {
+    const enemyTypes = ["walker", "armored", "clown", "wasp"];
+    const et = enemyTypes[Math.floor(rand(0, enemyTypes.length))];
+    const spriteMap = { walker: "walker", armored: "armored", clown: "clown", wasp: "wasp" };
+    const enemy = add([
+      sprite(spriteMap[et]),
+      pos(-20, 430),
+      anchor("center"),
+      scale(2),
+      opacity(0.5),
+      fixed(),
+      lifespan(8),
+      { t: 0 },
+    ]);
+    enemy.onUpdate(() => {
+      enemy.t += dt();
+      enemy.pos.x += 80 * dt();
+      enemy.pos.y = 430 + Math.sin(enemy.t * 3) * 5;
+    });
+  });
+
+  // Ground line where enemies walk
+  add([
+    rect(width(), 3),
+    pos(0, 445),
+    color(100, 80, 60),
+    opacity(0.3),
+    fixed(),
+  ]);
 
   // Detect touch device
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
-  // Instructions - different text for touch vs keyboard
+  // "PLAY!" prompt
   add([
-    text(isTouch ? "Tap anywhere to play!" : "Press ENTER to start!", { size: 20 }),
-    pos(width() / 2, 440),
+    text(isTouch ? "Tap anywhere to play!" : "Press ENTER to start!", { size: 22 }),
+    pos(width() / 2, 480),
     anchor("center"),
     color(255, 255, 255),
     fixed(),
@@ -1494,17 +1730,17 @@ scene("title", () => {
 
   // Controls help
   add([
-    text(isTouch ? "On-screen buttons appear during gameplay" : "Arrow Keys: Move & Jump | Space: Tail Spin!", { size: 14 }),
-    pos(width() / 2, 500),
+    text(isTouch ? "On-screen buttons appear during gameplay" : "Arrow Keys: Move & Jump | Space: Tail Spin!", { size: 12 }),
+    pos(width() / 2, 510),
     anchor("center"),
-    color(180, 180, 180),
+    color(150, 150, 150),
     fixed(),
   ]);
 
-  // About Rufus link - clickable button (left side)
+  // About Rufus button (left side)
   const aboutBtn = add([
-    rect(200, 36),
-    pos(width() / 2 - 110, 540),
+    rect(200, 34),
+    pos(width() / 2 - 110, 548),
     anchor("center"),
     color(255, 165, 0),
     opacity(0.2),
@@ -1513,10 +1749,9 @@ scene("title", () => {
     area(),
   ]);
   aboutBtn.onClick(() => go("about"));
-
   add([
-    text(isTouch ? "About Rufus" : "A: About Rufus", { size: 13 }),
-    pos(width() / 2 - 110, 540),
+    text(isTouch ? "About Rufus" : "A: About Rufus", { size: 12 }),
+    pos(width() / 2 - 110, 548),
     anchor("center"),
     color(255, 165, 0),
     fixed(),
@@ -1524,8 +1759,8 @@ scene("title", () => {
 
   // High Scores button (right side)
   const scoresBtn = add([
-    rect(200, 36),
-    pos(width() / 2 + 110, 540),
+    rect(200, 34),
+    pos(width() / 2 + 110, 548),
     anchor("center"),
     color(255, 215, 0),
     opacity(0.2),
@@ -1534,10 +1769,9 @@ scene("title", () => {
     area(),
   ]);
   scoresBtn.onClick(() => go("leaderboard"));
-
   add([
-    text(isTouch ? "High Scores" : "H: High Scores", { size: 13 }),
-    pos(width() / 2 + 110, 540),
+    text(isTouch ? "High Scores" : "H: High Scores", { size: 12 }),
+    pos(width() / 2 + 110, 548),
     anchor("center"),
     color(255, 215, 0),
     fixed(),
@@ -1545,7 +1779,7 @@ scene("title", () => {
 
   // Big "Play" tap area (everything above the buttons)
   const playBtn = add([
-    rect(width(), 500),
+    rect(width(), 520),
     pos(0, 0),
     opacity(0),
     fixed(),
@@ -1554,17 +1788,9 @@ scene("title", () => {
   ]);
   playBtn.onClick(() => go("levelSelect"));
 
-  onKeyPress("enter", () => {
-    go("levelSelect");
-  });
-
-  onKeyPress("a", () => {
-    go("about");
-  });
-
-  onKeyPress("h", () => {
-    go("leaderboard");
-  });
+  onKeyPress("enter", () => go("levelSelect"));
+  onKeyPress("a", () => go("about"));
+  onKeyPress("h", () => go("leaderboard"));
 });
 
 // ============================================
@@ -1963,14 +2189,17 @@ scene("levelSelect", () => {
       opacity(gemEarned ? 1 : 0.2),
     ]);
 
-    const pawFound = hasPaw(i);
-    add([
-      sprite("goldenPaw"),
-      pos(width() / 2 - 280, y + 10),
-      anchor("center"),
-      scale(1),
-      opacity(pawFound ? 1 : 0.2),
-    ]);
+    // Only show golden paw icon if the level HAS a golden paw
+    if (level.secretPaw) {
+      const pawFound = hasPaw(i);
+      add([
+        sprite("goldenPaw"),
+        pos(width() / 2 - 280, y + 10),
+        anchor("center"),
+        scale(1),
+        opacity(pawFound ? 1 : 0.2),
+      ]);
+    }
   });
 
   // Secret level entry (only visible when all paws collected!)
@@ -3129,9 +3358,31 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   });
 
   // --- JUMPING ---
+  // Jetpack state
+  let jetpackFuel = 0;
+  const jetpackMaxFuel = 3; // seconds of boost
+  const jetpackUnlocked = hasJetpack();
+
   onKeyPress("up", () => {
     if (rufus.isGrounded()) {
       rufus.jump(jumpForce);
+      jetpackFuel = jetpackMaxFuel; // refuel on ground
+    } else if (jetpackUnlocked && jetpackFuel > 0) {
+      // JETPACK BOOST! Push Rufus upward while in the air
+      rufus.jump(jumpForce * 0.6);
+      jetpackFuel -= 1;
+      // Fire particles from jetpack!
+      for (let i = 0; i < 4; i++) {
+        add([
+          rect(rand(3, 6), rand(3, 6)),
+          pos(rufus.pos.x + rand(-8, 8), rufus.pos.y + 15),
+          color(255, rand(50, 150), 0),
+          opacity(0.8),
+          lifespan(0.3),
+          move(270, rand(80, 180)),
+          z(9),
+        ]);
+      }
     }
   });
 
@@ -3308,7 +3559,24 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         }
         // Jump button area
         else if (g.x > gameW - 195 && g.x < gameW - 105 && g.y > gameH - 100) {
-          if (rufus.isGrounded()) rufus.jump(jumpForce);
+          if (rufus.isGrounded()) {
+            rufus.jump(jumpForce);
+            jetpackFuel = jetpackMaxFuel;
+          } else if (jetpackUnlocked && jetpackFuel > 0) {
+            rufus.jump(jumpForce * 0.6);
+            jetpackFuel -= 1;
+            for (let i = 0; i < 4; i++) {
+              add([
+                rect(rand(3, 6), rand(3, 6)),
+                pos(rufus.pos.x + rand(-8, 8), rufus.pos.y + 15),
+                color(255, rand(50, 150), 0),
+                opacity(0.8),
+                lifespan(0.3),
+                move(270, rand(80, 180)),
+                z(9),
+              ]);
+            }
+          }
         }
         // Spin/Power button area
         else if (g.x > gameW - 95 && g.y > gameH - 100) {
@@ -3844,6 +4112,23 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       } else {
         go("gameOver", { score, levelIndex });
       }
+    } else if (level.isBossFight) {
+      // Boss fight: respawn in place, don't restart the scene!
+      livesText.text = `Lives: ${"🦊".repeat(lives)}`;
+      rufus.pos.x = playerSpawn.x;
+      rufus.pos.y = playerSpawn.y || 0;
+      // Brief invincibility after respawn
+      wait(1.5, () => { isInvincible = false; });
+      // Flash Rufus to show invincibility
+      let flashCount = 0;
+      const flashInterval = loop(0.15, () => {
+        rufus.opacity = rufus.opacity > 0.5 ? 0.3 : 1;
+        flashCount++;
+        if (flashCount > 10) {
+          rufus.opacity = 1;
+          flashInterval.cancel();
+        }
+      });
     } else {
       // Restart level cleanly — spawn at checkpoint if one was activated
       go("game", levelIndex, lives, lastCheckpoint || null, deathsThisRun);
@@ -3866,6 +4151,13 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     // Secret level goes to its own celebration scene
     if (isSecret) {
       go("secretComplete", { score });
+      return;
+    }
+
+    // Boss fight unlocks the jetpack!
+    if (level.isBossFight) {
+      unlockJetpack();
+      go("jetpackUnlock", { score, levelIndex, earnedGem, pawCollectedThisRun });
       return;
     }
 
@@ -4109,6 +4401,426 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     });
   }
 
+  // --- BOSS ARENA BACKGROUND (roller coaster with clowns!) ---
+  if (level.isBossFight) {
+    // Roller coaster track in the background
+    for (let tx = 0; tx < level.width; tx += 30) {
+      const hill = Math.sin(tx * 0.008) * 60 + Math.sin(tx * 0.015) * 30;
+      const ty = 130 + hill;
+      add([ rect(32, 4), pos(tx, ty), color(120, 120, 130), opacity(0.3), z(-7) ]);
+      if (tx % 120 === 0) {
+        add([ rect(3, 400 - ty), pos(tx + 14, ty + 4), color(100, 100, 110), opacity(0.2), z(-8) ]);
+      }
+    }
+
+    // Clowns riding the coaster!
+    for (let r = 0; r < 3; r++) {
+      const cart = add([
+        rect(18, 10), pos(r * 400 + 100, 130),
+        color(220, 50 + r * 80, 50), opacity(0.45), z(-6),
+        "bossCoasterCart",
+        { trackX: r * 400 + 100, speed: 60 + r * 15, dir: 1 },
+      ]);
+      const rider = add([
+        sprite("clown"), pos(r * 400 + 100, 120),
+        anchor("bot"), scale(1), opacity(0.45), z(-6),
+        "bossCoasterRider", { cart: cart },
+      ]);
+    }
+
+    onUpdate("bossCoasterCart", (cart) => {
+      cart.trackX += cart.speed * cart.dir * dt();
+      if (cart.trackX > level.width - 50) cart.dir = -1;
+      if (cart.trackX < 50) cart.dir = 1;
+      const hill = Math.sin(cart.trackX * 0.008) * 60 + Math.sin(cart.trackX * 0.015) * 30;
+      cart.pos.x = cart.trackX;
+      cart.pos.y = 130 + hill;
+    });
+
+    // Spawn a new clown rider every 3 seconds!
+    loop(3, () => {
+      const startX = rand(50, level.width - 50);
+      const newCart = add([
+        rect(18, 10), pos(startX, 130),
+        color(rand(100, 255), rand(50, 200), rand(50, 200)), opacity(0.45), z(-6),
+        "bossCoasterCart",
+        { trackX: startX, speed: rand(50, 90), dir: rand(0, 1) > 0.5 ? 1 : -1 },
+      ]);
+      add([
+        sprite("clown"), pos(startX, 120),
+        anchor("bot"), scale(1), opacity(0.45), z(-6),
+        "bossCoasterRider", { cart: newCart },
+      ]);
+    });
+
+    onUpdate("bossCoasterRider", (rider) => {
+      if (!rider.cart || !rider.cart.exists()) { destroy(rider); return; }
+      rider.pos.x = rider.cart.pos.x + 3;
+      rider.pos.y = rider.cart.pos.y - 2;
+      rider.flipX = rider.cart.dir < 0;
+    });
+  }
+
+  // --- BOSS FIGHT (Level 6: King Clown!) ---
+  if (level.isBossFight) {
+    let bossHP = 3;
+    let bossState = "flying"; // flying, diving, stunned
+    let bossTimer = 0;
+    let bossSpeed = 70;
+    let bossDir = 1;
+    let bossHitCooldown = 0;
+    let bossDefeated = false;
+
+    // Destroy the exit flag — it spawns back after boss is defeated
+    get("exit").forEach((e) => { destroy(e); });
+
+    // Spawn the King Clown!
+    const boss = add([
+      sprite("bossClown"),
+      pos(width() / 2, 150),
+      anchor("center"),
+      scale(3),
+      area(),
+      z(10),
+      "boss",
+      { bossHP: bossHP },
+    ]);
+
+    // Boss HP bar
+    const bossBarBG = add([
+      rect(300, 22),
+      pos(width() / 2 - 150, 12),
+      color(40, 0, 0),
+      outline(2, rgb(100, 50, 50)),
+      fixed(),
+      z(100),
+    ]);
+    const bossBarFill = add([
+      rect(294, 16),
+      pos(width() / 2 - 147, 15),
+      color(255, 30, 30),
+      fixed(),
+      z(101),
+    ]);
+    add([
+      text("KING CLOWN", { size: 12 }),
+      pos(width() / 2, 23),
+      anchor("center"),
+      color(255, 255, 255),
+      fixed(),
+      z(102),
+    ]);
+
+    // "FIGHT!" intro text
+    const fightText = add([
+      text("FIGHT!", { size: 56 }),
+      pos(width() / 2, height() / 2),
+      anchor("center"),
+      color(255, 50, 0),
+      outline(3, rgb(0, 0, 0)),
+      opacity(1),
+      lifespan(2),
+      fixed(),
+      z(200),
+    ]);
+
+    // Boss AI loop
+    onUpdate(() => {
+      if (bossDefeated || !boss.exists()) return;
+      if (bossHitCooldown > 0) bossHitCooldown -= dt();
+      bossTimer += dt();
+
+      if (bossState === "flying") {
+        // Fly back and forth across the arena
+        boss.pos.x += bossDir * bossSpeed * dt();
+        boss.pos.y = 120 + Math.sin(time() * 2) * 30;
+
+        // Bounce at arena edges
+        if (boss.pos.x > level.width - 80) bossDir = -1;
+        if (boss.pos.x < 80) bossDir = 1;
+        boss.flipX = bossDir < 0;
+
+        // Jetpack fire particles
+        if (Math.random() < 0.4) {
+          add([
+            rect(rand(3, 6), rand(3, 6)),
+            pos(boss.pos.x + rand(-15, 15), boss.pos.y + 50),
+            color(255, rand(50, 150), 0),
+            opacity(0.7),
+            lifespan(0.3),
+            move(270, rand(50, 120)),
+            z(9),
+          ]);
+        }
+
+        // After flying for a bit, DIVE at Rufus!
+        if (bossTimer > 3.5) {
+          bossState = "diving";
+          bossTimer = 0;
+          // Aim at where Rufus is now
+          boss.diveTargetX = rufus.pos.x;
+        }
+      } else if (bossState === "diving") {
+        // Dive down toward Rufus's last position!
+        const targetY = height() - 80;
+        boss.pos.y += 280 * dt();
+        // Move toward the target X
+        const dx = boss.diveTargetX - boss.pos.x;
+        boss.pos.x += Math.sign(dx) * Math.min(Math.abs(dx), 300 * dt());
+
+        // Big dive fire trail
+        for (let i = 0; i < 2; i++) {
+          add([
+            rect(rand(4, 8), rand(4, 8)),
+            pos(boss.pos.x + rand(-20, 20), boss.pos.y - 20),
+            color(255, rand(100, 200), 0),
+            opacity(0.8),
+            lifespan(0.4),
+            move(90, rand(30, 80)),
+            z(9),
+          ]);
+        }
+
+        // CRASH! Hit the ground
+        if (boss.pos.y >= targetY) {
+          boss.pos.y = targetY;
+          bossState = "stunned";
+          bossTimer = 0;
+
+          // Screen shake effect — spawn impact particles
+          for (let i = 0; i < 12; i++) {
+            add([
+              rect(rand(4, 10), rand(4, 10)),
+              pos(boss.pos.x + rand(-40, 40), boss.pos.y + rand(-10, 10)),
+              color(200, 180, 120),
+              opacity(0.8),
+              lifespan(0.5),
+              move(rand(0, 360), rand(100, 300)),
+              z(11),
+            ]);
+          }
+
+          // "CRASH!" text
+          add([
+            text("CRASH!", { size: 36 }),
+            pos(boss.pos.x, boss.pos.y - 60),
+            anchor("center"),
+            color(255, 200, 0),
+            outline(2, rgb(0, 0, 0)),
+            opacity(1),
+            lifespan(1),
+            z(150),
+          ]);
+        }
+      } else if (bossState === "stunned") {
+        // Boss is stunned on the ground — stars spinning!
+        boss.angle = Math.sin(time() * 10) * 15;
+
+        // Stars around head
+        if (Math.random() < 0.2) {
+          add([
+            text("*", { size: rand(12, 20) }),
+            pos(boss.pos.x + rand(-30, 30), boss.pos.y - 50 + rand(-10, 10)),
+            color(255, 255, 0),
+            opacity(0.8),
+            lifespan(0.5),
+            move(rand(0, 360), rand(20, 50)),
+            z(12),
+          ]);
+        }
+
+        // After 3 seconds, recover and fly again (faster!)
+        if (bossTimer > 3) {
+          bossState = "flying";
+          bossTimer = 0;
+          boss.angle = 0;
+          boss.pos.y = 150;
+          // Spawn little clown minions after each recovery!
+          if (bossHP > 0) {
+            for (let m = 0; m < (4 - bossHP); m++) {
+              add([
+                sprite("clown"),
+                pos(rand(100, level.width - 100), 535),
+                area(), anchor("bot"), z(1),
+                "clown", "enemy",
+                { startX: rand(100, level.width - 100), startY: 535,
+                  patrol: 80, speed: 50 + (3 - bossHP) * 15, dir: 1,
+                  enemyType: "clown", isDisarmed: false, isWasp: false, isClown: true,
+                  isDiving: false, diveTimer: 0 },
+              ]);
+            }
+          }
+        }
+      }
+    });
+
+    // Rufus jumps on the boss while stunned!
+    rufus.onCollide("boss", () => {
+      if (bossDefeated || bossHitCooldown > 0) return;
+
+      if (bossState === "stunned" && (rufus.pos.y < boss.pos.y - 30 || rufus.isSpinning)) {
+        // HIT! Jump on his head or tail spin him while stunned!
+        bossHP--;
+        bossHitCooldown = 1;
+        rufus.jump(jumpForce * 0.8);
+
+        // Update boss HP bar
+        bossBarFill.width = 294 * (bossHP / 3);
+
+        // Hit flash — confetti burst!
+        for (let i = 0; i < 15; i++) {
+          const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200],[255,165,0]][i % 6];
+          add([
+            rect(rand(4, 10), rand(4, 10)),
+            pos(boss.pos.x + rand(-30, 30), boss.pos.y + rand(-30, 10)),
+            color(...cc),
+            opacity(1),
+            lifespan(0.6),
+            move(rand(0, 360), rand(100, 350)),
+            z(15),
+          ]);
+        }
+
+        // Boss text reaction
+        const reactions = ["HONK?!", "OUCH!", "NOOO!"];
+        add([
+          text(reactions[2 - bossHP] || "!", { size: 28 }),
+          pos(boss.pos.x, boss.pos.y - 80),
+          anchor("center"),
+          color(255, 50, 50),
+          outline(2, rgb(0, 0, 0)),
+          opacity(1),
+          lifespan(1.2),
+          z(150),
+        ]);
+
+        // Boss gets a little faster after each hit
+        bossSpeed += 25;
+
+        if (bossHP <= 0) {
+          // BOSS DEFEATED!
+          bossDefeated = true;
+          boss.angle = 0;
+          bossBarFill.width = 0;
+
+          // CONFETTI EXPLOSION!!! As many as possible without crashing!
+          // Wave 1 — instant burst from the boss
+          for (let i = 0; i < 150; i++) {
+            const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200],[255,165,0],[255,128,0],[200,0,255]][i % 8];
+            add([
+              rect(rand(4, 16), rand(4, 16)),
+              pos(boss.pos.x + rand(-80, 80), boss.pos.y + rand(-80, 80)),
+              color(...cc),
+              opacity(1),
+              lifespan(2.5),
+              move(rand(0, 360), rand(80, 600)),
+              z(20),
+            ]);
+          }
+          // Wave 2 — delayed second burst (even bigger!)
+          wait(0.3, () => {
+            for (let i = 0; i < 150; i++) {
+              const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200],[255,165,0]][i % 6];
+              add([
+                rect(rand(3, 12), rand(3, 12)),
+                pos(rand(0, width()), rand(0, height())),
+                color(...cc),
+                opacity(1),
+                lifespan(2),
+                move(rand(0, 360), rand(100, 500)),
+                fixed(),
+                z(20),
+              ]);
+            }
+          });
+          // Wave 3 — third burst from edges!
+          wait(0.6, () => {
+            for (let i = 0; i < 100; i++) {
+              const cc = [[255,50,50],[50,255,50],[50,50,255],[255,255,50],[255,50,255]][i % 5];
+              const side = i % 2 === 0 ? -10 : width() + 10;
+              add([
+                rect(rand(4, 14), rand(4, 14)),
+                pos(side, rand(0, height())),
+                color(...cc),
+                opacity(1),
+                lifespan(2.5),
+                move(side < 0 ? rand(330, 390) : rand(150, 210), rand(100, 400)),
+                fixed(),
+                z(20),
+              ]);
+            }
+          });
+
+          // MEGA confetti rain — dense shower that doesn't stop!
+          loop(0.05, () => {
+            if (!bossDefeated) return;
+            for (let i = 0; i < 3; i++) {
+              const cc = [[255,0,0],[0,200,0],[0,100,255],[255,255,0],[255,100,200],[255,165,0],[200,0,255],[0,255,255]][Math.floor(rand(0, 8))];
+              add([
+                rect(rand(3, 12), rand(3, 12)),
+                pos(rand(0, width()), -10),
+                color(...cc),
+                opacity(0.9),
+                lifespan(2.5),
+                move(rand(65, 115), rand(100, 250)),
+                fixed(),
+                z(20),
+              ]);
+            }
+          });
+
+          // "VICTORY!" text
+          add([
+            text("VICTORY!", { size: 52 }),
+            pos(width() / 2, height() / 2 - 50),
+            anchor("center"),
+            color(255, 215, 0),
+            outline(3, rgb(0, 0, 0)),
+            opacity(1),
+            fixed(),
+            z(200),
+            { t: 0 },
+          ]).onUpdate(function() {
+            this.t += dt();
+            this.opacity = Math.sin(this.t * 3) * 0.2 + 0.8;
+          });
+
+          // Destroy the boss and all remaining clown minions
+          destroy(boss);
+          get("clown").forEach((c) => {
+            if (c.exists()) destroy(c);
+          });
+
+          // Spawn the exit flag!
+          wait(2, () => {
+            add([
+              sprite("flag"),
+              pos(level.exit.x, level.exit.y),
+              area(),
+              anchor("bot"),
+              z(1),
+              "exit",
+            ]);
+            add([
+              text("The exit has appeared!", { size: 20 }),
+              pos(width() / 2, height() / 2),
+              anchor("center"),
+              color(255, 200, 100),
+              outline(2, rgb(0, 0, 0)),
+              opacity(1),
+              lifespan(3),
+              fixed(),
+              z(150),
+            ]);
+          });
+        }
+      } else if (bossState !== "stunned") {
+        // Boss hit Rufus while NOT stunned — ouch!
+        hurtRufus();
+      }
+    });
+  }
+
   // --- HUD (Heads Up Display) ---
   const scoreText = add([
     text(`Treats: ${score}`, { size: 20 }),
@@ -4214,6 +4926,12 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
       title: "Theme Park Legend!",
       message: "The clowns, the acrobat wasps, the bumper car squirrels — ALL defeated! Rufus is the ringmaster now!",
       rufusColor: [255, 200, 50],
+    },
+    { // Level 6 - boss fight victory, dark dramatic
+      bg: [80, 30, 50],
+      title: "King Clown Defeated!",
+      message: "The King Clown and his jetpack are DONE! Rufus stomped that crown right off his head! The circus belongs to the foxes now!",
+      rufusColor: [255, 100, 0],
     },
   ];
   const theme = themes[levelIndex] || themes[0];
@@ -4651,6 +5369,142 @@ scene("secretComplete", ({ score }) => {
   tapTarget.onClick(() => go("levelSelect"));
   onKeyPress("enter", () => go("levelSelect"));
   onKeyPress("escape", () => go("levelSelect"));
+});
+
+// ============================================
+// JETPACK UNLOCK SCENE
+// ============================================
+scene("jetpackUnlock", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) => {
+  const isTouchJP = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // Dark dramatic background
+  add([rect(width(), height()), pos(0, 0), color(20, 10, 40), fixed()]);
+
+  // Stars
+  for (let i = 0; i < 40; i++) {
+    const star = add([
+      rect(2, 2),
+      pos(rand(0, width()), rand(0, height() * 0.5)),
+      color(255, 255, rand(200, 255)),
+      opacity(rand(0.3, 0.7)),
+      fixed(),
+      { t: rand(0, 6.28) },
+    ]);
+    star.onUpdate(() => {
+      star.t += dt() * 2;
+      star.opacity = Math.sin(star.t) * 0.3 + 0.5;
+    });
+  }
+
+  // "NEW UNLOCK!" title
+  add([
+    text("NEW UNLOCK!", { size: 48 }),
+    pos(width() / 2, 70),
+    anchor("center"),
+    color(255, 215, 0),
+    outline(3, rgb(150, 100, 0)),
+    fixed(),
+    { t: 0 },
+  ]).onUpdate(function() {
+    this.t += dt();
+    this.scale = vec2(1 + Math.sin(this.t * 3) * 0.05);
+  });
+
+  // Jetpack image (using the boss clown sprite flipped as a trophy)
+  // Big jetpack icon made of rects
+  const jpX = width() / 2;
+  const jpY = 220;
+  // Jetpack body
+  add([ rect(40, 60), pos(jpX - 20, jpY - 30), color(140, 140, 150), fixed(), z(1) ]);
+  add([ rect(36, 56), pos(jpX - 18, jpY - 28), color(160, 160, 170), fixed(), z(2) ]);
+  // Nozzles
+  add([ rect(12, 20), pos(jpX - 18, jpY + 30), color(120, 120, 130), fixed(), z(1) ]);
+  add([ rect(12, 20), pos(jpX + 6, jpY + 30), color(120, 120, 130), fixed(), z(1) ]);
+  // Flames!
+  const flame1 = add([
+    rect(10, 16), pos(jpX - 17, jpY + 50),
+    color(255, 100, 0), opacity(0.9), fixed(), z(1), { t: 0 },
+  ]);
+  const flame2 = add([
+    rect(10, 16), pos(jpX + 7, jpY + 50),
+    color(255, 100, 0), opacity(0.9), fixed(), z(1), { t: 1 },
+  ]);
+  flame1.onUpdate(() => {
+    flame1.t += dt() * 8;
+    flame1.height = 16 + Math.sin(flame1.t) * 6;
+    flame1.color = rgb(255, 100 + Math.sin(flame1.t) * 50, 0);
+  });
+  flame2.onUpdate(() => {
+    flame2.t += dt() * 8;
+    flame2.height = 16 + Math.sin(flame2.t) * 6;
+    flame2.color = rgb(255, 100 + Math.sin(flame2.t) * 50, 0);
+  });
+  // Straps
+  add([ rect(4, 30), pos(jpX - 8, jpY - 50), color(100, 70, 40), fixed(), z(0) ]);
+  add([ rect(4, 30), pos(jpX + 4, jpY - 50), color(100, 70, 40), fixed(), z(0) ]);
+
+  // Spark particles around the jetpack
+  loop(0.2, () => {
+    add([
+      rect(rand(2, 5), rand(2, 5)),
+      pos(jpX + rand(-30, 30), jpY + rand(-40, 40)),
+      color(255, 215, rand(50, 200)),
+      opacity(0.8),
+      lifespan(0.5),
+      move(rand(0, 360), rand(30, 80)),
+      fixed(),
+    ]);
+  });
+
+  // Description
+  add([
+    text("JETPACK UNLOCKED!", { size: 32 }),
+    pos(width() / 2, 320),
+    anchor("center"),
+    color(255, 150, 0),
+    outline(2, rgb(0, 0, 0)),
+    fixed(),
+  ]);
+
+  add([
+    text("You took the King Clown's jetpack!", { size: 16 }),
+    pos(width() / 2, 365),
+    anchor("center"),
+    color(220, 200, 160),
+    fixed(),
+  ]);
+
+  add([
+    text("Press UP while in the air to BOOST!", { size: 18 }),
+    pos(width() / 2, 400),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+  ]);
+
+  add([
+    text("Works in ALL levels! You get 3 boosts per jump.", { size: 14 }),
+    pos(width() / 2, 430),
+    anchor("center"),
+    color(180, 170, 140),
+    fixed(),
+  ]);
+
+  // Continue prompt
+  add([
+    text(isTouchJP ? "Tap to continue!" : "Press ENTER to continue!", { size: 18 }),
+    pos(width() / 2, 510),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+    { t: 0 },
+  ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 3) * 0.3 + 0.7; });
+
+  const tapTarget = add([
+    rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
+  ]);
+  tapTarget.onClick(() => go("levelComplete", { score, levelIndex, earnedGem, pawCollectedThisRun }));
+  onKeyPress("enter", () => go("levelComplete", { score, levelIndex, earnedGem, pawCollectedThisRun }));
 });
 
 // ============================================
