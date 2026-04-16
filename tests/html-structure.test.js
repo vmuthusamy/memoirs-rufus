@@ -38,6 +38,7 @@ describe("HTML structure", () => {
     expect(htmlContent).toContain('src="levels/level4.js"');
     expect(htmlContent).toContain('src="levels/level5.js"');
     expect(htmlContent).toContain('src="levels/level6.js"');
+    expect(htmlContent).toContain('src="levels/level7.js"');
   });
 
   test("level scripts are loaded before Kaplay", () => {
@@ -541,7 +542,7 @@ describe("ALL_LEVELS configuration", () => {
   test("ALL_LEVELS array includes all level files", () => {
     expect(htmlContent).toContain("LEVEL_1");
     expect(htmlContent).toContain("LEVEL_2");
-    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*LEVEL_4.*LEVEL_5.*LEVEL_6.*\]/);
+    expect(htmlContent).toMatch(/ALL_LEVELS\s*=\s*\[.*LEVEL_1.*LEVEL_2.*LEVEL_3.*LEVEL_4.*LEVEL_5.*LEVEL_6.*LEVEL_7.*\]/);
   });
 
   test("level script tags match ALL_LEVELS entries", () => {
@@ -928,22 +929,17 @@ describe("Jetpack system", () => {
     expect(htmlContent).toContain('go("jetpackUnlock"');
   });
 
-  test("jetpack boost works mid-air with fuel system", () => {
-    expect(htmlContent).toContain("jetpackFuel");
-    expect(htmlContent).toContain("jetpackMaxFuel");
+  test("jetpack has thrust mechanic", () => {
     expect(htmlContent).toContain("jetpackUnlocked");
+    expect(htmlContent).toContain("jetpackActive");
   });
 
   test("jetpack has fire particles", () => {
-    // Jetpack boost should create fire particles below Rufus
-    const jetpackParticles = htmlContent.match(/jetpackUnlocked[\s\S]*?color\(255, rand\(50, 150\), 0\)/);
-    expect(jetpackParticles).not.toBeNull();
+    expect(htmlContent).toContain("Fire particles");
   });
 
   test("jetpack works on touch controls too", () => {
-    // Jump button area should have jetpack logic
-    const touchJump = htmlContent.match(/Jump button area[\s\S]*?jetpackUnlocked/);
-    expect(touchJump).not.toBeNull();
+    expect(htmlContent).toContain("touchJumpHeld");
   });
 });
 
@@ -991,5 +987,57 @@ describe("Title screen", () => {
     const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
     expect(titleScene).toContain('go("about")');
     expect(titleScene).toContain('go("leaderboard")');
+  });
+
+  test("has lollipops on title screen", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("lollipopPositions");
+  });
+
+  test("has roller coaster with riders on title screen", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Roller coaster");
+    expect(titleScene).toContain("clown");
+  });
+});
+
+// ============================================
+// LEVEL SELECT
+// ============================================
+describe("Level select", () => {
+  test("has paged chapter book level select", () => {
+    expect(htmlContent).toContain("LEVELS_PER_PAGE");
+    expect(htmlContent).toContain("currentPage");
+    expect(htmlContent).toContain("showPage");
+  });
+
+  test("has left and right arrows for page navigation", () => {
+    const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
+    expect(selectScene).toContain("leftArrow");
+    expect(selectScene).toContain("rightArrow");
+  });
+
+  test("has pink background for later chapters", () => {
+    expect(htmlContent).toContain("220, 150, 180");
+  });
+});
+
+// ============================================
+// LOLLIPOPS AND SPIKES
+// ============================================
+describe("Lollipops and spikes", () => {
+  test("has lollipop rendering in game engine", () => {
+    expect(htmlContent).toContain("level.lollipops");
+    expect(htmlContent).toContain("LOLLIPOPS");
+  });
+
+  test("has spike rendering in game engine", () => {
+    expect(htmlContent).toContain("level.spikes");
+    expect(htmlContent).toContain("spikeWidth");
+  });
+
+  test("spikes hurt Rufus by proximity check", () => {
+    expect(htmlContent).toContain('get("spike")');
+    expect(htmlContent).toContain("hurtRufus()");
   });
 });

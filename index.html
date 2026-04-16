@@ -22,6 +22,7 @@
 <script src="levels/level4.js"></script>
 <script src="levels/level5.js"></script>
 <script src="levels/level6.js"></script>
+<script src="levels/level7.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -61,7 +62,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -1712,6 +1713,69 @@ scene("title", () => {
     fixed(),
   ]);
 
+  // Lollipops on the title screen! (only on far edges, away from characters)
+  const lollipopPositions = [30, 90, 710, 770];
+  lollipopPositions.forEach((lx) => {
+    const lh = rand(60, 120);
+    // Stick
+    add([ rect(4, lh), pos(lx - 2, 445 - lh), color(240, 240, 240), opacity(0.4), fixed() ]);
+    // Candy top
+    const candyColors = [[255,50,100],[100,200,255],[255,200,50],[150,255,100],[200,100,255]];
+    const cc = candyColors[Math.floor(rand(0, candyColors.length))];
+    add([ rect(24, 24), pos(lx - 12, 445 - lh - 22), color(...cc), opacity(0.4), fixed() ]);
+    add([ rect(18, 18), pos(lx - 9, 445 - lh - 19), color(255, 255, 255), opacity(0.15), fixed() ]);
+    // Swirl
+    add([ rect(14, 2), pos(lx - 7, 445 - lh - 16), color(...cc), opacity(0.3), fixed() ]);
+    add([ rect(14, 2), pos(lx - 7, 445 - lh - 10), color(...cc), opacity(0.3), fixed() ]);
+  });
+
+  // Roller coaster in the background — above the enemy march line
+  for (let tx = 0; tx < width(); tx += 25) {
+    const hill = Math.sin(tx * 0.012) * 15 + Math.sin(tx * 0.025) * 8;
+    const ty = 420 + hill;
+    add([ rect(27, 3), pos(tx, ty), color(100, 100, 110), opacity(0.25), fixed() ]);
+    // Support poles
+    if (tx % 100 === 0) {
+      add([ rect(2, 445 - ty), pos(tx + 12, ty + 3), color(80, 80, 90), opacity(0.15), fixed() ]);
+    }
+  }
+
+  // Riders on the coaster — squirrels and clowns!
+  loop(2, () => {
+    const riderType = rand(0, 1) > 0.5 ? "clown" : "walker";
+    const cartColor = [rand(150, 255), rand(50, 200), rand(50, 200)];
+    const cart = add([
+      rect(16, 8),
+      pos(-20, 420),
+      color(...cartColor),
+      opacity(0.4),
+      fixed(),
+      lifespan(12),
+      { t: 0, spd: rand(60, 100) },
+    ]);
+    const rider = add([
+      sprite(riderType),
+      pos(-20, 412),
+      anchor("bot"),
+      scale(1),
+      opacity(0.4),
+      fixed(),
+      lifespan(12),
+      { cart: cart },
+    ]);
+    cart.onUpdate(() => {
+      cart.t += dt();
+      cart.pos.x += cart.spd * dt();
+      const hill = Math.sin(cart.pos.x * 0.012) * 15 + Math.sin(cart.pos.x * 0.025) * 8;
+      cart.pos.y = 420 + hill;
+    });
+    rider.onUpdate(() => {
+      if (!rider.cart || !rider.cart.exists()) return;
+      rider.pos.x = rider.cart.pos.x + 2;
+      rider.pos.y = rider.cart.pos.y - 2;
+    });
+  });
+
   // Detect touch device
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
@@ -2117,207 +2181,240 @@ scene("about", (pageIndex) => {
 // ============================================
 // LEVEL SELECT - "Rufus's Journal"
 // ============================================
-scene("levelSelect", () => {
-  add([
-    rect(width(), height()),
-    pos(0, 0),
-    color(40, 30, 20),
-    fixed(),
-  ]);
-
-  add([
-    text("Rufus's Journal", { size: 40 }),
-    pos(width() / 2, 40),
-    anchor("center"),
-    color(255, 200, 100),
-    fixed(),
-  ]);
-
-  // Scrollable journal — entries use camera, title stays fixed
-  const entrySpacing = 90;
-  const entryHeight = 75;
-  // Calculate total content height
-  let scrollY = height() / 2;
+scene("levelSelect", (startPage) => {
+  const LEVELS_PER_PAGE = 6;
+  const totalPages = Math.ceil(ALL_LEVELS.length / LEVELS_PER_PAGE);
+  let currentPage = startPage || 0;
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   const hasSecretEntry = allPawsCollected();
-  const totalEntries = ALL_LEVELS.length + (hasSecretEntry ? 1 : 0) + 1; // +1 for bottom row
-  const contentHeight = 120 + totalEntries * entrySpacing;
-  const minScrollY = height() / 2;
-  const maxScrollY = Math.max(minScrollY, contentHeight - height() / 2);
+  let flipping = false;
 
-  ALL_LEVELS.forEach((level, i) => {
-    const y = 120 + i * entrySpacing;
+  // Page flip animation!
+  function flipToPage(newPage) {
+    if (flipping) return;
+    flipping = true;
+    const goingRight = newPage > currentPage;
+    const newColor = newPage === 0 ? [40, 30, 20] : [220, 150, 180];
 
-    const entry = add([
-      rect(600, entryHeight),
-      pos(width() / 2, y),
-      anchor("center"),
-      color(60, 50, 35),
-      outline(2, rgb(100, 80, 50)),
-      area(),
+    // Page slides across
+    const page = add([
+      rect(width(), height()),
+      pos(goingRight ? width() : -width(), 0),
+      color(...newColor),
+      opacity(0.95),
+      fixed(),
+      z(200),
     ]);
-    entry.onClick(() => go("memoir", i));
-
-    add([
-      text(`Chapter ${i + 1}: ${level.name}`, { size: 20 }),
-      pos(width() / 2, y - 12),
-      anchor("center"),
-      color(255, 200, 100),
-    ]);
-
-    const preview = level.memoir.substring(0, 55) + "...";
-    add([
-      text(preview, { size: 11, width: 520 }),
-      pos(width() / 2, y + 12),
-      anchor("center"),
-      color(200, 180, 140),
+    // Shadow edge
+    const shadow = add([
+      rect(20, height()),
+      pos(page.pos.x, 0),
+      color(0, 0, 0),
+      opacity(0.3),
+      fixed(),
+      z(201),
     ]);
 
-    const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
-    add([
-      text(isTouch ? "Tap" : `Press ${i + 1}`, { size: 13 }),
-      pos(width() / 2 + 260, y),
-      anchor("center"),
-      color(255, 165, 0),
-    ]);
-
-    const gemEarned = hasGem(i);
-    add([
-      sprite("gem"),
-      pos(width() / 2 - 280, y - 6),
-      anchor("center"),
-      scale(1.2),
-      opacity(gemEarned ? 1 : 0.2),
-    ]);
-
-    // Only show golden paw icon if the level HAS a golden paw
-    if (level.secretPaw) {
-      const pawFound = hasPaw(i);
-      add([
-        sprite("goldenPaw"),
-        pos(width() / 2 - 280, y + 10),
-        anchor("center"),
-        scale(1),
-        opacity(pawFound ? 1 : 0.2),
-      ]);
-    }
-  });
-
-  // Secret level entry (only visible when all paws collected!)
-  if (hasSecretEntry) {
-    const secretY = 120 + ALL_LEVELS.length * entrySpacing;
-    const secretEntry = add([
-      rect(600, entryHeight),
-      pos(width() / 2, secretY),
-      anchor("center"),
-      color(50, 40, 25),
-      outline(2, rgb(255, 215, 0)),
-      area(),
-    ]);
-    secretEntry.onUpdate(function() {
-      this.opacity = Math.sin(time() * 3) * 0.15 + 0.85;
+    let t = 0;
+    const anim = onUpdate(() => {
+      t += dt() * 2.5;
+      if (t >= 1) {
+        anim.cancel();
+        destroy(page);
+        destroy(shadow);
+        currentPage = newPage;
+        flipping = false;
+        showPage();
+        return;
+      }
+      if (goingRight) {
+        page.pos.x = width() * (1 - t);
+        shadow.pos.x = page.pos.x - 10;
+      } else {
+        page.pos.x = -width() * (1 - t);
+        shadow.pos.x = page.pos.x + width();
+      }
     });
-    secretEntry.onClick(() => go("memoir", "secret"));
-
-    add([
-      text("??? Secret Chapter ???", { size: 20 }),
-      pos(width() / 2, secretY - 12),
-      anchor("center"),
-      color(255, 215, 0),
-      { t: 0 },
-    ]).onUpdate(function() {
-      this.t += dt();
-      this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8;
-    });
-
-    add([
-      text("All golden paws collected... a new adventure awaits!", { size: 11 }),
-      pos(width() / 2, secretY + 12),
-      anchor("center"),
-      color(200, 180, 100),
-    ]);
-
-    add([ sprite("goldenPaw"), pos(width() / 2 - 260, secretY), anchor("center"), scale(1.5) ]);
-    add([ sprite("goldenPaw"), pos(width() / 2 + 250, secretY), anchor("center"), scale(1.5) ]);
   }
 
-  // Bottom row: About Me and High Scores
-  const bottomY = 120 + (ALL_LEVELS.length + (hasSecretEntry ? 1 : 0)) * entrySpacing;
-  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  function showPage() {
+    destroyAll();
 
-  const aboutEntry = add([
-    rect(290, 60),
-    pos(width() / 2 - 155, bottomY),
-    anchor("center"),
-    color(55, 45, 30),
-    outline(2, rgb(110, 90, 60)),
-    area(),
-  ]);
-  aboutEntry.onClick(() => go("about"));
-  add([ text("About Rufus", { size: 16 }), pos(width() / 2 - 155, bottomY - 10), anchor("center"), color(255, 165, 0) ]);
-  add([ text(isTouch ? "Tap to read" : "Press A", { size: 11 }), pos(width() / 2 - 155, bottomY + 12), anchor("center"), color(200, 180, 140) ]);
+    // Background — page 1 brown journal, page 2+ pink chapter book!
+    const bgColor = currentPage === 0 ? [40, 30, 20] : [220, 150, 180];
+    add([ rect(width(), height()), pos(0, 0), color(...bgColor), fixed() ]);
 
-  const scoresEntry = add([
-    rect(290, 60),
-    pos(width() / 2 + 155, bottomY),
-    anchor("center"),
-    color(45, 35, 50),
-    outline(2, rgb(120, 100, 60)),
-    area(),
-  ]);
-  scoresEntry.onClick(() => go("leaderboard"));
-  add([ text("High Scores", { size: 16 }), pos(width() / 2 + 155, bottomY - 10), anchor("center"), color(255, 215, 0) ]);
-  add([ text(isTouch ? "Tap to view" : "Press H", { size: 11 }), pos(width() / 2 + 155, bottomY + 12), anchor("center"), color(200, 180, 140) ]);
+    // Book decoration for page 2+ — feels like a different chapter book
+    if (currentPage > 0) {
+      // Book spine on the left edge
+      add([ rect(8, height()), pos(0, 0), color(180, 100, 130), fixed() ]);
+      add([ rect(3, height()), pos(8, 0), color(160, 80, 110), fixed() ]);
+      // Decorative corner flourishes
+      add([ rect(40, 3), pos(15, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
+      add([ rect(3, 40), pos(15, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
+      add([ rect(40, 3), pos(width() - 55, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
+      add([ rect(3, 40), pos(width() - 18, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
+      // Page texture lines
+      for (let ly = 100; ly < height() - 60; ly += 72) {
+        add([ rect(width() - 40, 1), pos(20, ly), color(200, 140, 170), opacity(0.2), fixed() ]);
+      }
+    }
 
-  // Scroll hint (only if content overflows)
-  if (maxScrollY > minScrollY) {
+    // Title — different for each chapter book
+    const titles = ["Rufus's Journal", "Rufus's Adventures Continue..."];
+    const titleColors = [[255, 200, 100], [255, 180, 220]];
     add([
-      text(isTouch ? "Swipe to scroll" : "Up/Down to scroll", { size: 12 }),
-      pos(width() / 2, height() - 15),
+      text(titles[currentPage] || titles[1], { size: 36 }),
+      pos(width() / 2, 40),
       anchor("center"),
-      color(150, 130, 100),
-      opacity(0.6),
+      color(...(titleColors[currentPage] || titleColors[1])),
       fixed(),
     ]);
+
+    // Page number
+    if (totalPages > 1) {
+      add([
+        text(`Book ${currentPage + 1} of ${totalPages}`, { size: 13 }),
+        pos(width() / 2, 72),
+        anchor("center"),
+        color(currentPage === 0 ? 180 : 160, currentPage === 0 ? 160 : 100, currentPage === 0 ? 120 : 130),
+        fixed(),
+      ]);
+    }
+
+    // Levels for this page
+    const startIdx = currentPage * LEVELS_PER_PAGE;
+    const endIdx = Math.min(startIdx + LEVELS_PER_PAGE, ALL_LEVELS.length);
+
+    for (let i = startIdx; i < endIdx; i++) {
+      const level = ALL_LEVELS[i];
+      const slot = i - startIdx;
+      const y = 120 + slot * 72;
+
+      const entry = add([
+        rect(560, 62),
+        pos(width() / 2, y),
+        anchor("center"),
+        color(60, 50, 35),
+        outline(2, rgb(100, 80, 50)),
+        area(),
+        fixed(),
+      ]);
+      entry.onClick(() => go("memoir", i));
+
+      add([
+        text(`Chapter ${i + 1}: ${level.name}`, { size: 18 }),
+        pos(width() / 2, y - 10),
+        anchor("center"),
+        color(255, 200, 100),
+        fixed(),
+      ]);
+
+      const preview = level.memoir.substring(0, 48) + "...";
+      add([
+        text(preview, { size: 10, width: 480 }),
+        pos(width() / 2, y + 12),
+        anchor("center"),
+        color(200, 180, 140),
+        fixed(),
+      ]);
+
+      add([
+        sprite("gem"),
+        pos(width() / 2 - 260, y - 4),
+        anchor("center"),
+        scale(1.1),
+        opacity(hasGem(i) ? 1 : 0.2),
+        fixed(),
+      ]);
+
+      if (level.secretPaw) {
+        add([
+          sprite("goldenPaw"),
+          pos(width() / 2 - 260, y + 12),
+          anchor("center"),
+          scale(0.9),
+          opacity(hasPaw(i) ? 1 : 0.2),
+          fixed(),
+        ]);
+      }
+    }
+
+    // Secret level on last page
+    if (currentPage === totalPages - 1 && hasSecretEntry) {
+      const secretSlot = endIdx - startIdx;
+      const secretY = 120 + secretSlot * 72;
+      const secretEntry = add([
+        rect(560, 62),
+        pos(width() / 2, secretY),
+        anchor("center"),
+        color(50, 40, 25),
+        outline(2, rgb(255, 215, 0)),
+        area(),
+        fixed(),
+      ]);
+      secretEntry.onClick(() => go("memoir", "secret"));
+      add([
+        text("??? Secret Chapter ???", { size: 18 }),
+        pos(width() / 2, secretY - 10),
+        anchor("center"),
+        color(255, 215, 0),
+        fixed(),
+        { t: 0 },
+      ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8; });
+      add([
+        text("All golden paws collected!", { size: 10 }),
+        pos(width() / 2, secretY + 12),
+        anchor("center"),
+        color(200, 180, 100),
+        fixed(),
+      ]);
+    }
+
+    // Bottom row
+    const aboutEntry = add([
+      rect(240, 42), pos(width() / 2 - 130, 560), anchor("center"),
+      color(55, 45, 30), outline(2, rgb(110, 90, 60)), area(), fixed(),
+    ]);
+    aboutEntry.onClick(() => go("about"));
+    add([ text(isTouch ? "About" : "A: About", { size: 13 }), pos(width() / 2 - 130, 560), anchor("center"), color(255, 165, 0), fixed() ]);
+
+    const scoresEntry = add([
+      rect(240, 42), pos(width() / 2 + 130, 560), anchor("center"),
+      color(45, 35, 50), outline(2, rgb(120, 100, 60)), area(), fixed(),
+    ]);
+    scoresEntry.onClick(() => go("leaderboard"));
+    add([ text(isTouch ? "Scores" : "H: Scores", { size: 13 }), pos(width() / 2 + 130, 560), anchor("center"), color(255, 215, 0), fixed() ]);
+
+    // Left arrow (previous chapter book)
+    if (currentPage > 0) {
+      const leftArrow = add([
+        rect(50, 50), pos(25, height() / 2), anchor("center"),
+        color(80, 60, 40), outline(2, rgb(200, 160, 80)), area(), fixed(), z(50),
+      ]);
+      add([ text("<", { size: 32 }), pos(25, height() / 2), anchor("center"), color(255, 200, 100), fixed(), z(51) ]);
+      leftArrow.onClick(() => { flipToPage(currentPage - 1); });
+    }
+
+    // Right arrow (next chapter book)
+    if (currentPage < totalPages - 1) {
+      const rightArrow = add([
+        rect(50, 50), pos(width() - 25, height() / 2), anchor("center"),
+        color(80, 60, 40), outline(2, rgb(200, 160, 80)), area(), fixed(), z(50),
+      ]);
+      add([ text(">", { size: 32 }), pos(width() - 25, height() / 2), anchor("center"), color(255, 200, 100), fixed(), z(51) ]);
+      rightArrow.onClick(() => { flipToPage(currentPage + 1); });
+    }
+
+    // Keyboard
+    onKeyPress("left", () => { if (currentPage > 0) flipToPage(currentPage - 1); });
+    onKeyPress("right", () => { if (currentPage < totalPages - 1) flipToPage(currentPage + 1); });
+    onKeyPress("a", () => go("about"));
+    onKeyPress("h", () => go("leaderboard"));
+    onKeyPress("escape", () => go("title"));
   }
 
-  // Scroll with keyboard
-  onKeyDown("down", () => {
-    scrollY = Math.min(maxScrollY, scrollY + 300 * dt());
-  });
-  onKeyDown("up", () => {
-    scrollY = Math.max(minScrollY, scrollY - 300 * dt());
-  });
-
-  // Scroll with touch drag
-  let touchStartY = null;
-  let touchScrollStart = 0;
-  onTouchStart((tpos) => {
-    touchStartY = tpos.y;
-    touchScrollStart = scrollY;
-  });
-  onTouchMove((tpos) => {
-    if (touchStartY !== null) {
-      const delta = touchStartY - tpos.y;
-      scrollY = Math.max(minScrollY, Math.min(maxScrollY, touchScrollStart + delta));
-    }
-  });
-  onTouchEnd(() => { touchStartY = null; });
-
-  // Update camera to scroll position
-  onUpdate(() => {
-    camPos(width() / 2, scrollY);
-  });
-
-  // Keyboard controls
-  ALL_LEVELS.forEach((_, i) => {
-    onKeyPress(`${i + 1}`, () => {
-      go("memoir", i);
-    });
-  });
-
-  onKeyPress("a", () => go("about"));
-  onKeyPress("h", () => go("leaderboard"));
-  onKeyPress("escape", () => go("title"));
+  showPage();
 });
 
 // ============================================
@@ -3177,6 +3274,72 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     p.angle = Math.sin(time() * 3) * 8;
   });
 
+  // --- LOLLIPOPS (candy obstacles to fly over!) ---
+  if (level.lollipops) {
+    level.lollipops.forEach((lp) => {
+      const stickHeight = height() - 40 - lp.y;
+      // Lollipop stick (white) — solid wall you can't walk through
+      add([
+        rect(12, stickHeight),
+        pos(lp.x - 6, lp.y),
+        color(240, 240, 240),
+        area(),
+        body({ isStatic: true }),
+      ]);
+      // Candy circle on top (colorful swirl!)
+      const candyColors = [[255,50,100],[100,200,255],[255,200,50],[150,255,100],[200,100,255]];
+      const cc = candyColors[Math.floor(rand(0, candyColors.length))];
+      // Big round candy (made of layered rects) — EXTRA BIG!
+      add([ rect(50, 50), pos(lp.x - 25, lp.y - 48), color(...cc), z(1) ]);
+      add([ rect(44, 44), pos(lp.x - 22, lp.y - 45), color(255, 255, 255), opacity(0.3), z(2) ]);
+      // Swirl lines
+      add([ rect(36, 4), pos(lp.x - 18, lp.y - 40), color(...cc), opacity(0.8), z(3) ]);
+      add([ rect(36, 4), pos(lp.x - 18, lp.y - 30), color(...cc), opacity(0.8), z(3) ]);
+      add([ rect(36, 4), pos(lp.x - 18, lp.y - 20), color(...cc), opacity(0.8), z(3) ]);
+      // Shine
+      add([ rect(8, 8), pos(lp.x - 16, lp.y - 42), color(255, 255, 255), opacity(0.7), z(3) ]);
+    });
+  }
+
+  // --- CRATES ---
+  // --- CHOCOLATE SPIKES (hurt if you land on them!) ---
+  if (level.spikes) {
+    level.spikes.forEach((sp) => {
+      // Chocolate base
+      add([
+        rect(sp.width, 15),
+        pos(sp.x, sp.y),
+        color(80, 40, 20),
+        "spike",
+        { spikeWidth: sp.width },
+      ]);
+      // Pointy chocolate spike tips
+      for (let sx = sp.x + 8; sx < sp.x + sp.width - 8; sx += 18) {
+        // Triangle shape (stacked rects getting smaller)
+        add([ rect(14, 5), pos(sx - 3, sp.y - 5), color(100, 50, 25), z(1) ]);
+        add([ rect(10, 5), pos(sx - 1, sp.y - 10), color(110, 55, 28), z(1) ]);
+        add([ rect(6, 5), pos(sx + 1, sp.y - 15), color(120, 60, 30), z(1) ]);
+        add([ rect(2, 4), pos(sx + 3, sp.y - 19), color(130, 65, 32), z(1) ]);
+      }
+      // Chocolate drip detail
+      add([ rect(sp.width - 4, 3), pos(sp.x + 2, sp.y + 2), color(60, 30, 15), z(1) ]);
+    });
+
+    // Spikes hurt Rufus! Check by proximity every frame
+    onUpdate(() => {
+      if (!rufus.exists() || isInvincible) return;
+      get("spike").forEach((sp) => {
+        const spikeCenter = sp.pos.x + sp.spikeWidth / 2;
+        const dx = Math.abs(rufus.pos.x - spikeCenter);
+        const dy = rufus.pos.y - sp.pos.y;
+        // Rufus must be within the spike width and near the top of the spikes
+        if (dx < sp.spikeWidth / 2 && dy > -30 && dy < 15) {
+          hurtRufus();
+        }
+      });
+    });
+  }
+
   // --- CRATES ---
   level.crates.forEach((c) => {
     add([
@@ -3341,7 +3504,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // Camera follows Rufus
   rufus.onUpdate(() => {
-    camPos(rufus.pos.x, height() / 2);
+    // Camera follows Rufus up when flying, but never goes below ground level
+    const camY = Math.min(height() / 2, rufus.pos.y);
+    camPos(rufus.pos.x, camY);
   });
 
   // --- MOVEMENT ---
@@ -3358,32 +3523,97 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   });
 
   // --- JUMPING ---
-  // Jetpack state
-  let jetpackFuel = 0;
-  const jetpackMaxFuel = 3; // seconds of boost
-  // Jetpack only works in levels AFTER chapter 6 (level index 6+)
+  // --- JETPACK (6 seconds fly, 6 seconds recharge) ---
   const jetpackUnlocked = hasJetpack() && !isSecret && typeof levelIndex === "number" && levelIndex >= 6;
+  let jetpackActive = false;
+  let jetpackFlySpeed = 250;
+  let touchJumpHeld = false;
+  let jetpackFuel = 8;        // seconds of flight
+  const jetpackMaxFuel = 8;
+  let jetpackCooldown = 0;    // seconds until recharged
+  const jetpackRechargeTime = 3;
+  let wKeyHeld = false;
 
+  // Track UP key hold manually
+  let upHeld = false;
+  document.addEventListener("keydown", (e) => { if (e.key === "ArrowUp") upHeld = true; });
+  document.addEventListener("keyup", (e) => { if (e.key === "ArrowUp") upHeld = false; });
+
+  // Jetpack: hold UP arrow to fly! Same key as jump.
+  // On ground = jump. In the air = jetpack thrust.
+  onUpdate(() => {
+    if (!rufus.exists()) return;
+
+    const holdingUp = upHeld || touchJumpHeld;
+    const holdingDir = holdingUp || isKeyDown("left") || isKeyDown("right");
+    const canFly = jetpackFuel > 0 && jetpackCooldown <= 0;
+    const thrusting = jetpackUnlocked && !rufus.isGrounded() && holdingDir && canFly;
+    jetpackActive = thrusting;
+
+    if (thrusting && rufus.vel) {
+      // Drain fuel while flying!
+      jetpackFuel -= dt();
+      if (jetpackFuel <= 0) {
+        jetpackFuel = 0;
+        jetpackCooldown = jetpackRechargeTime; // start recharging
+      }
+      // Cancel gravity — hover in place!
+      rufus.vel.y = 0;
+      // UP = fly upward
+      if (upHeld || touchJumpHeld) {
+        rufus.pos.y -= 300 * dt();
+      }
+      // Fire particles down (always while hovering)
+      if (Math.random() < 0.4) {
+        add([
+          rect(rand(3, 6), rand(3, 6)),
+          pos(rufus.pos.x + rand(-10, 10), rufus.pos.y + 20),
+          color(255, rand(50, 150), 0), opacity(0.7),
+          lifespan(0.25), move(270, rand(100, 200)), z(9),
+        ]);
+      }
+    }
+
+    // Cooldown timer — ticks down only when NOT thrusting
+    if (jetpackCooldown > 0 && !thrusting) {
+      jetpackCooldown -= dt();
+      if (jetpackCooldown <= 0) {
+        jetpackCooldown = 0;
+        jetpackFuel = jetpackMaxFuel;
+      }
+    }
+
+    // Refuel slowly when on the ground (only if not in cooldown)
+    if (rufus.isGrounded() && jetpackCooldown <= 0 && jetpackFuel < jetpackMaxFuel) {
+      jetpackFuel = Math.min(jetpackMaxFuel, jetpackFuel + 1 * dt());
+    }
+  });
+
+  // Visible jetpack on Rufus's back
+  if (jetpackUnlocked) {
+    const jetpackBody = add([
+      rect(10, 16), pos(rufus.pos.x, rufus.pos.y),
+      anchor("center"), color(140, 140, 150), z(8),
+    ]);
+    const jetpackNozzle = add([
+      rect(8, 6), pos(rufus.pos.x, rufus.pos.y),
+      anchor("center"), color(100, 100, 110), z(8),
+    ]);
+    onUpdate(() => {
+      if (!rufus.exists()) return;
+      const backOffset = rufus.flipX ? 12 : -12;
+      jetpackBody.pos.x = rufus.pos.x + backOffset;
+      jetpackBody.pos.y = rufus.pos.y - 8;
+      jetpackNozzle.pos.x = rufus.pos.x + backOffset;
+      jetpackNozzle.pos.y = rufus.pos.y;
+      jetpackBody.color = jetpackActive ? rgb(180, 100, 50) : rgb(140, 140, 150);
+    });
+  }
+
+  // Normal jump
   onKeyPress("up", () => {
     if (rufus.isGrounded()) {
       rufus.jump(jumpForce);
-      jetpackFuel = jetpackMaxFuel; // refuel on ground
-    } else if (jetpackUnlocked && jetpackFuel > 0) {
-      // JETPACK BOOST! Push Rufus upward while in the air
-      rufus.jump(jumpForce * 0.6);
-      jetpackFuel -= 1;
-      // Fire particles from jetpack!
-      for (let i = 0; i < 4; i++) {
-        add([
-          rect(rand(3, 6), rand(3, 6)),
-          pos(rufus.pos.x + rand(-8, 8), rufus.pos.y + 15),
-          color(255, rand(50, 150), 0),
-          opacity(0.8),
-          lifespan(0.3),
-          move(270, rand(80, 180)),
-          z(9),
-        ]);
-      }
     }
   });
 
@@ -3558,25 +3788,11 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
           moveTouchId = touch.identifier;
           touchDir = 1;
         }
-        // Jump button area
+        // Jump / Jetpack thrust button area
         else if (g.x > gameW - 195 && g.x < gameW - 105 && g.y > gameH - 100) {
+          touchJumpHeld = true;
           if (rufus.isGrounded()) {
             rufus.jump(jumpForce);
-            jetpackFuel = jetpackMaxFuel;
-          } else if (jetpackUnlocked && jetpackFuel > 0) {
-            rufus.jump(jumpForce * 0.6);
-            jetpackFuel -= 1;
-            for (let i = 0; i < 4; i++) {
-              add([
-                rect(rand(3, 6), rand(3, 6)),
-                pos(rufus.pos.x + rand(-8, 8), rufus.pos.y + 15),
-                color(255, rand(50, 150), 0),
-                opacity(0.8),
-                lifespan(0.3),
-                move(270, rand(80, 180)),
-                z(9),
-              ]);
-            }
           }
         }
         // Spin/Power button area
@@ -3598,8 +3814,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
     canvas.addEventListener("touchend", (ev) => {
       ev.preventDefault();
+      touchJumpHeld = false; // Release jetpack thrust
       for (const touch of ev.changedTouches) {
-        // If the direction touch was released, stop moving
         if (touch.identifier === moveTouchId) {
           moveTouchId = null;
           touchDir = 0;
@@ -4851,6 +5067,57 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     z(100),
   ]);
 
+  // Jetpack bar (only when unlocked)
+  if (jetpackUnlocked) {
+    const jetBarBG = add([
+      rect(120, 16),
+      pos(20, 82),
+      color(30, 15, 0),
+      outline(1, rgb(255, 100, 0)),
+      opacity(0.7),
+      fixed(),
+      z(100),
+    ]);
+    const jetBarFill = add([
+      rect(116, 12),
+      pos(22, 84),
+      color(255, 100, 0),
+      fixed(),
+      z(101),
+    ]);
+    add([
+      text("JETPACK", { size: 9 }),
+      pos(80, 79),
+      anchor("center"),
+      color(255, 200, 100),
+      outline(1, rgb(0, 0, 0)),
+      fixed(),
+      z(102),
+    ]);
+
+    // Bar shows fuel level and recharge
+    onUpdate(() => {
+      if (!jetBarFill || !jetBarFill.exists()) return;
+      if (jetpackCooldown > 0) {
+        // Recharging — bar fills up as cooldown ticks down
+        const rechargePercent = 1 - (jetpackCooldown / jetpackRechargeTime);
+        jetBarFill.width = rechargePercent * 116;
+        jetBarFill.color = rgb(100, 100, 200); // blue while recharging
+        jetBarBG.outline.color = rgb(100, 100, 255);
+      } else if (jetpackActive) {
+        // Flying — bar drains
+        jetBarFill.width = (jetpackFuel / jetpackMaxFuel) * 116;
+        jetBarFill.color = rgb(255, 150, 0); // orange while flying
+        jetBarBG.outline.color = rgb(255, 220, 0);
+      } else {
+        // Ready to fly
+        jetBarFill.width = (jetpackFuel / jetpackMaxFuel) * 116;
+        jetBarFill.color = rgb(50, 200, 50); // green when ready
+        jetBarBG.outline.color = rgb(255, 100, 0);
+      }
+    });
+  }
+
   // Power indicator (secret level only)
   if (isSecret) {
     powerHUD = add([
@@ -4874,7 +5141,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // Controls hint (fades away)
   const hint = add([
-    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap Power" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
+    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap" : jetpackUnlocked ? "Hold UP: Fly! | Left/Right: Steer | Space: Spin" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
     pos(width() / 2, height() - 30),
     anchor("center"),
     color(255, 255, 255),
@@ -4933,6 +5200,12 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
       title: "King Clown Defeated!",
       message: "The King Clown and his jetpack are DONE! Rufus stomped that crown right off his head! The circus belongs to the foxes now!",
       rufusColor: [255, 100, 0],
+    },
+    { // Level 7 - jetpack training, candy sky
+      bg: [255, 180, 220],
+      title: "Jetpack Master!",
+      message: "Rufus flew over every lollipop and dodged every chocolate spike! The jetpack is his now!",
+      rufusColor: [255, 150, 200],
     },
   ];
   const theme = themes[levelIndex] || themes[0];
@@ -5476,7 +5749,7 @@ scene("jetpackUnlock", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
   ]);
 
   add([
-    text("Press UP while in the air to BOOST!", { size: 18 }),
+    text("Hold UP arrow to fly! Left/Right to steer!", { size: 18 }),
     pos(width() / 2, 400),
     anchor("center"),
     color(255, 200, 100),
@@ -5484,7 +5757,7 @@ scene("jetpackUnlock", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
   ]);
 
   add([
-    text("Works in ALL levels! You get 3 boosts per jump.", { size: 14 }),
+    text("Unlimited fuel! Fly as much as you want!", { size: 14 }),
     pos(width() / 2, 430),
     anchor("center"),
     color(180, 170, 140),

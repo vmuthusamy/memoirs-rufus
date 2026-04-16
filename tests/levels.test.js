@@ -18,8 +18,9 @@ const LEVEL_3 = loadLevel("level3.js");
 const LEVEL_4 = loadLevel("level4.js");
 const LEVEL_5 = loadLevel("level5.js");
 const LEVEL_6 = loadLevel("level6.js");
+const LEVEL_7 = loadLevel("level7.js");
 const SECRET_LEVEL = loadLevel("secret.js");
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7];
 
 // Game constants (must match index.html)
 const GAME_HEIGHT = 600;
@@ -187,8 +188,10 @@ describe("Crate validation", () => {
         });
       });
 
-      test("has at least 2 crates", () => {
-        expect(level.crates.length).toBeGreaterThanOrEqual(2);
+      test("has crates (unless tutorial level)", () => {
+        if (level.platforms.length > 0) {
+          expect(level.crates.length).toBeGreaterThanOrEqual(2);
+        }
       });
     });
   });
@@ -200,10 +203,12 @@ describe("Crate validation", () => {
 describe("Bounce crate validation", () => {
   ALL_LEVELS.forEach((level, i) => {
     describe(`Level ${i + 1}: ${level.name}`, () => {
-      test("bounce crates exist", () => {
+      test("bounce crates exist (unless tutorial)", () => {
         expect(level.bounceCrates).toBeDefined();
         expect(Array.isArray(level.bounceCrates)).toBe(true);
-        expect(level.bounceCrates.length).toBeGreaterThan(0);
+        if (level.platforms.length > 0) {
+          expect(level.bounceCrates.length).toBeGreaterThan(0);
+        }
       });
 
       test("all bounce crates have x,y coordinates", () => {
@@ -229,10 +234,8 @@ describe("Bounce crate validation", () => {
       });
 
       test("bounce crates are spread across the level", () => {
+        if (level.bounceCrates.length < 2) return;
         const xs = level.bounceCrates.map((bc) => bc.x).sort((a, b) => a - b);
-        const firstQuarter = level.width * 0.25;
-        const lastQuarter = level.width * 0.75;
-        // At least one in first half and one in second half
         expect(xs[0]).toBeLessThan(level.width * 0.5);
         expect(xs[xs.length - 1]).toBeGreaterThan(level.width * 0.5);
       });
@@ -367,7 +370,7 @@ describe("Platform enemy placement", () => {
         e.type === "walker" || e.type === "armored";
 
       test("has ground enemies on platforms (not just ground)", () => {
-        if (level.isBossFight) return; // Boss fights have no regular enemies
+        if (level.isBossFight || level.platforms.length === 0) return; // Boss fights and tutorials skip this
         const platformEnemies = level.enemies.filter(
           (e) => isGroundType(e) && e.y < 500
         );
@@ -424,11 +427,11 @@ describe("Level progression", () => {
     expect(LEVEL_2.width).toBeGreaterThan(LEVEL_1.width);
   });
 
-  test("levels have increasing difficulty (enemy count, excluding boss fights)", () => {
-    const nonBossLevels = ALL_LEVELS.filter((l) => !l.isBossFight);
-    for (let i = 1; i < nonBossLevels.length; i++) {
-      expect(nonBossLevels[i].enemies.length).toBeGreaterThanOrEqual(
-        nonBossLevels[i - 1].enemies.length
+  test("levels have increasing difficulty (enemy count, excluding boss fights and tutorials)", () => {
+    const regularLevels = ALL_LEVELS.filter((l) => !l.isBossFight && l.platforms.length > 0);
+    for (let i = 1; i < regularLevels.length; i++) {
+      expect(regularLevels[i].enemies.length).toBeGreaterThanOrEqual(
+        regularLevels[i - 1].enemies.length
       );
     }
   });
@@ -689,6 +692,70 @@ describe("Level 6: King Clown", () => {
     const fs = require("fs");
     const path = require("path");
     const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level6.js"), "utf-8");
+    expect(() => new Function(code)).not.toThrow();
+  });
+});
+
+// ============================================
+// LEVEL 7: JETPACK TRAINING
+// ============================================
+describe("Level 7: Jetpack Training", () => {
+  test("has jetpack training name", () => {
+    expect(LEVEL_7.name).toBe("Jetpack Training");
+  });
+
+  test("starts with 3 lives", () => {
+    expect(LEVEL_7.startLives).toBe(3);
+  });
+
+  test("has no platforms (just fly!)", () => {
+    expect(LEVEL_7.platforms.length).toBe(0);
+  });
+
+  test("has no crates or bounce crates", () => {
+    expect(LEVEL_7.crates.length).toBe(0);
+    expect(LEVEL_7.bounceCrates.length).toBe(0);
+  });
+
+  test("has lollipop obstacles", () => {
+    expect(LEVEL_7.lollipops).toBeDefined();
+    expect(LEVEL_7.lollipops.length).toBeGreaterThan(0);
+  });
+
+  test("has chocolate spikes", () => {
+    expect(LEVEL_7.spikes).toBeDefined();
+    expect(LEVEL_7.spikes.length).toBeGreaterThan(0);
+  });
+
+  test("all spikes have width", () => {
+    LEVEL_7.spikes.forEach((sp) => {
+      expect(sp.width).toBeGreaterThan(0);
+    });
+  });
+
+  test("has a golden paw hidden at the wasp", () => {
+    expect(LEVEL_7.secretPaw).toBeDefined();
+    expect(LEVEL_7.secretPaw.x).toBe(1100);
+    expect(LEVEL_7.secretPaw.y).toBe(200);
+  });
+
+  test("has pink sky", () => {
+    expect(LEVEL_7.skyColor[0]).toBeGreaterThan(200);
+    expect(LEVEL_7.skyColor[2]).toBeGreaterThan(150);
+  });
+
+  test("is a short tutorial level", () => {
+    expect(LEVEL_7.width).toBeLessThanOrEqual(2000);
+  });
+
+  test("has few enemies (tutorial)", () => {
+    expect(LEVEL_7.enemies.length).toBeLessThanOrEqual(5);
+  });
+
+  test("level7.js is valid JS", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level7.js"), "utf-8");
     expect(() => new Function(code)).not.toThrow();
   });
 });
