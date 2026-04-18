@@ -2534,7 +2534,27 @@ scene("memoir", (levelIndex) => {
     this.opacity = Math.sin(this.flashTimer * 3) * 0.4 + 0.6;
   });
 
-  // Full screen clickable area for touch
+  // Back button (top-left corner) — go back to the journal
+  const backBtn = add([
+    rect(90, 36),
+    pos(20, 20),
+    color(60, 40, 20),
+    outline(2, rgb(150, 100, 50)),
+    area(),
+    fixed(),
+    z(10),
+  ]);
+  add([
+    text("< Back", { size: 16 }),
+    pos(65, 38),
+    anchor("center"),
+    color(255, 200, 100),
+    fixed(),
+    z(11),
+  ]);
+  backBtn.onClick(() => go("levelSelect"));
+
+  // Full screen clickable area for touch (BEHIND the back button)
   const startBtn = add([
     rect(width(), height()),
     pos(0, 0),
@@ -2548,6 +2568,7 @@ scene("memoir", (levelIndex) => {
   onKeyPress("enter", () => {
     go("game", levelIndex);
   });
+  onKeyPress("escape", () => go("levelSelect"));
 });
 
 // ============================================
