@@ -23,6 +23,8 @@
 <script src="levels/level5.js"></script>
 <script src="levels/level6.js"></script>
 <script src="levels/level7.js"></script>
+<script src="levels/level8.js"></script>
+<script src="levels/level9.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -62,7 +64,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -1036,6 +1038,41 @@ function drawGem() {
   return c;
 }
 
+// --- DRAW A RED GEM (secret color gem!) ---
+function drawRedGem() {
+  const c = document.createElement("canvas");
+  c.width = 20;
+  c.height = 20;
+  const ctx = c.getContext("2d");
+
+  // Diamond shape (red!)
+  ctx.fillStyle = "#DD2222";
+  ctx.fillRect(8, 1, 4, 2);
+  ctx.fillRect(6, 3, 8, 2);
+  ctx.fillRect(4, 5, 12, 2);
+  ctx.fillRect(2, 7, 16, 4);
+  ctx.fillRect(4, 11, 12, 2);
+  ctx.fillRect(6, 13, 8, 2);
+  ctx.fillRect(8, 15, 4, 2);
+
+  // Shine
+  ctx.fillStyle = "#FF6666";
+  ctx.fillRect(6, 5, 4, 4);
+  ctx.fillRect(8, 3, 3, 3);
+
+  // White sparkle
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(7, 5, 2, 2);
+  ctx.fillRect(9, 3, 1, 1);
+
+  // Dark edge
+  ctx.fillStyle = "#880000";
+  ctx.fillRect(2, 10, 16, 1);
+  ctx.fillRect(8, 16, 4, 1);
+
+  return c;
+}
+
 // --- LOAD ALL SPRITES ---
 loadSprite("rufus", drawFoxSprite().toDataURL());
 loadSprite("rufus_spin", drawFoxSpinning().toDataURL());
@@ -1057,6 +1094,7 @@ loadSprite("flag", drawFlag().toDataURL());
 loadSprite("clown", drawClown().toDataURL());
 loadSprite("bossClown", drawBossClown().toDataURL());
 loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
+loadSprite("redGem", drawRedGem().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
 // ============================================
@@ -1158,6 +1196,14 @@ function allPawsCollected() {
     if (!data.paws[i]) return false;
   }
   return true;
+}
+
+// Color gems — secret collectibles that unlock areas in other levels!
+function hasRedGem() {
+  return localStorage.getItem("rufus_red_gem") === "true";
+}
+function awardRedGem() {
+  localStorage.setItem("rufus_red_gem", "true");
 }
 
 // Check if jetpack is unlocked
@@ -2338,6 +2384,16 @@ scene("levelSelect", (startPage) => {
           fixed(),
         ]);
       }
+      if (level.redGem) {
+        add([
+          sprite("redGem"),
+          pos(width() / 2 + 240, y + 12),
+          anchor("center"),
+          scale(1.1),
+          opacity(hasRedGem() ? 1 : 0.2),
+          fixed(),
+        ]);
+      }
     }
 
     // Secret level on last page
@@ -2530,6 +2586,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const isGym = level.name === "The School Gym";
   const isNeighborhood = level.name === "The Neighborhood";
   const isThemePark = level.name === "The Theme Park";
+  const isCandy = level.name === "Candy Kingdom" || level.name === "Jetpack Training";
 
   // Background sky
   add([
@@ -2747,7 +2804,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     rect(level.width, 40),
     pos(0, height() - 40),
     color(...level.groundColor),
-    outline(2, isGym ? rgb(130, 95, 45) : isThemePark ? rgb(120, 115, 100) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
+    outline(2, isGym ? rgb(130, 95, 45) : isThemePark ? rgb(120, 115, 100) : isCandy ? rgb(80, 40, 20) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
     area(),
     body({ isStatic: true }),
     "ground",
@@ -3115,6 +3172,23 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         // Seat cushion
         add([ rect(p.width - 8, 8), pos(p.x + 4, p.y + p.height - 10), color(80, 140, 220), z(1) ]);
       }
+    } else if (isCandy) {
+      // Pink candy platforms!
+      add([
+        rect(p.width, p.height),
+        pos(p.x, p.y),
+        color(255, 150, 200),
+        outline(2, rgb(220, 100, 160)),
+        area(), body({ isStatic: true }), "platform",
+      ]);
+      // Frosting on top
+      add([ rect(p.width - 4, 5), pos(p.x + 2, p.y - 2), color(255, 200, 230), z(1) ]);
+      // Sprinkles!
+      const sprinkleColors = [[255,80,80],[80,200,255],[255,255,80],[80,255,120],[200,80,255]];
+      for (let sx = p.x + 8; sx < p.x + p.width - 8; sx += rand(14, 22)) {
+        const sc = sprinkleColors[Math.floor(rand(0, sprinkleColors.length))];
+        add([ rect(6, 2), pos(sx, p.y + rand(5, p.height - 5)), color(...sc), z(1) ]);
+      }
     } else if (isSecret) {
       // Magical platforms! Rainbow bridges, clouds, crystals, moonbeams, stars
       const magicType = idx % 5;
@@ -3274,6 +3348,26 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     p.angle = Math.sin(time() * 3) * 8;
   });
 
+  // --- RED GEM (color gem collectible!) ---
+  if (level.redGem && !hasRedGem()) {
+    add([
+      sprite("redGem"),
+      pos(level.redGem.x, level.redGem.y),
+      area(),
+      anchor("center"),
+      scale(2),
+      z(2),
+      "redGem",
+      { collected: false, bobOffset: rand(0, 6.28) },
+    ]);
+  }
+
+  // Bob and glow the red gem
+  onUpdate("redGem", (g) => {
+    g.pos.y += Math.sin(time() * 2.5 + g.bobOffset) * 0.5;
+    g.angle = Math.sin(time() * 3) * 10;
+  });
+
   // --- LOLLIPOPS (candy obstacles to fly over!) ---
   if (level.lollipops) {
     level.lollipops.forEach((lp) => {
@@ -3337,6 +3431,53 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
           hurtRufus();
         }
       });
+    });
+  }
+
+  // --- CEILING SPIKES (spikes hanging from the top!) ---
+  if (level.ceilingSpikes) {
+    level.ceilingSpikes.forEach((sp) => {
+      // Chocolate base on ceiling
+      add([
+        rect(sp.width, 15),
+        pos(sp.x, sp.y),
+        color(80, 40, 20),
+        "ceilingSpike",
+        { spikeWidth: sp.width },
+      ]);
+      // Pointy spikes hanging DOWN
+      for (let sx = sp.x + 8; sx < sp.x + sp.width - 8; sx += 18) {
+        add([ rect(14, 5), pos(sx - 3, sp.y + 15), color(100, 50, 25), z(1) ]);
+        add([ rect(10, 5), pos(sx - 1, sp.y + 20), color(110, 55, 28), z(1) ]);
+        add([ rect(6, 5), pos(sx + 1, sp.y + 25), color(120, 60, 30), z(1) ]);
+        add([ rect(2, 4), pos(sx + 3, sp.y + 30), color(130, 65, 32), z(1) ]);
+      }
+    });
+
+    // Ceiling spikes hurt Rufus!
+    onUpdate(() => {
+      if (!rufus.exists() || isInvincible) return;
+      get("ceilingSpike").forEach((sp) => {
+        const spikeCenter = sp.pos.x + sp.spikeWidth / 2;
+        const dx = Math.abs(rufus.pos.x - spikeCenter);
+        const dy = sp.pos.y + 30 - rufus.pos.y;
+        if (dx < sp.spikeWidth / 2 && dy > -15 && dy < 40) {
+          hurtRufus();
+        }
+      });
+    });
+  }
+
+  // --- WALLS (solid barriers you can't pass!) ---
+  if (level.walls) {
+    level.walls.forEach((w) => {
+      add([
+        rect(w.width, w.height),
+        pos(w.x, w.y),
+        color(80, 40, 20),
+        area(),
+        body({ isStatic: true }),
+      ]);
     });
   }
 
@@ -3534,19 +3675,172 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const jetpackRechargeTime = 3;
   let wKeyHeld = false;
 
-  // Track UP key hold manually
+  // Track UP key hold — use multiple methods for max compatibility
   let upHeld = false;
-  document.addEventListener("keydown", (e) => { if (e.key === "ArrowUp") upHeld = true; });
-  document.addEventListener("keyup", (e) => { if (e.key === "ArrowUp") upHeld = false; });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp" || e.key === "Up" || e.keyCode === 38) upHeld = true;
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowUp" || e.key === "Up" || e.keyCode === 38) upHeld = false;
+  });
 
   // Jetpack: hold UP arrow to fly! Same key as jump.
   // On ground = jump. In the air = jetpack thrust.
   onUpdate(() => {
     if (!rufus.exists()) return;
 
-    const holdingUp = upHeld || touchJumpHeld;
+    const holdingUp = upHeld || touchJumpHeld || isKeyDown("up");
     const holdingDir = holdingUp || isKeyDown("left") || isKeyDown("right");
-    const canFly = jetpackFuel > 0 && jetpackCooldown <= 0;
+    // Check if Rufus is in a no-jetpack zone
+    let inNoJetpackZone = false;
+    if (level.noJetpackZones) {
+      level.noJetpackZones.forEach((zone) => {
+        if (rufus.pos.x >= zone.startX && rufus.pos.x <= zone.endX) {
+          inNoJetpackZone = true;
+          // Cutscene: full screen takeover! Rufus takes off jetpack
+          if (!zone.cutscenePlayed) {
+            zone.cutscenePlayed = true;
+            isInvincible = true;
+
+            // Black overlay covers everything
+            const overlay = add([
+              rect(width(), height()),
+              pos(0, 0),
+              color(0, 0, 0),
+              opacity(0),
+              fixed(),
+              z(300),
+            ]);
+
+            // Fade to black
+            let fadeT = 0;
+            const fadeIn = onUpdate(() => {
+              fadeT += dt() * 2;
+              overlay.opacity = Math.min(1, fadeT);
+              if (fadeT >= 1) {
+                fadeIn.cancel();
+
+                // Cutscene screen! Tag everything as "cutscene1"
+                add([
+                  rect(width(), height()), pos(0, 0),
+                  color(255, 170, 210), fixed(), z(301), "cutscene1",
+                ]);
+                add([
+                  sprite("rufus"), pos(width() / 2, 280),
+                  anchor("center"), scale(6), fixed(), z(302), "cutscene1",
+                ]);
+                const cutJP = add([
+                  rect(20, 30), pos(width() / 2 + 40, 260),
+                  color(140, 140, 150), fixed(), z(302), "cutscene1", { t: 0 },
+                ]);
+                cutJP.onUpdate(() => {
+                  cutJP.t += dt();
+                  cutJP.pos.y += 80 * cutJP.t;
+                  cutJP.angle += 150 * dt();
+                  cutJP.opacity = Math.max(0, 1 - cutJP.t * 0.4);
+                });
+                add([
+                  text("I'm tired of this jetpack...", { size: 22 }),
+                  pos(width() / 2, 120), anchor("center"),
+                  color(255, 255, 255), fixed(), z(302), "cutscene1",
+                ]);
+                wait(1.5, () => {
+                  add([
+                    text("Time to take it off!", { size: 22 }),
+                    pos(width() / 2, 160), anchor("center"),
+                    color(255, 200, 100), fixed(), z(302), "cutscene1",
+                  ]);
+                });
+                wait(3, () => {
+                  let fadeOutT = 0;
+                  const fadeOut = onUpdate(() => {
+                    fadeOutT += dt() * 2;
+                    overlay.opacity = 1 - Math.min(1, fadeOutT);
+                    if (fadeOutT >= 1) {
+                      fadeOut.cancel();
+                      destroy(overlay);
+                      get("cutscene1").forEach((c) => destroy(c));
+                      isInvincible = false;
+                    }
+                  });
+                });
+              }
+            });
+          }
+        }
+      });
+    }
+
+    // Cutscene when jetpack comes BACK after a no-jetpack zone
+    if (jetpackUnlocked && level.noJetpackZones && !inNoJetpackZone) {
+      level.noJetpackZones.forEach((zone) => {
+        // Only trigger if we WERE in this zone (cutscene played) and now we're past it
+        if (zone.cutscenePlayed && !zone.jetpackBackPlayed && rufus.pos.x > zone.endX) {
+          zone.jetpackBackPlayed = true;
+          isInvincible = true;
+
+          const overlay2 = add([
+            rect(width(), height()),
+            pos(0, 0), color(0, 0, 0), opacity(0), fixed(), z(300),
+          ]);
+
+          let fadeT2 = 0;
+          const fadeIn2 = onUpdate(() => {
+            fadeT2 += dt() * 2;
+            overlay2.opacity = Math.min(1, fadeT2);
+            if (fadeT2 >= 1) {
+              fadeIn2.cancel();
+
+              // Tag everything as "cutscene2"
+              add([
+                rect(width(), height()), pos(0, 0),
+                color(255, 170, 210), fixed(), z(301), "cutscene2",
+              ]);
+              add([
+                sprite("rufus"), pos(width() / 2, 280),
+                anchor("center"), scale(6), fixed(), z(302), "cutscene2",
+              ]);
+              const cutJP2 = add([
+                rect(20, 30), pos(width() + 50, 260),
+                color(140, 140, 150), fixed(), z(302), "cutscene2", { t: 0 },
+              ]);
+              cutJP2.onUpdate(() => {
+                cutJP2.t += dt();
+                cutJP2.pos.x -= 200 * dt();
+                if (cutJP2.pos.x < width() / 2 + 40) cutJP2.pos.x = width() / 2 + 40;
+              });
+              add([
+                text("Those lollipops are HUGE!", { size: 22 }),
+                pos(width() / 2, 120), anchor("center"),
+                color(255, 255, 255), fixed(), z(302), "cutscene2",
+              ]);
+              wait(1.5, () => {
+                add([
+                  text("Time to put the jetpack back on!", { size: 22 }),
+                  pos(width() / 2, 160), anchor("center"),
+                  color(255, 200, 100), fixed(), z(302), "cutscene2",
+                ]);
+              });
+              wait(3, () => {
+                let fadeOutT2 = 0;
+                const fadeOut2 = onUpdate(() => {
+                  fadeOutT2 += dt() * 2;
+                  overlay2.opacity = 1 - Math.min(1, fadeOutT2);
+                  if (fadeOutT2 >= 1) {
+                    fadeOut2.cancel();
+                    destroy(overlay2);
+                    get("cutscene2").forEach((c) => destroy(c));
+                    isInvincible = false;
+                  }
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+
+    const canFly = jetpackFuel > 0 && jetpackCooldown <= 0 && !inNoJetpackZone;
     const thrusting = jetpackUnlocked && !rufus.isGrounded() && holdingDir && canFly;
     jetpackActive = thrusting;
 
@@ -3589,7 +3883,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
   });
 
-  // Visible jetpack on Rufus's back
+  // Visible jetpack on Rufus's back (hides in no-jetpack zones)
   if (jetpackUnlocked) {
     const jetpackBody = add([
       rect(10, 16), pos(rufus.pos.x, rufus.pos.y),
@@ -3601,6 +3895,15 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     ]);
     onUpdate(() => {
       if (!rufus.exists()) return;
+      // Hide jetpack in no-jetpack zones
+      let hidden = false;
+      if (level.noJetpackZones) {
+        level.noJetpackZones.forEach((zone) => {
+          if (rufus.pos.x >= zone.startX && rufus.pos.x <= zone.endX) hidden = true;
+        });
+      }
+      jetpackBody.opacity = hidden ? 0 : 1;
+      jetpackNozzle.opacity = hidden ? 0 : 1;
       const backOffset = rufus.flipX ? 12 : -12;
       jetpackBody.pos.x = rufus.pos.x + backOffset;
       jetpackBody.pos.y = rufus.pos.y - 8;
@@ -3611,9 +3914,21 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   }
 
   // Normal jump
-  onKeyPress("up", () => {
+  // Coyote time — remember if Rufus was recently grounded
+  let coyoteTimer = 0;
+  rufus.onUpdate(() => {
     if (rufus.isGrounded()) {
+      coyoteTimer = 0.15; // allow jumping for 150ms after leaving ground
+    } else {
+      coyoteTimer = Math.max(0, coyoteTimer - dt());
+    }
+  });
+
+  onKeyPress("up", () => {
+    // Allow jump if grounded OR if recently grounded (coyote time)
+    if (rufus.isGrounded() || coyoteTimer > 0) {
       rufus.jump(jumpForce);
+      coyoteTimer = 0;
     }
   });
 
@@ -4136,6 +4451,42 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
   });
 
+  // --- COLLECT RED GEM ---
+  rufus.onCollide("redGem", (gem) => {
+    if (!gem.collected) {
+      gem.collected = true;
+      awardRedGem();
+
+      // Big RED sparkle burst!
+      for (let i = 0; i < 20; i++) {
+        add([
+          rect(rand(3, 7), rand(3, 7)),
+          pos(gem.pos),
+          color(255, rand(0, 80), rand(0, 80)),
+          opacity(1),
+          lifespan(1),
+          move(rand(0, 360), rand(80, 300)),
+          z(100),
+        ]);
+      }
+
+      // "RED GEM!" popup
+      const popup = add([
+        text("RED GEM!", { size: 36 }),
+        pos(gem.pos.x, gem.pos.y - 40),
+        anchor("center"),
+        color(255, 50, 50),
+        outline(2, rgb(150, 0, 0)),
+        opacity(1),
+        lifespan(2),
+        z(100),
+      ]);
+      popup.onUpdate(() => { if (popup.exists()) popup.pos.y -= 25 * dt(); });
+
+      destroy(gem);
+    }
+  });
+
   // --- CHECKPOINT ACTIVATION ---
   rufus.onCollide("checkpoint", (cp) => {
     if (!cp.activated) {
@@ -4199,6 +4550,52 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // --- ENEMY INTERACTIONS ---
   let isInvincible = false;
+
+  // --- START CUTSCENE (plays once at level start) ---
+  if (level.startCutscene) {
+    isInvincible = true;
+    add([
+      rect(width(), height()), pos(0, 0),
+      color(255, 170, 210), fixed(), z(300), "startCutscene",
+    ]);
+    add([
+      sprite("rufus"), pos(width() / 2, 280),
+      anchor("center"), scale(6), fixed(), z(301), "startCutscene",
+    ]);
+    add([
+      text(level.startCutscene.line1, { size: 22 }),
+      pos(width() / 2, 120), anchor("center"),
+      color(255, 255, 255), fixed(), z(301), "startCutscene",
+    ]);
+    wait(1.5, () => {
+      add([
+        text(level.startCutscene.line2, { size: 22 }),
+        pos(width() / 2, 160), anchor("center"),
+        color(255, 200, 100), fixed(), z(301), "startCutscene",
+      ]);
+    });
+    const scJP = add([
+      rect(20, 30), pos(width() + 50, 260),
+      color(140, 140, 150), fixed(), z(301), "startCutscene", { t: 0 },
+    ]);
+    scJP.onUpdate(() => {
+      scJP.t += dt();
+      scJP.pos.x -= 200 * dt();
+      if (scJP.pos.x < width() / 2 + 40) scJP.pos.x = width() / 2 + 40;
+    });
+    wait(3.5, () => {
+      let fadeT = 0;
+      const fadeOut = onUpdate(() => {
+        fadeT += dt() * 2;
+        get("startCutscene").forEach((c) => { if (c.exists()) c.opacity = 1 - Math.min(1, fadeT); });
+        if (fadeT >= 1) {
+          fadeOut.cancel();
+          get("startCutscene").forEach((c) => destroy(c));
+          isInvincible = false;
+        }
+      });
+    });
+  }
 
   rufus.onCollide("enemy", (enemy) => {
     // Skip ALL enemy interactions during invincibility
@@ -5067,7 +5464,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     z(100),
   ]);
 
-  // Jetpack bar (only when unlocked)
+  // Jetpack bar (only when unlocked, hides in no-jetpack zones)
   if (jetpackUnlocked) {
     const jetBarBG = add([
       rect(120, 16),
@@ -5085,7 +5482,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       fixed(),
       z(101),
     ]);
-    add([
+    const jetBarText = add([
       text("JETPACK", { size: 9 }),
       pos(80, 79),
       anchor("center"),
@@ -5095,24 +5492,34 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       z(102),
     ]);
 
-    // Bar shows fuel level and recharge
     onUpdate(() => {
       if (!jetBarFill || !jetBarFill.exists()) return;
+
+      // Hide bar in no-jetpack zones
+      let hidden = false;
+      if (level.noJetpackZones && rufus.exists()) {
+        level.noJetpackZones.forEach((zone) => {
+          if (rufus.pos.x >= zone.startX && rufus.pos.x <= zone.endX) hidden = true;
+        });
+      }
+      jetBarBG.opacity = hidden ? 0 : 0.7;
+      jetBarFill.opacity = hidden ? 0 : 1;
+      jetBarText.opacity = hidden ? 0 : 1;
+
+      if (hidden) return;
+
       if (jetpackCooldown > 0) {
-        // Recharging — bar fills up as cooldown ticks down
         const rechargePercent = 1 - (jetpackCooldown / jetpackRechargeTime);
         jetBarFill.width = rechargePercent * 116;
-        jetBarFill.color = rgb(100, 100, 200); // blue while recharging
+        jetBarFill.color = rgb(100, 100, 200);
         jetBarBG.outline.color = rgb(100, 100, 255);
       } else if (jetpackActive) {
-        // Flying — bar drains
         jetBarFill.width = (jetpackFuel / jetpackMaxFuel) * 116;
-        jetBarFill.color = rgb(255, 150, 0); // orange while flying
+        jetBarFill.color = rgb(255, 150, 0);
         jetBarBG.outline.color = rgb(255, 220, 0);
       } else {
-        // Ready to fly
         jetBarFill.width = (jetpackFuel / jetpackMaxFuel) * 116;
-        jetBarFill.color = rgb(50, 200, 50); // green when ready
+        jetBarFill.color = rgb(50, 200, 50);
         jetBarBG.outline.color = rgb(255, 100, 0);
       }
     });
@@ -5206,6 +5613,18 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
       title: "Jetpack Master!",
       message: "Rufus flew over every lollipop and dodged every chocolate spike! The jetpack is his now!",
       rufusColor: [255, 150, 200],
+    },
+    { // Level 8 - candy kingdom, sweet victory
+      bg: [255, 180, 220],
+      title: "Candy King!",
+      message: "Rufus conquered the Candy Kingdom! He flew over lollipops and jumped through cookie bridges!",
+      rufusColor: [255, 100, 180],
+    },
+    { // Level 9 - candy chaos victory
+      bg: [200, 80, 130],
+      title: "Chaos Champion!",
+      message: "Rufus flew through the spike tunnel and survived Candy Chaos! Nothing can stop this fox!",
+      rufusColor: [255, 120, 180],
     },
   ];
   const theme = themes[levelIndex] || themes[0];
