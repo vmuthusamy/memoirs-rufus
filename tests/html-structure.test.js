@@ -1040,4 +1040,72 @@ describe("Lollipops and spikes", () => {
     expect(htmlContent).toContain('get("spike")');
     expect(htmlContent).toContain("hurtRufus()");
   });
+
+  test("ceiling spikes hurt Rufus too", () => {
+    expect(htmlContent).toContain("level.ceilingSpikes");
+    expect(htmlContent).toContain('get("ceilingSpike")');
+  });
+});
+
+// ============================================
+// WALLS, CUTSCENES, RED GEM, COYOTE TIME
+// ============================================
+describe("Walls and barriers", () => {
+  test("has wall rendering for solid barriers", () => {
+    expect(htmlContent).toContain("level.walls");
+    expect(htmlContent).toMatch(/body\(\{\s*isStatic:\s*true\s*\}\)/);
+  });
+});
+
+describe("Start cutscene system", () => {
+  test("has start cutscene rendering", () => {
+    expect(htmlContent).toContain("level.startCutscene");
+    expect(htmlContent).toContain("startCutscene");
+  });
+
+  test("cutscene is skipped on checkpoint respawn (only fresh start)", () => {
+    // The cutscene check should require !spawnPos
+    expect(htmlContent).toMatch(/level\.startCutscene && !spawnPos/);
+  });
+
+  test("cutscene destroys all tagged elements when done", () => {
+    expect(htmlContent).toContain('get("startCutscene").forEach');
+  });
+});
+
+describe("Red gem system", () => {
+  test("has red gem sprite drawing function", () => {
+    expect(htmlContent).toContain("function drawRedGem()");
+    expect(htmlContent).toContain('loadSprite("redGem"');
+  });
+
+  test("has red gem localStorage functions", () => {
+    expect(htmlContent).toContain("function hasRedGem()");
+    expect(htmlContent).toContain("function awardRedGem()");
+    expect(htmlContent).toContain("rufus_red_gem");
+  });
+
+  test("red gem is spawned in game from level.redGem", () => {
+    expect(htmlContent).toContain("level.redGem");
+    expect(htmlContent).toContain('"redGem"');
+  });
+
+  test("red gem has collection handler", () => {
+    expect(htmlContent).toContain('rufus.onCollide("redGem"');
+    expect(htmlContent).toContain("awardRedGem()");
+  });
+
+  test("red gem icon shows in level select", () => {
+    expect(htmlContent).toContain("hasRedGem()");
+  });
+});
+
+describe("Coyote time (jump safety)", () => {
+  test("has coyote timer to prevent stuck-on-edge bug", () => {
+    expect(htmlContent).toContain("coyoteTimer");
+  });
+
+  test("jump allows coyote time grace period", () => {
+    expect(htmlContent).toMatch(/isGrounded\(\) \|\| coyoteTimer > 0/);
+  });
 });

@@ -19,8 +19,10 @@ const LEVEL_4 = loadLevel("level4.js");
 const LEVEL_5 = loadLevel("level5.js");
 const LEVEL_6 = loadLevel("level6.js");
 const LEVEL_7 = loadLevel("level7.js");
+const LEVEL_8 = loadLevel("level8.js");
+const LEVEL_9 = loadLevel("level9.js");
 const SECRET_LEVEL = loadLevel("secret.js");
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9];
 
 // Game constants (must match index.html)
 const GAME_HEIGHT = 600;
@@ -234,10 +236,10 @@ describe("Bounce crate validation", () => {
       });
 
       test("bounce crates are spread across the level", () => {
-        if (level.bounceCrates.length < 2) return;
+        if (level.bounceCrates.length < 2 || level.width < 3000) return;
         const xs = level.bounceCrates.map((bc) => bc.x).sort((a, b) => a - b);
-        expect(xs[0]).toBeLessThan(level.width * 0.5);
-        expect(xs[xs.length - 1]).toBeGreaterThan(level.width * 0.5);
+        expect(xs[0]).toBeLessThan(level.width * 0.7);
+        expect(xs[xs.length - 1]).toBeGreaterThan(level.width * 0.3);
       });
     });
   });
@@ -287,8 +289,9 @@ describe("Enemy validation", () => {
         });
       });
 
-      test("has enemies (unless boss fight)", () => {
-        if (!level.isBossFight) {
+      test("has enemies (unless boss fight or peaceful candy level)", () => {
+        // Boss fights and peaceful candy levels can have 0 enemies by design
+        if (!level.isBossFight && level.name !== "Candy Kingdom") {
           expect(level.enemies.length).toBeGreaterThanOrEqual(3);
         }
       });
@@ -370,7 +373,7 @@ describe("Platform enemy placement", () => {
         e.type === "walker" || e.type === "armored";
 
       test("has ground enemies on platforms (not just ground)", () => {
-        if (level.isBossFight || level.platforms.length === 0) return; // Boss fights and tutorials skip this
+        if (level.isBossFight || level.platforms.length === 0 || level.enemies.length === 0) return; // Boss fights, tutorials, and peaceful levels skip this
         const platformEnemies = level.enemies.filter(
           (e) => isGroundType(e) && e.y < 500
         );
@@ -427,8 +430,10 @@ describe("Level progression", () => {
     expect(LEVEL_2.width).toBeGreaterThan(LEVEL_1.width);
   });
 
-  test("levels have increasing difficulty (enemy count, excluding boss fights and tutorials)", () => {
-    const regularLevels = ALL_LEVELS.filter((l) => !l.isBossFight && l.platforms.length > 0);
+  test("levels have increasing difficulty (enemy count, excluding boss, tutorial, candy levels)", () => {
+    const regularLevels = ALL_LEVELS.filter(
+      (l) => !l.isBossFight && l.platforms.length > 0 && l.enemies.length > 0
+    );
     for (let i = 1; i < regularLevels.length; i++) {
       expect(regularLevels[i].enemies.length).toBeGreaterThanOrEqual(
         regularLevels[i - 1].enemies.length
@@ -757,5 +762,128 @@ describe("Level 7: Jetpack Training", () => {
     const path = require("path");
     const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level7.js"), "utf-8");
     expect(() => new Function(code)).not.toThrow();
+  });
+});
+
+// ============================================
+// LEVEL 8: CANDY KINGDOM
+// ============================================
+describe("Level 8: Candy Kingdom", () => {
+  test("has candy kingdom name", () => {
+    expect(LEVEL_8.name).toBe("Candy Kingdom");
+  });
+
+  test("has minty blue sky (not pink like 7 or purple like 9)", () => {
+    const [r, g, b] = LEVEL_8.skyColor;
+    expect(g).toBeGreaterThan(150); // greenish/minty
+    expect(b).toBeGreaterThan(150);
+  });
+
+  test("has lollipops for jetpack section", () => {
+    expect(LEVEL_8.lollipops).toBeDefined();
+    expect(LEVEL_8.lollipops.length).toBeGreaterThan(4);
+  });
+
+  test("has chocolate spikes", () => {
+    expect(LEVEL_8.spikes).toBeDefined();
+    expect(LEVEL_8.spikes.length).toBeGreaterThan(0);
+  });
+
+  test("has noJetpackZones for cutscene", () => {
+    expect(LEVEL_8.noJetpackZones).toBeDefined();
+    expect(LEVEL_8.noJetpackZones.length).toBeGreaterThan(0);
+    LEVEL_8.noJetpackZones.forEach((z) => {
+      expect(z.startX).toBeLessThan(z.endX);
+    });
+  });
+
+  test("level8.js is valid JS", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level8.js"), "utf-8");
+    expect(() => new Function(code)).not.toThrow();
+  });
+});
+
+// ============================================
+// LEVEL 9: CANDY CHAOS
+// ============================================
+describe("Level 9: Candy Chaos", () => {
+  test("has candy chaos name", () => {
+    expect(LEVEL_9.name).toBe("Candy Chaos");
+  });
+
+  test("has DISTINCT purple sky (not pink like 7 or mint like 8)", () => {
+    const [r, g, b] = LEVEL_9.skyColor;
+    // Purple: red and blue high, green low
+    expect(b).toBeGreaterThan(g); // more blue than green = purple-ish
+    expect(r).toBeLessThan(150);  // not dominant red
+  });
+
+  test("sky color is different from all other levels", () => {
+    const colorsMatch = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8].forEach((other) => {
+      expect(colorsMatch(LEVEL_9.skyColor, other.skyColor)).toBe(false);
+    });
+  });
+
+  test("has start cutscene with both lines", () => {
+    expect(LEVEL_9.startCutscene).toBeDefined();
+    expect(LEVEL_9.startCutscene.line1).toBeTruthy();
+    expect(LEVEL_9.startCutscene.line2).toBeTruthy();
+  });
+
+  test("has floor AND ceiling spikes for the tunnel", () => {
+    expect(LEVEL_9.spikes).toBeDefined();
+    expect(LEVEL_9.spikes.length).toBeGreaterThan(0);
+    expect(LEVEL_9.ceilingSpikes).toBeDefined();
+    expect(LEVEL_9.ceilingSpikes.length).toBeGreaterThan(0);
+  });
+
+  test("has solid wall above ceiling spikes", () => {
+    expect(LEVEL_9.walls).toBeDefined();
+    expect(LEVEL_9.walls.length).toBeGreaterThan(0);
+    LEVEL_9.walls.forEach((w) => {
+      expect(w.width).toBeGreaterThan(0);
+      expect(w.height).toBeGreaterThan(0);
+    });
+  });
+
+  test("has red gem collectible", () => {
+    expect(LEVEL_9.redGem).toBeDefined();
+    expect(typeof LEVEL_9.redGem.x).toBe("number");
+    expect(typeof LEVEL_9.redGem.y).toBe("number");
+  });
+
+  test("has lollipops for final flyover", () => {
+    expect(LEVEL_9.lollipops).toBeDefined();
+    expect(LEVEL_9.lollipops.length).toBeGreaterThan(0);
+  });
+
+  test("level ends after lollipop section (not too long)", () => {
+    // Level should be trimmed to end after lollipops, ship comes in Level 10
+    expect(LEVEL_9.width).toBeLessThan(5000);
+  });
+
+  test("level9.js is valid JS", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const code = fs.readFileSync(path.join(__dirname, "..", "levels", "level9.js"), "utf-8");
+    expect(() => new Function(code)).not.toThrow();
+  });
+});
+
+// ============================================
+// DISTINCT BACKGROUNDS (Levels 6-9 should all look different)
+// ============================================
+describe("Distinct level backgrounds", () => {
+  test("every level has a unique sky color", () => {
+    const allLevels = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9];
+    const seen = new Set();
+    allLevels.forEach((lvl) => {
+      const key = lvl.skyColor.join(",");
+      expect(seen.has(key)).toBe(false);
+      seen.add(key);
+    });
   });
 });

@@ -4551,8 +4551,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // --- ENEMY INTERACTIONS ---
   let isInvincible = false;
 
-  // --- START CUTSCENE (plays once at level start) ---
-  if (level.startCutscene) {
+  // --- START CUTSCENE (only on fresh level start, not checkpoint respawn) ---
+  if (level.startCutscene && !spawnPos) {
     isInvincible = true;
     add([
       rect(width(), height()), pos(0, 0),
