@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About · KC Hearts · Rufus Family</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'><rect x='6' y='0' width='6' height='8' fill='%23D2691E'/><rect x='20' y='0' width='6' height='8' fill='%23D2691E'/><rect x='4' y='6' width='24' height='18' fill='%23D2691E' rx='4'/><rect x='8' y='14' width='16' height='8' fill='%23F4A460'/><rect x='10' y='9' width='4' height='4' fill='%23000'/><rect x='18' y='9' width='4' height='4' fill='%23000'/><rect x='11' y='9' width='2' height='2' fill='%23FFF'/><rect x='19' y='9' width='2' height='2' fill='%23FFF'/><rect x='14' y='13' width='4' height='3' fill='%23000'/><rect x='13' y='17' width='2' height='1' fill='%23d6336c'/><rect x='16' y='17' width='2' height='1' fill='%23d6336c'/><rect x='12' y='18' width='7' height='1' fill='%23d6336c'/><rect x='13' y='19' width='5' height='1' fill='%23d6336c'/><rect x='14' y='20' width='3' height='1' fill='%23d6336c'/><rect x='15' y='21' width='1' height='1' fill='%23d6336c'/></svg>">
+<style>
+  :root {
+    --bg: #fff8f7;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #eadcd9;
+    --accent: #d6336c;
+    --fox: #D2691E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.55; font-size: 15px;
+  }
+  header {
+    padding: 12px 16px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  header a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  header a:hover { text-decoration: underline; }
+  header h1 {
+    margin: 0; font-size: 16px; color: var(--accent);
+    margin-left: auto;
+  }
+
+  main {
+    max-width: 720px; margin: 0 auto; padding: 28px 20px 60px;
+  }
+
+  .hero {
+    text-align: center; margin-bottom: 32px;
+  }
+  .hero .rufus-sprite {
+    display: inline-block;
+    margin-bottom: 4px;
+    transform-origin: center bottom;
+    animation: rufus-bounce 1.1s ease-in-out infinite;
+  }
+  .hero .rufus-sprite svg {
+    width: 128px; height: 128px; display: block;
+  }
+  @keyframes rufus-bounce {
+    0%   { transform: translateY(0)    scaleY(1); }
+    30%  { transform: translateY(-20px) scaleY(1.03); }
+    55%  { transform: translateY(-20px) scaleY(1.03); }
+    78%  { transform: translateY(0)    scaleY(0.92) scaleX(1.07); }
+    100% { transform: translateY(0)    scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero .rufus-sprite { animation: none; }
+  }
+  .hero h2 {
+    font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em;
+  }
+  .hero .sub { color: var(--muted); font-size: 15px; }
+
+  .story {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px 26px; margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .story p { margin: 0 0 14px; }
+  .story p:last-child { margin-bottom: 0; }
+  .story .opener::first-letter {
+    float: left; font-size: 44px; line-height: 0.9; padding: 2px 8px 0 0;
+    color: var(--fox); font-weight: 700;
+  }
+
+  .bullets {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .bullets h3 {
+    margin: 0 0 10px; font-size: 14px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+  }
+  .bullets ul { margin: 0; padding-left: 20px; }
+  .bullets li { margin-bottom: 6px; }
+
+  .credits {
+    font-size: 13px; color: var(--muted); text-align: center;
+    padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .credits a { color: var(--accent); }
+
+  .back {
+    display: inline-block; margin-top: 24px;
+    background: var(--accent); color: white;
+    padding: 10px 18px; border-radius: 10px;
+    text-decoration: none; font-weight: 600;
+  }
+  .back:hover { filter: brightness(0.95); }
+
+  .heart-emoji { color: var(--accent); }
+
+  /* Dad's technical disclaimer — cooler palette, clearly a different voice */
+  .dad-note {
+    background: #f5f7fb;
+    border: 1px dashed #c7d2e0;
+    border-radius: 16px;
+    padding: 22px 26px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .dad-note h3 {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: #334155;
+    letter-spacing: -0.01em;
+  }
+  .dad-note ul { margin: 0 0 14px; padding-left: 20px; }
+  .dad-note li { margin-bottom: 5px; color: #334155; }
+  .dad-note .sig {
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 14px;
+    margin-bottom: 0;
+  }
+  .dad-note .clear-btn {
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #334155;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .dad-note .clear-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+  .dad-note .clear-btn.done { background: #dcfce7; color: #166534; border-color: #86efac; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/">🦊 Rufus</a>
+  <a href="./">💗 Map</a>
+  <h1>About</h1>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="rufus-sprite" aria-label="Rufus the fox, bouncing">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+        <!-- Tail (rendered first, behind body) -->
+        <rect x="2" y="14" width="6" height="4" fill="#D2691E"/>
+        <rect x="0" y="12" width="4" height="4" fill="#D2691E"/>
+        <rect x="0" y="12" width="3" height="4" fill="#FFFFFF"/>
+        <!-- Body -->
+        <rect x="8" y="12" width="16" height="12" fill="#D2691E"/>
+        <!-- Head -->
+        <rect x="10" y="4" width="14" height="12" fill="#D2691E"/>
+        <!-- Ears -->
+        <rect x="10" y="0" width="4" height="6" fill="#D2691E"/>
+        <rect x="20" y="0" width="4" height="6" fill="#D2691E"/>
+        <!-- Inner ears -->
+        <rect x="11" y="1" width="2" height="4" fill="#A0522D"/>
+        <rect x="21" y="1" width="2" height="4" fill="#A0522D"/>
+        <!-- Belly -->
+        <rect x="12" y="16" width="10" height="6" fill="#F4A460"/>
+        <!-- Eyes -->
+        <rect x="13" y="7" width="3" height="3" fill="#000"/>
+        <rect x="19" y="7" width="3" height="3" fill="#000"/>
+        <!-- Eye shine -->
+        <rect x="14" y="7" width="1" height="1" fill="#FFF"/>
+        <rect x="20" y="7" width="1" height="1" fill="#FFF"/>
+        <!-- Nose -->
+        <rect x="16" y="10" width="2" height="2" fill="#000"/>
+        <!-- Toothy grin -->
+        <rect x="12" y="13" width="2" height="2" fill="#FFF"/>
+        <rect x="14" y="12" width="2" height="2" fill="#FFF"/>
+        <rect x="16" y="13" width="2" height="2" fill="#FFF"/>
+        <rect x="18" y="12" width="2" height="2" fill="#FFF"/>
+        <rect x="20" y="13" width="2" height="2" fill="#FFF"/>
+        <!-- Legs -->
+        <rect x="10" y="24" width="4" height="6" fill="#8B4513"/>
+        <rect x="20" y="24" width="4" height="6" fill="#8B4513"/>
+        <!-- Paws -->
+        <rect x="10" y="28" width="4" height="4" fill="#5C3317"/>
+        <rect x="20" y="28" width="4" height="4" fill="#5C3317"/>
+      </svg>
+    </div>
+    <h2>A note from Rufus</h2>
+    <div class="sub">happy-go-loving fox · occasional web developer</div>
+  </section>
+
+  <section class="story">
+    <p class="opener"><em>Hallo.</em> I'm Rufus. <em>Ein Fuchs</em>, officially from Germany, spiritually from a 2D platformer. Most days I run through levels, dodge obstacles, and work on my toothy grin. I also sleep. Foxes sleep a lot. But sometimes my favorite human (small, loud, my actual boss, also known around here as <em>mein Mensch</em>) gets obsessed with something, and then I clock in.</p>
+
+    <p>This year it was the <strong>Parade of Hearts</strong> <span class="heart-emoji">💗</span>. Artists from all over Kansas City paint these huge heart sculptures and tuck them into neighborhoods across the metro. Each one is a whole universe, painted by somebody who loves this city. You find them at barbecue joints, on jazz corners, by the fountains. Apparently Kansas City has more fountains than Rome, which frankly blew my little fox mind. <em>Wunderbar.</em></p>
+
+    <p><em>Mein Mensch</em> wanted to find as many hearts as possible. So we built a map. It knows where every heart lives, finds the ones nearest you, remembers the ones you've tracked down, and gives directions in one tap. It does not judge you for stopping at a barbecue place along the way. Neither do I.</p>
+
+    <p>When you find one, tip your hat to the artists. They put the whole city into each heart. And if you ever see a small orange <em>Fuchs</em> and a smaller human staring reverently at a sculpture somewhere around the Crossroads, please, <em>kein Wort.</em> I'm supposed to be inside a video game, and <em>mein Mensch</em> is supposed to be doing homework.</p>
+
+    <p style="text-align: right; color: var(--muted); font-style: italic; margin-top: 18px;"><em>Tschüss,</em> Rufus 🦊</p>
+  </section>
+
+  <section class="bullets">
+    <h3>What this is (and isn't)</h3>
+    <ul>
+      <li>Every 2026 Parade of Hearts sculpture we could pin down (139 and counting). Sort by distance, filter by community, search by name or artist, check off as you go, one-tap directions.</li>
+      <li>Your visited list lives in your browser only. No accounts, no tracking.</li>
+      <li>Heart data sourced from <a href="https://theparadeofhearts.com" target="_blank" rel="noopener">theparadeofhearts.com</a>. Please support the artists and sponsors who make this real.</li>
+      <li>Fan-built and <strong>not officially affiliated</strong>. If the Parade of Hearts team wants it handed over, tuned, or taken down, just reach out. Happy to help.</li>
+    </ul>
+  </section>
+
+  <section class="dad-note">
+    <h3>🛠️ A note from Rufus's tech-savvy father</h3>
+    <p>Rufus is a good fox, but foxes have a reputation for sniffing around. Before letting him loose on the internet, I made sure he wasn't sniffing where he shouldn't.</p>
+    <ul>
+      <li>No tracking. No analytics. No cookies. No ad networks.</li>
+      <li>No accounts. No logins. Nothing to sign up for.</li>
+      <li>Your "visited hearts" list lives in your browser, on your device. Nobody else sees it. Not me, not Rufus.</li>
+      <li>Your location is only read when you tap "Near me", used in real time to sort hearts by distance, and then forgotten. It is not saved. It is not sent anywhere.</li>
+      <li>Map tiles load from OpenStreetMap and heart photos load from Parade of Hearts. Those are normal web requests, same as any map site.</li>
+    </ul>
+    <p>If you want a clean slate, wipe your saved data any time:</p>
+    <p><button class="clear-btn" onclick="clearSavedData(this)">Clear my saved data</button></p>
+    <p class="sig">No cookies. No ad networks. No shady fox business.<br>Rufus's dad 🛠️</p>
+  </section>
+
+  <p style="text-align: center;">
+    <a class="back" href="./">← Back to the map</a>
+  </p>
+
+  <script>
+    function clearSavedData(btn) {
+      if (!confirm("Clear your visited-hearts list and preferences? This can't be undone.")) return;
+      localStorage.removeItem('kc-hearts-visited-v1');
+      localStorage.removeItem('kc-hearts-hide-visited-v1');
+      btn.textContent = '✓ Cleared';
+      btn.classList.add('done');
+      btn.disabled = true;
+    }
+  </script>
+
+  <div class="credits">
+    Built on a weekend at <a href="https://rufusfamily.com">rufusfamily.com</a> ·
+    Map tiles © OpenStreetMap contributors ·
+    Hearts belong to the artists & Kansas City
+  </div>
+
+</main>
+</body>
+</html>

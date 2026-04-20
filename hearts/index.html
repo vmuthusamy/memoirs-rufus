@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KC Hearts — Parade of Hearts Finder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'><rect x='6' y='0' width='6' height='8' fill='%23D2691E'/><rect x='20' y='0' width='6' height='8' fill='%23D2691E'/><rect x='4' y='6' width='24' height='18' fill='%23D2691E' rx='4'/><rect x='8' y='14' width='16' height='8' fill='%23F4A460'/><rect x='10' y='9' width='4' height='4' fill='%23000'/><rect x='18' y='9' width='4' height='4' fill='%23000'/><rect x='11' y='9' width='2' height='2' fill='%23FFF'/><rect x='19' y='9' width='2' height='2' fill='%23FFF'/><rect x='14' y='13' width='4' height='3' fill='%23000'/><rect x='13' y='17' width='2' height='1' fill='%23d6336c'/><rect x='16' y='17' width='2' height='1' fill='%23d6336c'/><rect x='12' y='18' width='7' height='1' fill='%23d6336c'/><rect x='13' y='19' width='5' height='1' fill='%23d6336c'/><rect x='14' y='20' width='3' height='1' fill='%23d6336c'/><rect x='15' y='21' width='1' height='1' fill='%23d6336c'/></svg>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  :root {
+    --bg: #fff8f7;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #eadcd9;
+    --accent: #d6336c;
+    --accent-soft: #ffe0e6;
+    --visited: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+  }
+  header {
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  header h1 {
+    margin: 0; font-size: 16px; font-weight: 700;
+    color: var(--accent); margin-right: 8px;
+  }
+  header h1 span { font-size: 18px; margin-right: 4px; }
+  #count { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+  input, select, button {
+    font: inherit; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; background: white;
+  }
+  button {
+    cursor: pointer; background: var(--accent); color: white; border-color: var(--accent);
+    font-weight: 600;
+  }
+  button.ghost { background: white; color: var(--accent); }
+  button:hover { filter: brightness(0.95); }
+  .about-link {
+    font-size: 13px; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 8px; background: white; color: var(--accent);
+    text-decoration: none; font-weight: 600;
+  }
+  .about-link:hover { background: var(--accent-soft); }
+  #search { min-width: 180px; flex: 1; max-width: 240px; }
+
+  main {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    overflow: hidden;
+    min-height: 0;
+  }
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 40vh 1fr; }
+  }
+
+  #list {
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 8px;
+  }
+  .heart {
+    display: flex; gap: 10px; padding: 10px; border-radius: 10px;
+    cursor: pointer; margin-bottom: 6px;
+    border: 1px solid transparent;
+  }
+  .heart:hover { background: var(--accent-soft); border-color: var(--border); }
+  .heart.visited { opacity: 0.55; }
+  .heart.visited .thumb { filter: grayscale(1); }
+  .heart.active { background: var(--accent-soft); border-color: var(--accent); }
+  .thumb {
+    width: 56px; height: 56px; border-radius: 8px; object-fit: cover;
+    flex-shrink: 0; background: #eee;
+  }
+  .meta { min-width: 0; flex: 1; }
+  .meta .name { font-weight: 600; font-size: 13.5px; line-height: 1.25; }
+  .meta .artist { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .meta .community { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .meta .distance { color: var(--accent); font-size: 11px; font-weight: 600; margin-top: 2px; }
+
+  #map { width: 100%; height: 100%; }
+
+  .leaflet-popup-content { margin: 10px 12px; min-width: 200px; }
+  .popup-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .popup-artist { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .popup-thumb { width: 100%; max-width: 220px; border-radius: 8px; margin-bottom: 8px; display: block; }
+  .popup-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .popup-actions a, .popup-actions button {
+    font-size: 12px; padding: 5px 9px; border-radius: 6px; text-decoration: none;
+    border: 1px solid var(--border); background: white; color: var(--ink); cursor: pointer;
+  }
+  .popup-actions a.primary, .popup-actions button.primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .popup-actions .visited-toggle.on {
+    background: var(--visited); color: white; border-color: var(--visited);
+  }
+
+  /* Custom divIcon marker */
+  .heart-marker {
+    font-size: 22px; text-align: center; line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+  }
+  .heart-marker.visited { filter: grayscale(1) opacity(0.5); }
+
+  .progress-bar {
+    height: 4px; background: var(--accent-soft); border-radius: 2px; overflow: hidden;
+    margin-top: 4px; width: 120px;
+  }
+  .progress-bar > div {
+    height: 100%; background: var(--accent); transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>💗</span>KC Hearts</h1>
+  <input id="search" type="search" placeholder="Search name or artist…" autocomplete="off">
+  <select id="community"><option value="">All communities</option></select>
+  <button id="locate" class="ghost">📍 Near me</button>
+  <button id="hide-visited" class="ghost">Hide visited</button>
+  <a href="./about.html" class="about-link" title="How Rufus built this">🦊 About</a>
+  <span id="count">
+    <span id="count-num">0</span> shown ·
+    <span id="visited-num">0</span>/<span id="total-num">0</span> visited
+    <div class="progress-bar"><div id="progress"></div></div>
+  </span>
+</header>
+
+<main>
+  <aside id="list"></aside>
+  <div id="map"></div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(async function() {
+  const VISITED_KEY = 'kc-hearts-visited-v1';
+  const HIDE_VISITED_KEY = 'kc-hearts-hide-visited-v1';
+  const visited = new Set(JSON.parse(localStorage.getItem(VISITED_KEY) || '[]'));
+  function saveVisited() { localStorage.setItem(VISITED_KEY, JSON.stringify([...visited])); }
+
+  const res = await fetch('./hearts.json');
+  const all = await res.json();
+  const hearts = all.filter(h => h.has_coords);
+
+  // KC metro center + zoom
+  const map = L.map('map').setView([39.0997, -94.5786], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Community dropdown
+  const communities = [...new Set(hearts.map(h => h.community).filter(Boolean))].sort();
+  const $community = document.getElementById('community');
+  for (const c of communities) {
+    const o = document.createElement('option'); o.value = c; o.textContent = c;
+    $community.appendChild(o);
+  }
+
+  // State
+  let userLoc = null;
+  let userMarker = null;
+  let hideVisited = localStorage.getItem(HIDE_VISITED_KEY) === '1';
+  let activeId = null;
+  const markers = new Map();
+
+  function clearSelection() {
+    activeId = null;
+    map.closePopup();
+    renderList();
+  }
+
+  function distanceMi(a, b) {
+    const R = 3959;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const x = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+  }
+
+  function makeMarker(h) {
+    const isVisited = visited.has(h.id);
+    const icon = L.divIcon({
+      html: `<div class="heart-marker ${isVisited ? 'visited' : ''}">💗</div>`,
+      className: '', iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12]
+    });
+    const m = L.marker([h.lat, h.lng], { icon }).addTo(map);
+    m.bindPopup(() => renderPopup(h), { maxWidth: 260 });
+    m.on('click', () => {
+      activeId = h.id;
+      renderList();
+      scrollActiveIntoView();
+    });
+    return m;
+  }
+
+  function scrollActiveIntoView() {
+    if (!activeId) return;
+    const el = document.querySelector(`.heart[data-id="${activeId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function recenterToFiltered({ openPopup = true, zoom = 14 } = {}) {
+    const filtered = currentFilter();
+    if (filtered.length === 0) return;
+
+    // If user location is known, pick the closest filtered heart
+    let target = filtered[0];
+    if (userLoc) {
+      target = filtered.reduce((closest, h) =>
+        distanceMi(userLoc, h) < distanceMi(userLoc, closest) ? h : closest
+      );
+    } else if (filtered.length > 1) {
+      // No user location: fit bounds to all filtered hearts
+      const bounds = L.latLngBounds(filtered.map(h => [h.lat, h.lng]));
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      return;
+    }
+
+    activeId = target.id;
+    map.flyTo([target.lat, target.lng], zoom, { duration: 0.6 });
+    if (openPopup) {
+      const m = markers.get(target.id);
+      if (m) setTimeout(() => m.openPopup(), 650);
+    }
+    renderList();
+    scrollActiveIntoView();
+  }
+
+  function renderPopup(h) {
+    const isVisited = visited.has(h.id);
+    const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`;
+    return `
+      <div class="popup-name">${escapeHtml(h.name)}</div>
+      <div class="popup-artist">by ${escapeHtml(h.artist || 'Unknown')}${h.community ? ' · ' + escapeHtml(h.community) : ''}</div>
+      ${h.thumbnail ? `<img class="popup-thumb" src="${h.thumbnail}" alt="" loading="lazy">` : ''}
+      <div class="popup-actions">
+        <a class="primary" href="${gmapsUrl}" target="_blank" rel="noopener">Directions</a>
+        ${h.url ? `<a href="${h.url}" target="_blank" rel="noopener">Details</a>` : ''}
+        <button class="visited-toggle ${isVisited ? 'on' : ''}" onclick="window.toggleVisited('${h.id}')">${isVisited ? '✓ Visited' : 'Mark visited'}</button>
+      </div>
+    `;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  window.toggleVisited = function(id) {
+    if (visited.has(id)) visited.delete(id); else visited.add(id);
+    saveVisited();
+    const m = markers.get(id);
+    if (m) {
+      m.setIcon(L.divIcon({
+        html: `<div class="heart-marker ${visited.has(id) ? 'visited' : ''}">💗</div>`,
+        className: '', iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12]
+      }));
+      // Update popup content in place (no close/reopen jitter)
+      const popup = m.getPopup();
+      if (popup && popup.isOpen()) {
+        const h = hearts.find(x => x.id === id);
+        if (h) popup.setContent(renderPopup(h));
+      }
+    }
+    renderList();
+    updateCounts();
+  };
+
+  for (const h of hearts) markers.set(h.id, makeMarker(h));
+
+  function currentFilter() {
+    const q = document.getElementById('search').value.toLowerCase().trim();
+    const c = $community.value;
+    return hearts.filter(h => {
+      if (hideVisited && visited.has(h.id)) return false;
+      if (c && h.community !== c) return false;
+      if (q && !((h.name||'').toLowerCase().includes(q) || (h.artist||'').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }
+
+  function renderList() {
+    const filtered = currentFilter();
+    // Sort by distance if we have user location, else alphabetical
+    filtered.sort((a, b) => {
+      if (userLoc) {
+        const da = distanceMi(userLoc, { lat: a.lat, lng: a.lng });
+        const db = distanceMi(userLoc, { lat: b.lat, lng: b.lng });
+        return da - db;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    const $list = document.getElementById('list');
+    if (filtered.length === 0) {
+      $list.innerHTML = `
+        <div style="padding: 30px 16px; text-align: center; color: var(--muted);">
+          <div style="font-size: 32px; margin-bottom: 8px;">💗</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px;">No hearts match</div>
+          <div style="font-size: 12px;">Try clearing the search, picking a different community, or turning "Hide visited" off.</div>
+        </div>`;
+      document.getElementById('count-num').textContent = 0;
+      return;
+    }
+    $list.innerHTML = filtered.map(h => {
+      const isVisited = visited.has(h.id);
+      const dist = userLoc ? distanceMi(userLoc, { lat: h.lat, lng: h.lng }).toFixed(1) + ' mi' : '';
+      return `
+        <div class="heart ${isVisited ? 'visited' : ''} ${activeId === h.id ? 'active' : ''}" data-id="${h.id}">
+          <img class="thumb" src="${h.thumbnail}" alt="" loading="lazy">
+          <div class="meta">
+            <div class="name">${escapeHtml(h.name)}</div>
+            <div class="artist">by ${escapeHtml(h.artist || 'Unknown')}</div>
+            <div class="community">${escapeHtml(h.community || '')}</div>
+            ${dist ? `<div class="distance">${dist}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    document.getElementById('count-num').textContent = filtered.length;
+
+    // Wire up clicks
+    $list.querySelectorAll('.heart').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        const h = hearts.find(x => x.id === id);
+        if (!h) return;
+        activeId = id;
+        map.flyTo([h.lat, h.lng], 15, { duration: 0.5 });
+        const m = markers.get(id);
+        if (m) setTimeout(() => m.openPopup(), 500);
+        renderList();
+      });
+    });
+  }
+
+  function updateCounts() {
+    document.getElementById('visited-num').textContent = visited.size;
+    document.getElementById('total-num').textContent = hearts.length;
+    document.getElementById('progress').style.width = (100 * visited.size / hearts.length) + '%';
+  }
+
+  document.getElementById('search').addEventListener('input', renderList);
+  $community.addEventListener('change', () => {
+    renderList();
+    // If a specific community is picked, zoom to the closest heart in it.
+    if ($community.value) recenterToFiltered();
+  });
+
+  const $hideBtn = document.getElementById('hide-visited');
+  $hideBtn.textContent = hideVisited ? 'Show visited' : 'Hide visited';
+  $hideBtn.addEventListener('click', () => {
+    hideVisited = !hideVisited;
+    localStorage.setItem(HIDE_VISITED_KEY, hideVisited ? '1' : '0');
+    $hideBtn.textContent = hideVisited ? 'Show visited' : 'Hide visited';
+    renderList();
+  });
+
+  document.getElementById('locate').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+    // Clear any open popup / selection before re-centering
+    clearSelection();
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (userMarker) {
+        userMarker.setLatLng([userLoc.lat, userLoc.lng]);
+      } else {
+        userMarker = L.circleMarker([userLoc.lat, userLoc.lng], {
+          radius: 8, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.6, weight: 2
+        }).addTo(map).bindPopup('You are here');
+      }
+      renderList();
+      // Fit the view to include both the user and the nearest heart in the
+      // current filter, so they can see the relationship at a glance.
+      const filtered = currentFilter();
+      if (filtered.length) {
+        const closest = filtered.reduce((c, h) =>
+          distanceMi(userLoc, h) < distanceMi(userLoc, c) ? h : c
+        );
+        const bounds = L.latLngBounds([
+          [userLoc.lat, userLoc.lng],
+          [closest.lat, closest.lng]
+        ]);
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+      } else {
+        map.flyTo([userLoc.lat, userLoc.lng], 12, { duration: 0.7 });
+      }
+    }, err => alert('Location error: ' + err.message));
+  });
+
+  // Clicking empty map background clears selection
+  map.on('click', () => clearSelection());
+  map.on('popupclose', () => { activeId = null; renderList(); });
+
+  updateCounts();
+  renderList();
+})();
+</script>
+</body>
+</html>
