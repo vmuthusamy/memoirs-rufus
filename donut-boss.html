@@ -451,18 +451,21 @@
   function explodeMrDonut() {
     state.donut.exploding = true;
     state.donut.explodeTimer = 0;
+    // Save to the active game file (the main game prefixes keys per save slot)
+    const _slot = localStorage.getItem('rufus_active_slot') || '1';
+    const _sp = (k) => 's' + _slot + '__' + k;
     // NORMAL gem: beating Mr. Donut at all earns Level 10's cyan gem (index 9),
     // even if you took damage — matches how every other level awards its gem.
     try {
-      const c = JSON.parse(localStorage.getItem('rufus_collectibles')) || { gems: {}, paws: {} };
+      const c = JSON.parse(localStorage.getItem(_sp('rufus_collectibles'))) || { gems: {}, paws: {} };
       if (!c.gems) c.gems = {};
       c.gems[9] = true; // Level 10 is index 9 in ALL_LEVELS
-      localStorage.setItem('rufus_collectibles', JSON.stringify(c));
+      localStorage.setItem(_sp('rufus_collectibles'), JSON.stringify(c));
     } catch (e) {}
     // YELLOW GEM reward: beat Mr. Donut without losing a single hit point
     state.perfectRun = (state.rufusHealth === state.maxHealth);
     if (state.perfectRun) {
-      try { localStorage.setItem('rufus-yellow-gem', '1'); } catch (e) {}
+      try { localStorage.setItem(_sp('rufus-yellow-gem'), '1'); } catch (e) {}
     }
     audio.sfx('explode');
     setTimeout(() => audio.sfx('win'), 600);

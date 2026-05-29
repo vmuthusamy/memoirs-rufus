@@ -64,6 +64,35 @@ kaplay({
 })();
 
 // ============================================
+// SAVE FILES — up to 3 named game files. Trick: we wrap localStorage so every
+// game key automatically gets prefixed with the active file, making all the
+// existing gem/hat/progress code save separately per file with no other changes.
+// ============================================
+const SLOTS = (function () {
+  const ACTIVE = "rufus_active_slot";
+  const realGet = localStorage.getItem.bind(localStorage);
+  const realSet = localStorage.setItem.bind(localStorage);
+  const realRemove = localStorage.removeItem.bind(localStorage);
+  function active() { return realGet(ACTIVE) || "1"; }
+  function isMgmt(k) { return k === ACTIVE || k.indexOf("rufus_slot_") === 0; }
+  function pfx(k) { return isMgmt(k) ? k : ("s" + active() + "__" + k); }
+  localStorage.getItem = (k) => realGet(pfx(k));
+  localStorage.setItem = (k, v) => realSet(pfx(k), v);
+  localStorage.removeItem = (k) => realRemove(pfx(k));
+  return {
+    active,
+    setActive: (n) => realSet(ACTIVE, String(n)),
+    getName: (n) => realGet("rufus_slot_" + n + "_name"),
+    setName: (n, name) => realSet("rufus_slot_" + n + "_name", name),
+    deleteSlot: (n) => {
+      const p = "s" + n + "__";
+      Object.keys(localStorage).filter((k) => k.indexOf(p) === 0).forEach((k) => realRemove(k));
+      realRemove("rufus_slot_" + n + "_name");
+    },
+  };
+})();
+
+// ============================================
 // 8-BIT MENU MUSIC — 100% original, generated live from
 // oscillators (copyright-free). NES-style: square-wave lead,
 // triangle bass, noise-channel drums. Plays on the menus and
@@ -1740,6 +1769,20 @@ function drawRedGem() {
 }
 
 // --- DRAW A GREEN GEM (secret color gem!) ---
+function drawPurpleGem() {
+  const c = document.createElement("canvas");
+  c.width = 20; c.height = 20;
+  const ctx = c.getContext("2d");
+  // Diamond shape (purple!)
+  ctx.fillStyle = "#9C36DD";
+  ctx.fillRect(8, 1, 4, 2); ctx.fillRect(6, 3, 8, 2); ctx.fillRect(4, 5, 12, 2);
+  ctx.fillRect(2, 7, 16, 4); ctx.fillRect(4, 11, 12, 2); ctx.fillRect(6, 13, 8, 2); ctx.fillRect(8, 15, 4, 2);
+  ctx.fillStyle = "#C77DFF"; ctx.fillRect(6, 5, 4, 4); ctx.fillRect(8, 3, 3, 3);
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(7, 5, 2, 2); ctx.fillRect(9, 3, 1, 1);
+  ctx.fillStyle = "#6A1B9A"; ctx.fillRect(2, 10, 16, 1); ctx.fillRect(8, 16, 4, 1);
+  return c;
+}
+
 function drawGreenGem() {
   const c = document.createElement("canvas");
   c.width = 20;
@@ -1832,6 +1875,7 @@ loadSprite("bossClown", drawBossClown().toDataURL());
 loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
 loadSprite("redGem", drawRedGem().toDataURL());
 loadSprite("greenGem", drawGreenGem().toDataURL());
+loadSprite("purpleGem", drawPurpleGem().toDataURL());
 loadSprite("yellowGem", drawYellowGem().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
@@ -1922,6 +1966,19 @@ function hasGem(levelIndex) {
   return getCollectibles().gems[levelIndex] === true;
 }
 
+// Track which levels have been BEATEN (reached the exit), for unlocking.
+function getBeaten() {
+  try { return JSON.parse(localStorage.getItem("rufus_beaten")) || {}; }
+  catch (e) { return {}; }
+}
+function markBeaten(i) {
+  const b = getBeaten(); b[i] = true;
+  localStorage.setItem("rufus_beaten", JSON.stringify(b));
+}
+function isBeaten(i) { return getBeaten()[i] === true; }
+// Levels 7-14 (index >= 6) are locked until King Clown (Level 6 = index 5) is beaten.
+function isLevelLocked(i) { return (typeof i === "number") && i >= 6 && !isBeaten(5); }
+
 // Check if player already has the golden paw for a level
 function hasPaw(levelIndex) {
   return getCollectibles().paws[levelIndex] === true;
@@ -1942,6 +1999,12 @@ function hasRedGem() {
 }
 function awardRedGem() {
   localStorage.setItem("rufus_red_gem", "true");
+}
+function hasPurpleGem() {
+  return localStorage.getItem("rufus_purple_gem") === "true";
+}
+function awardPurpleGem() {
+  localStorage.setItem("rufus_purple_gem", "true");
 }
 function hasGreenGem() {
   return localStorage.getItem("rufus_green_gem") === "true";
@@ -2032,6 +2095,13 @@ function hasHatPaint() {
   const p = getHatPaint();
   return Array.isArray(p) && p.some((c) => c);
 }
+// Color of the hat's brim (bottom). null = default dark grey.
+function getHatBrim() {
+  try { const v = JSON.parse(localStorage.getItem("rufus_hat_brim")); return Array.isArray(v) ? v : null; }
+  catch (e) { return null; }
+}
+function setHatBrim(c) { localStorage.setItem("rufus_hat_brim", JSON.stringify(c)); }
+function hatBrimColor() { return getHatBrim() || [35, 35, 40]; }
 
 // ============================================
 // NAME ENTRY SCENE - arcade-style initials!
@@ -2379,6 +2449,73 @@ scene("leaderboard", () => {
       showScores();
     });
   });
+});
+
+// ============================================
+// GAME FILES — pick / create / delete up to 3 save files
+// ============================================
+scene("gameFiles", () => {
+  add([ rect(width(), height()), pos(0, 0), color(25, 20, 45), fixed() ]);
+  add([ text("Game Files", { size: 40 }), pos(width() / 2, 50), anchor("center"), color(255, 220, 120), fixed() ]);
+  add([ text("Pick a file to play, make a new one, or delete one.", { size: 14 }), pos(width() / 2, 92), anchor("center"), color(200, 190, 220), fixed() ]);
+
+  let naming = 0;       // which slot is being named (0 = none)
+  let typed = "";
+  let typeLabel = null;
+
+  function refresh() {
+    get("fileRow").forEach((o) => destroy(o));
+    for (let n = 1; n <= 3; n++) {
+      const y = 160 + (n - 1) * 110;
+      const name = SLOTS.getName(n);
+      const isActive = SLOTS.active() === String(n);
+      // Row box
+      add([ rect(560, 92), pos(width() / 2, y), anchor("center"), color(45, 38, 62), outline(3, isActive ? rgb(120, 255, 150) : rgb(110, 100, 150)), fixed(), "fileRow" ]);
+      add([ text("File " + n + (isActive ? "  (playing)" : ""), { size: 13 }), pos(width() / 2 - 255, y - 28), anchor("left"), color(180, 200, 255), fixed(), "fileRow" ]);
+
+      if (naming === n) {
+        // Typing a name for this new file
+        add([ text("Type a name, then ENTER:", { size: 14 }), pos(width() / 2 - 255, y), anchor("left"), color(255, 255, 255), fixed(), "fileRow" ]);
+        typeLabel = add([ text("_", { size: 22 }), pos(width() / 2 - 255, y + 26), anchor("left"), color(255, 230, 150), fixed(), "fileRow" ]);
+      } else if (name) {
+        add([ text(name, { size: 26 }), pos(width() / 2 - 255, y + 4), anchor("left"), color(255, 255, 255), fixed(), "fileRow" ]);
+        const play = add([ rect(110, 44), pos(width() / 2 + 110, y), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), "fileRow" ]);
+        add([ text("PLAY", { size: 18 }), pos(width() / 2 + 110, y), anchor("center"), color(255, 255, 255), fixed(), "fileRow" ]);
+        play.onClick(() => { SLOTS.setActive(n); go("title"); });
+        const del = add([ rect(100, 44), pos(width() / 2 + 235, y), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), "fileRow" ]);
+        add([ text("DELETE", { size: 14 }), pos(width() / 2 + 235, y), anchor("center"), color(255, 255, 255), fixed(), "fileRow" ]);
+        del.onClick(() => { SLOTS.deleteSlot(n); if (SLOTS.active() === String(n)) SLOTS.setActive(1); refresh(); });
+      } else {
+        add([ text("— Empty —", { size: 20 }), pos(width() / 2 - 255, y + 4), anchor("left"), color(150, 140, 170), fixed(), "fileRow" ]);
+        const mk = add([ rect(150, 44), pos(width() / 2 + 175, y), anchor("center"), color(60, 120, 200), outline(2, rgb(150, 200, 255)), area(), fixed(), "fileRow" ]);
+        add([ text("NEW FILE", { size: 16 }), pos(width() / 2 + 175, y), anchor("center"), color(255, 255, 255), fixed(), "fileRow" ]);
+        mk.onClick(() => { naming = n; typed = ""; refresh(); });
+      }
+    }
+  }
+
+  onCharInput((ch) => {
+    if (!naming) return;
+    if (typed.length >= 12) return;
+    if (/[a-zA-Z0-9 ]/.test(ch)) { typed += ch; if (typeLabel) typeLabel.text = typed + "_"; }
+  });
+  onKeyPress("backspace", () => { if (naming) { typed = typed.slice(0, -1); if (typeLabel) typeLabel.text = typed + "_"; } });
+  onKeyPress("enter", () => {
+    if (naming && typed.trim()) {
+      SLOTS.setName(naming, typed.trim());
+      SLOTS.setActive(naming);
+      naming = 0;
+      go("title");
+    }
+  });
+
+  // Back button
+  const back = add([ rect(120, 40), pos(70, height() - 35), anchor("center"), color(80, 60, 120), outline(2, rgb(180, 160, 255)), area(), fixed() ]);
+  add([ text("< Back", { size: 16 }), pos(70, height() - 35), anchor("center"), color(230, 220, 255), fixed() ]);
+  back.onClick(() => go("title"));
+  onKeyPress("escape", () => go("title"));
+
+  refresh();
 });
 
 // ============================================
@@ -2771,12 +2908,22 @@ scene("title", () => {
       cellEnts.push(e);
     }
 
+    // BRIM bar (the bottom of the hat) — click it to color it with the picked color
+    let brimColor = getHatBrim() || [35, 35, 40];
+    const brimBarY = gy + gridH + 16;
+    const brimBar = add([ rect(gridW + 30, 18), pos(width() / 2, brimBarY), anchor("center"), color(brimColor[0], brimColor[1], brimColor[2]), outline(2, rgb(120, 110, 160)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("brim — click to color the bottom", { size: 10 }), pos(width() / 2, brimBarY), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    brimBar.onClick(() => {
+      if (selColor === null) { brimColor = [35, 35, 40]; brimBar.color = rgb(35, 35, 40); }
+      else { brimColor = selColor.slice(); brimBar.color = rgb(selColor[0], selColor[1], selColor[2]); }
+    });
+
     // Color palette + eraser
     const palette = [
       [220, 40, 40], [255, 140, 0], [255, 220, 40], [60, 200, 70], [60, 140, 255],
       [160, 80, 220], [255, 255, 255], [20, 20, 20], [150, 90, 40], [255, 150, 200],
     ];
-    const py = gy + gridH + 34;
+    const py = gy + gridH + 54;
     const totalW = (palette.length + 1) * 40;
     let sx0 = width() / 2 - totalW / 2 + 20;
     // eraser first
@@ -2795,12 +2942,16 @@ scene("title", () => {
     add([ text("DONE", { size: 18 }), pos(width() / 2 - 150, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
     doneB.onClick(() => {
       setHatPaint(grid);
+      setHatBrim(brimColor);
       if (grid.some((g) => g)) setHat(true);
       go("title"); // reload menu so the painted hat shows up everywhere
     });
     const clearB = add([ rect(130, 44), pos(width() / 2, by), anchor("center"), color(120, 100, 60), outline(2, rgb(255, 220, 120)), area(), fixed(), z(202), "charDialog" ]);
     add([ text("CLEAR", { size: 18 }), pos(width() / 2, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
-    clearB.onClick(() => { for (let i = 0; i < grid.length; i++) { grid[i] = null; cellEnts[i].color = rgb(35, 30, 45); } });
+    clearB.onClick(() => {
+      for (let i = 0; i < grid.length; i++) { grid[i] = null; cellEnts[i].color = rgb(35, 30, 45); }
+      brimColor = [35, 35, 40]; brimBar.color = rgb(35, 35, 40);
+    });
     const cancelB = add([ rect(130, 44), pos(width() / 2 + 150, by), anchor("center"), color(120, 60, 70), outline(2, rgb(255, 150, 150)), area(), fixed(), z(202), "charDialog" ]);
     add([ text("CANCEL", { size: 16 }), pos(width() / 2 + 150, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
     cancelB.onClick(() => closeCharDialog());
@@ -2849,7 +3000,7 @@ scene("title", () => {
   if (hasHatPaint()) {
     const paintArr = getHatPaint();
     const PS = 7;
-    const pBrimM = add([ rect(HAT_PAINT_COLS * PS + 22, 8), pos(0, 0), anchor("center"), color(35, 35, 40), fixed(), z(4) ]);
+    const pBrimM = add([ rect(HAT_PAINT_COLS * PS + 22, 8), pos(0, 0), anchor("center"), color(...hatBrimColor()), fixed(), z(4) ]);
     const pcells = [];
     for (let i = 0; i < paintArr.length; i++) {
       if (!paintArr[i]) continue;
@@ -2902,18 +3053,37 @@ scene("title", () => {
 
   // Lollipops on the title screen! (only on far edges, away from characters)
   const lollipopPositions = [30, 90, 710, 770];
-  lollipopPositions.forEach((lx) => {
-    const lh = rand(60, 120);
+  lollipopPositions.forEach((lx, idx) => {
+    const lh = (idx === 0) ? 100 : rand(60, 120);
     // Stick
     add([ rect(4, lh), pos(lx - 2, 445 - lh), color(240, 240, 240), opacity(0.4), fixed() ]);
     // Candy top
     const candyColors = [[255,50,100],[100,200,255],[255,200,50],[150,255,100],[200,100,255]];
     const cc = candyColors[Math.floor(rand(0, candyColors.length))];
-    add([ rect(24, 24), pos(lx - 12, 445 - lh - 22), color(...cc), opacity(0.4), fixed() ]);
+    const topY = 445 - lh - 22;
+    add([ rect(24, 24), pos(lx - 12, topY), color(...cc), opacity(0.4), fixed() ]);
     add([ rect(18, 18), pos(lx - 9, 445 - lh - 19), color(255, 255, 255), opacity(0.15), fixed() ]);
     // Swirl
     add([ rect(14, 2), pos(lx - 7, 445 - lh - 16), color(...cc), opacity(0.3), fixed() ]);
     add([ rect(14, 2), pos(lx - 7, 445 - lh - 10), color(...cc), opacity(0.3), fixed() ]);
+
+    // SECRET: click the FIRST lollipop to get the PURPLE GEM!
+    if (idx === 0) {
+      const hit = add([ rect(30, 30), pos(lx - 15, topY - 3), opacity(0), area(), fixed(), z(7) ]);
+      hit.onClick(() => {
+        if (dialogOpen) return;
+        if (hasPurpleGem()) {
+          add([ text("You already have the PURPLE GEM!", { size: 14 }), pos(width() / 2, 200), anchor("center"), color(200, 130, 255), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(2), fixed(), z(220) ]);
+          return;
+        }
+        awardPurpleGem();
+        for (let i = 0; i < 18; i++) {
+          add([ rect(rand(3, 6), rand(3, 6)), pos(lx, topY + 10), color(rand(150, 210), rand(40, 90), 255), opacity(1), lifespan(1), move(rand(0, 360), rand(90, 260)), fixed(), z(219) ]);
+        }
+        add([ sprite("purpleGem"), pos(width() / 2, 200), anchor("center"), scale(3), opacity(1), lifespan(2.5), fixed(), z(220) ]);
+        add([ text("PURPLE GEM!", { size: 32 }), pos(width() / 2, 250), anchor("center"), color(190, 100, 255), outline(3, rgb(60, 0, 90)), opacity(1), lifespan(2.5), fixed(), z(220) ]);
+      });
+    }
   });
 
   // Roller coaster in the background — above the enemy march line
@@ -3083,6 +3253,36 @@ scene("title", () => {
     window.open("https://www.youtube.com/@Arvindthecreator", "_blank");
   });
 
+  // --- GEM TRACKER (top-left): normal gems collected + all color gems ---
+  let normalGems = 0;
+  for (let gi = 0; gi < ALL_LEVELS.length; gi++) if (hasGem(gi)) normalGems++;
+  const colorGems = [
+    { spr: "redGem", has: hasRedGem() },
+    { spr: "greenGem", has: hasGreenGem() },
+    { spr: "yellowGem", has: hasYellowGem() },
+    { spr: "purpleGem", has: hasPurpleGem() },
+  ];
+  // Color gems count toward the gem bar too
+  const colorCount = colorGems.filter((g) => g.has).length;
+  const totalGot = normalGems + colorCount;
+  const totalMax = ALL_LEVELS.length + colorGems.length;
+  add([ sprite("gem"), pos(20, 24), anchor("center"), scale(1.2), fixed(), z(6) ]);
+  add([ text(`${totalGot}/${totalMax}`, { size: 14 }), pos(34, 24), anchor("left"), color(180, 245, 245), fixed(), z(6) ]);
+  colorGems.forEach((g, i) => {
+    add([ sprite(g.spr), pos(20 + i * 26, 50), anchor("center"), scale(1.1), opacity(g.has ? 1 : 0.22), fixed(), z(6) ]);
+  });
+
+  // --- GAME FILES button (top-left, under the gem tracker) ---
+  const filesBtn = add([
+    rect(130, 28), pos(75, 80), anchor("center"),
+    color(70, 60, 110), opacity(0.9), outline(1, rgb(180, 160, 255)),
+    area(), fixed(), z(6),
+  ]);
+  const curName = SLOTS.getName(SLOTS.active());
+  add([ text("Game Files", { size: 13 }), pos(75, 80), anchor("center"), color(230, 220, 255), fixed(), z(7) ]);
+  if (curName) add([ text(curName, { size: 10 }), pos(75, 98), anchor("center"), color(180, 200, 255), fixed(), z(7) ]);
+  filesBtn.onClick(() => { if (!dialogOpen) go("gameFiles"); });
+
   // (No more tap-anywhere area — you start with the PLAY button above, so the
   // dancing characters stay as hidden secrets you have to click on purpose.)
 
@@ -3097,6 +3297,26 @@ scene("title", () => {
     const muted = menuMusic.toggleMute();
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
+
+  // First time playing (or first time on the new update): name your game file!
+  if (!(SLOTS.getName(1) || SLOTS.getName(2) || SLOTS.getName(3))) {
+    dialogOpen = true;
+    let fnaming = true, fname = "";
+    add([ rect(width(), height()), pos(0, 0), color(20, 15, 45), opacity(0.97), area(), fixed(), z(300), "firstName" ]);
+    add([ text("Welcome to Adventures of Rufus!", { size: 26 }), pos(width() / 2, height() / 2 - 90), anchor("center"), color(255, 200, 100), fixed(), z(301), "firstName" ]);
+    add([ text("Name your game file, then press ENTER:", { size: 16 }), pos(width() / 2, height() / 2 - 44), anchor("center"), color(255, 255, 255), fixed(), z(301), "firstName" ]);
+    add([ rect(360, 46), pos(width() / 2, height() / 2 + 4), anchor("center"), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(301), "firstName" ]);
+    const fl = add([ text("_", { size: 24 }), pos(width() / 2, height() / 2 + 4), anchor("center"), color(255, 230, 150), fixed(), z(302), "firstName" ]);
+    onCharInput((ch) => { if (fnaming && fname.length < 12 && /[a-zA-Z0-9 ]/.test(ch)) { fname += ch; fl.text = fname + "_"; } });
+    onKeyPress("backspace", () => { if (fnaming) { fname = fname.slice(0, -1); fl.text = fname + "_"; } });
+    onKeyPress("enter", () => {
+      if (fnaming && fname.trim()) {
+        SLOTS.setName(1, fname.trim()); SLOTS.setActive(1);
+        fnaming = false; dialogOpen = false;
+        get("firstName").forEach((o) => destroy(o));
+      }
+    });
+  }
 });
 
 // ============================================
@@ -3557,26 +3777,34 @@ scene("levelSelect", (startPage) => {
       const slot = i - startIdx;
       const y = 120 + slot * 72;
 
+      const locked = isLevelLocked(i);
+
       const entry = add([
         rect(560, 62),
         pos(width() / 2, y),
         anchor("center"),
-        color(60, 50, 35),
-        outline(2, rgb(100, 80, 50)),
+        color(locked ? 40 : 60, locked ? 35 : 50, locked ? 40 : 35),
+        outline(2, locked ? rgb(120, 60, 60) : rgb(100, 80, 50)),
         area(),
         fixed(),
       ]);
-      entry.onClick(() => go("memoir", i));
+      if (locked) {
+        entry.onClick(() => {
+          add([ text("Beat King Clown (Chapter 6) to unlock!", { size: 16 }), pos(width() / 2, height() - 60), anchor("center"), color(255, 120, 120), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(2.2), fixed(), z(60) ]);
+        });
+      } else {
+        entry.onClick(() => go("memoir", i));
+      }
 
       add([
-        text(`Chapter ${i + 1}: ${level.name}`, { size: 18 }),
+        text(locked ? `Chapter ${i + 1}: LOCKED` : `Chapter ${i + 1}: ${level.name}`, { size: 18 }),
         pos(width() / 2, y - 10),
         anchor("center"),
-        color(255, 200, 100),
+        color(locked ? 200 : 255, locked ? 120 : 200, locked ? 120 : 100),
         fixed(),
       ]);
 
-      const preview = level.memoir.substring(0, 48) + "...";
+      const preview = locked ? "Beat King Clown (Chapter 6) to unlock this!" : level.memoir.substring(0, 48) + "...";
       add([
         text(preview, { size: 10, width: 480 }),
         pos(width() / 2, y + 12),
@@ -5242,7 +5470,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       // PAINTED pixel-art hat (pixels sit on a brim so it reads as a hat)
       const PS = 4;
       if (hLabel) hLabel.color = rgb(57, 255, 20); // neon green text on a painted hat
-      const pBrim = add([ rect(HAT_PAINT_COLS * PS + 14, 5), pos(0, 0), anchor("center"), color(35, 35, 40), z(10), "playerHat" ]);
+      const pBrim = add([ rect(HAT_PAINT_COLS * PS + 14, 5), pos(0, 0), anchor("center"), color(...hatBrimColor()), z(10), "playerHat" ]);
       const pcells = [];
       for (let i = 0; i < paintArr.length; i++) {
         if (!paintArr[i]) continue;
@@ -6520,6 +6748,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     // Award gem if player didn't die (not for secret level)
     const earnedGem = (deathsThisRun === 0 && !isSecret);
     if (earnedGem) awardGem(levelIndex);
+    // Mark this level beaten (unlocks later levels)
+    if (!isSecret && typeof levelIndex === "number") markBeaten(levelIndex);
 
     // Secret level goes to its own celebration scene
     if (isSecret) {
