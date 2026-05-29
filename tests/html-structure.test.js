@@ -1006,9 +1006,18 @@ describe("Title screen", () => {
 // ============================================
 describe("Level select", () => {
   test("has paged chapter book level select", () => {
-    expect(htmlContent).toContain("LEVELS_PER_PAGE");
+    expect(htmlContent).toContain("const BOOKS");
     expect(htmlContent).toContain("currentPage");
     expect(htmlContent).toContain("showPage");
+  });
+
+  test("has three chapter books (1-6, 7-10, 11+)", () => {
+    const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
+    // Three books, each with a start/end level range
+    const startCount = (selectScene.match(/start:\s*\d+, end:/g) || []).length;
+    expect(startCount).toBe(3);
+    // The new third book uses ALL_LEVELS.length so it grows with new levels
+    expect(selectScene).toContain("end: ALL_LEVELS.length");
   });
 
   test("has left and right arrows for page navigation", () => {
@@ -1147,6 +1156,58 @@ describe("8-bit menu music", () => {
   test("title screen has a music on/off toggle", () => {
     expect(htmlContent).toContain("Music: ON");
     expect(htmlContent).toContain("toggleMute()");
+  });
+});
+
+describe("Rising lava hazard", () => {
+  test("renders rising lava from level.risingLava", () => {
+    expect(htmlContent).toContain("level.risingLava");
+    expect(htmlContent).toContain('"lava"');
+  });
+
+  test("lava creeps upward and hurts the player on contact", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/lavaY -= lavaSpeed \* dt\(\)/);
+    expect(gameScene).toMatch(/rufus\.pos\.y \+ 16 >= lavaY[\s\S]{0,40}hurtRufus\(\)/);
+  });
+});
+
+describe("In-level volcano music", () => {
+  test("defines the levelMusic engine with a volcano theme", () => {
+    expect(htmlContent).toContain("const levelMusic");
+    expect(htmlContent).toContain("VOLCANO THEME");
+    expect(htmlContent).toContain("rumble");
+  });
+
+  test("plays level music only for levels that define one", () => {
+    expect(htmlContent).toMatch(/if \(!isSecret && level\.music\) levelMusic\.start/);
+  });
+
+  test("shares the mute setting with the menu music", () => {
+    const engine = htmlContent.match(/const levelMusic = \{[\s\S]*?\n\};/)[0];
+    expect(engine).toContain("rufus_music_muted");
+  });
+
+  test("stops the level music on the post-level screens", () => {
+    expect(htmlContent).toMatch(/scene\("levelComplete"[\s\S]{0,80}levelMusic\.stop\(\)/);
+    expect(htmlContent).toMatch(/scene\("gameOver"[\s\S]{0,120}levelMusic\.stop\(\)/);
+  });
+});
+
+describe("Fire hero (play as Fiery)", () => {
+  test("detects a fire-hero level from level.fireHero", () => {
+    expect(htmlContent).toContain("isFireHero");
+    expect(htmlContent).toContain("level.fireHero");
+  });
+
+  test("renders the player as the fiery sprite on a fire-hero level", () => {
+    expect(htmlContent).toContain("heroSprite");
+    expect(htmlContent).toMatch(/isFireHero \? "fiery" : "rufus"/);
+  });
+
+  test("space and touch attack spit fire on a fire-hero level", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/else if \(isFireHero\) \{\s*fireBreath\(\);/);
   });
 });
 

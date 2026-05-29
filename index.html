@@ -26,6 +26,7 @@
 <script src="levels/level8.js"></script>
 <script src="levels/level9.js"></script>
 <script src="levels/level10.js"></script>
+<script src="levels/level11.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -81,6 +82,8 @@ const menuMusic = {
   },
 
   start() {
+    // Menu music and in-level music never play at the same time.
+    if (typeof levelMusic !== "undefined") levelMusic.stop();
     if (this.playing || this.muted) return;
     this.init();
     if (!this.ctx) return;
@@ -215,13 +218,215 @@ const menuMusic = {
   document.addEventListener("keydown", go, true);
 })();
 
+// ============================================
+// IN-LEVEL MUSIC — original 8-bit themes generated live (copyright-free).
+// Used by levels that set `music: "..."` in their level file. Right now there's
+// one theme: "volcano" (dark, rumbling, minor key) for Level 11.
+// Shares the same mute setting as the menu music.
+// ============================================
+const levelMusic = {
+  ctx: null,
+  playing: false,
+  theme: null,
+  bpm: 116,
+  step: 0,
+  nextNoteTime: 0,
+  timer: null,
+
+  isMuted() { return localStorage.getItem("rufus_music_muted") === "1"; },
+
+  init() {
+    if (this.ctx) return;
+    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { this.ctx = null; }
+  },
+
+  start(theme) {
+    if (this.playing || this.isMuted()) return;
+    this.theme = theme || "volcano";
+    this.init();
+    if (!this.ctx) return;
+    const begin = () => {
+      if (this.playing || this.isMuted()) return;
+      this.playing = true;
+      this.step = 0;
+      this.nextNoteTime = this.ctx.currentTime + 0.06;
+      this.scheduler();
+    };
+    if (this.ctx.state === "suspended") this.ctx.resume().then(begin).catch(() => {});
+    else begin();
+  },
+
+  stop() {
+    this.playing = false;
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+  },
+
+  freq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); },
+
+  note(f, time, dur, type, vol) {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = type || "square";
+    osc.frequency.value = f;
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(vol || 0.12, time + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(time); osc.stop(time + dur + 0.02);
+  },
+
+  // Low rumble (filtered noise burst) — like the volcano grumbling
+  rumble(time, vol) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = sr * 0.25;
+    const buf = this.ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.2);
+    const n = this.ctx.createBufferSource(), g = this.ctx.createGain();
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 220;
+    n.buffer = buf; g.gain.value = vol || 0.16;
+    n.connect(lp).connect(g).connect(this.ctx.destination);
+    n.start(time);
+  },
+
+  drum(time, type) {
+    if (!this.ctx) return;
+    if (type === "kick") {
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.frequency.setValueAtTime(150, time);
+      o.frequency.exponentialRampToValueAtTime(42, time + 0.12);
+      g.gain.setValueAtTime(0.32, time);
+      g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+      o.connect(g).connect(this.ctx.destination);
+      o.start(time); o.stop(time + 0.16);
+    }
+  },
+
+  scheduler() {
+    if (!this.playing || !this.ctx) return;
+    if (this.isMuted()) { this.stop(); return; }
+    const lookahead = 0.1;
+    while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
+      this.playStep(this.step, this.nextNoteTime);
+      this.nextNoteTime += 60 / this.bpm / 4; // 16th notes
+      this.step = (this.step + 1) % 256;       // 16-bar loop: build → DROP 1 → build → BIGGER DROP 2
+    }
+    this.timer = setTimeout(() => this.scheduler(), 25);
+  },
+
+  // Crisp hi-hat tick for the drop's groove
+  hat(time, vol) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = sr * 0.03;
+    const buf = this.ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1);
+    const n = this.ctx.createBufferSource(), g = this.ctx.createGain();
+    n.buffer = buf; g.gain.value = vol || 0.05;
+    n.connect(g).connect(this.ctx.destination);
+    n.start(time);
+  },
+
+  // Rising "riser" tone that builds tension right before the drop
+  riser(time, dur, startMidi, endMidi) {
+    if (!this.ctx) return;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(this.freq(startMidi), time);
+    o.frequency.exponentialRampToValueAtTime(this.freq(endMidi), time + dur);
+    g.gain.setValueAtTime(0.001, time);
+    g.gain.linearRampToValueAtTime(0.12, time + dur * 0.9);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(time); o.stop(time + dur + 0.02);
+  },
+
+  // VOLCANO THEME — dark minor 8-bit with TWO epic beat drops! (16-bar loop)
+  // Bars 0-3 build-up → 4-7 DROP 1 → 8-11 build-up → 12-15 BIGGER DROP 2.
+  // Progression: Dm-Bb-C-A.
+  playStep(step, time) {
+    const bar = Math.floor(step / 16);     // 0..15
+    const inBar = step % 16;
+    // Two drop sections: bars 4-7 and bars 12-15
+    const dropped = (bar >= 4 && bar <= 7) || (bar >= 12);
+    const bigDrop = bar >= 12;             // the second drop is the BIG one
+    const preDrop = (bar === 3) || (bar === 11); // riser bar before each drop
+    const chords = [
+      { root: 38, notes: [62, 65, 69, 74] }, // Dm
+      { root: 34, notes: [58, 62, 65, 70] }, // Bb
+      { root: 36, notes: [60, 64, 67, 72] }, // C
+      { root: 33, notes: [57, 61, 64, 69] }, // A (sharp 3rd = tension)
+    ];
+    const c = chords[bar % 4];
+
+    if (!dropped) {
+      // ---- BUILD-UP (bars 0-3 and 8-11): brooding, sparse ----
+      if (inBar % 4 === 0) this.note(this.freq(c.root), time, 0.22, "triangle", 0.3);
+      else if (inBar % 4 === 2) this.note(this.freq(c.root), time, 0.18, "triangle", 0.22);
+
+      const leadPatterns = [
+        [0, -1, 0, 1, -1, 2, -1, 1, 0, -1, -1, 1, 2, 3, 2, 1],
+        [1, -1, 0, -1, 1, 2, -1, -1, 0, 1, 2, 3, -1, 2, 1, 0],
+        [2, -1, 1, 2, -1, 3, -1, 2, 1, -1, 2, -1, 0, 1, 2, 3],
+        [3, 2, 3, -1, 2, -1, 1, 0, 1, 2, 3, 2, 1, -1, 0, -1],
+      ];
+      const idx = leadPatterns[bar % 4][inBar];
+      if (idx >= 0) this.note(this.freq(c.notes[idx]), time, 0.11, "square", 0.075);
+
+      if (inBar === 0) this.rumble(time, 0.18);
+      if (inBar === 0 || inBar === 8) this.drum(time, "kick");
+      // The 2nd build-up (bars 8-11) adds light hats so it feels like it's revving up
+      if (bar >= 8 && inBar % 4 === 2) this.hat(time, 0.035);
+
+      // RISER + accelerating ticks through the bar right before each drop
+      if (preDrop) {
+        if (inBar === 0) this.riser(time, 60 / this.bpm * 4, 45, bigDrop ? 86 : 81);
+        if (inBar >= 8) this.hat(time, 0.04 + (inBar - 8) * 0.01);
+        if (inBar >= 12) this.drum(time, "kick");
+      }
+    } else {
+      // ---- THE DROP (bars 4-7 = drop 1, bars 12-15 = BIGGER drop 2) ----
+      // Driving bass on every beat, octave bounce on the offbeats
+      if (inBar % 2 === 0) this.note(this.freq(c.root), time, 0.13, "triangle", 0.32);
+      if (inBar % 4 === 2) this.note(this.freq(c.root + 12), time, 0.1, "triangle", 0.18);
+      // Drop 2 adds an extra octave-down bass thump on every beat for weight
+      if (bigDrop && inBar % 4 === 0) this.note(this.freq(c.root - 12), time, 0.16, "triangle", 0.26);
+
+      // Fast 16th-note lead arpeggio, octave up — energetic
+      const dropLead = [
+        [0, 2, 3, 2, 0, 2, 3, 2, 1, 3, 2, 3, 0, 2, 3, 2],
+        [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3],
+        [3, 2, 1, 2, 3, 2, 1, 2, 0, 1, 2, 3, 2, 1, 0, 1],
+        [0, 3, 2, 3, 1, 3, 2, 3, 0, 3, 2, 3, 1, 2, 1, 0],
+      ];
+      const di = dropLead[bar % 4][inBar];
+      this.note(this.freq(c.notes[di] + 12), time, 0.08, "square", 0.08);
+      // Harmony layer for thickness — drop 2 stacks an extra octave-up sparkle
+      if (inBar % 2 === 0) this.note(this.freq(c.notes[di] + 5), time, 0.07, "square", 0.035);
+      if (bigDrop) this.note(this.freq(c.notes[di] + 24), time, 0.06, "square", 0.03);
+
+      // Four-on-the-floor kick + snare backbeat + hats = the groove
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (bigDrop && inBar % 2 === 0) this.drum(time, "kick"); // drop 2 = double-time kick
+      if (inBar === 4 || inBar === 12) this.rumble(time, 0.12); // snare-ish hit
+      if (inBar % 2 === 1) this.hat(time, 0.045);
+
+      // Big rumble on the downbeat of each drop (drop 2 hits harder)
+      if ((bar === 4 || bar === 12) && inBar === 0) this.rumble(time, bigDrop ? 0.32 : 0.26);
+    }
+  },
+};
+
 // --- HOW FAST AND HIGH RUFUS MOVES ---
 const foxSpeed = 300;
 const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -1419,6 +1624,7 @@ function unlockJetpack() {
 // NAME ENTRY SCENE - arcade-style initials!
 // ============================================
 scene("nameEntry", ({ score, levelIndex, nextScene, earnedGem, pawCollectedThisRun }) => {
+  levelMusic.stop();
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   // Background
@@ -2461,8 +2667,30 @@ scene("about", (pageIndex) => {
 // ============================================
 scene("levelSelect", (startPage) => {
   menuMusic.start();
-  const LEVELS_PER_PAGE = 6;
-  const totalPages = Math.ceil(ALL_LEVELS.length / LEVELS_PER_PAGE);
+  // Each "book" is a flip page with its own levels, color, and title.
+  // start/end are level indexes (end is exclusive). Add more levels and the
+  // last book grows; bump its `end` or add a new book to start a fresh page.
+  const BOOKS = [
+    {
+      start: 0, end: 6,
+      bg: [40, 30, 20],
+      title: "Rufus's Journal", titleColor: [255, 200, 100],
+      decor: null,
+    },
+    {
+      start: 6, end: 10,
+      bg: [220, 150, 180],
+      title: "Rufus's Adventures Continue...", titleColor: [255, 180, 220],
+      decor: { spine: [180, 100, 130], spine2: [160, 80, 110], flourish: [200, 130, 160], line: [200, 140, 170] },
+    },
+    {
+      start: 10, end: ALL_LEVELS.length,
+      bg: [210, 45, 55],
+      title: "Rufus's New Adventures!", titleColor: [255, 235, 235],
+      decor: { spine: [235, 80, 90], spine2: [205, 60, 70], flourish: [255, 150, 150], line: [255, 150, 150] },
+    },
+  ];
+  const totalPages = BOOKS.length;
   let currentPage = startPage || 0;
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   const hasSecretEntry = allPawsCollected();
@@ -2473,7 +2701,7 @@ scene("levelSelect", (startPage) => {
     if (flipping) return;
     flipping = true;
     const goingRight = newPage > currentPage;
-    const newColor = newPage === 0 ? [40, 30, 20] : [220, 150, 180];
+    const newColor = BOOKS[newPage].bg;
 
     // Page slides across
     const page = add([
@@ -2519,34 +2747,34 @@ scene("levelSelect", (startPage) => {
   function showPage() {
     destroyAll();
 
-    // Background — page 1 brown journal, page 2+ pink chapter book!
-    const bgColor = currentPage === 0 ? [40, 30, 20] : [220, 150, 180];
-    add([ rect(width(), height()), pos(0, 0), color(...bgColor), fixed() ]);
+    const book = BOOKS[currentPage];
 
-    // Book decoration for page 2+ — feels like a different chapter book
-    if (currentPage > 0) {
+    // Background — each book has its own color
+    add([ rect(width(), height()), pos(0, 0), color(...book.bg), fixed() ]);
+
+    // Book decoration (spine + flourishes) for books that have one
+    if (book.decor) {
+      const d = book.decor;
       // Book spine on the left edge
-      add([ rect(8, height()), pos(0, 0), color(180, 100, 130), fixed() ]);
-      add([ rect(3, height()), pos(8, 0), color(160, 80, 110), fixed() ]);
+      add([ rect(8, height()), pos(0, 0), color(...d.spine), fixed() ]);
+      add([ rect(3, height()), pos(8, 0), color(...d.spine2), fixed() ]);
       // Decorative corner flourishes
-      add([ rect(40, 3), pos(15, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
-      add([ rect(3, 40), pos(15, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
-      add([ rect(40, 3), pos(width() - 55, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
-      add([ rect(3, 40), pos(width() - 18, 15), color(200, 130, 160), opacity(0.5), fixed() ]);
+      add([ rect(40, 3), pos(15, 15), color(...d.flourish), opacity(0.5), fixed() ]);
+      add([ rect(3, 40), pos(15, 15), color(...d.flourish), opacity(0.5), fixed() ]);
+      add([ rect(40, 3), pos(width() - 55, 15), color(...d.flourish), opacity(0.5), fixed() ]);
+      add([ rect(3, 40), pos(width() - 18, 15), color(...d.flourish), opacity(0.5), fixed() ]);
       // Page texture lines
       for (let ly = 100; ly < height() - 60; ly += 72) {
-        add([ rect(width() - 40, 1), pos(20, ly), color(200, 140, 170), opacity(0.2), fixed() ]);
+        add([ rect(width() - 40, 1), pos(20, ly), color(...d.line), opacity(0.2), fixed() ]);
       }
     }
 
     // Title — different for each chapter book
-    const titles = ["Rufus's Journal", "Rufus's Adventures Continue..."];
-    const titleColors = [[255, 200, 100], [255, 180, 220]];
     add([
-      text(titles[currentPage] || titles[1], { size: 36 }),
+      text(book.title, { size: 36 }),
       pos(width() / 2, 40),
       anchor("center"),
-      color(...(titleColors[currentPage] || titleColors[1])),
+      color(...book.titleColor),
       fixed(),
     ]);
 
@@ -2556,14 +2784,14 @@ scene("levelSelect", (startPage) => {
         text(`Book ${currentPage + 1} of ${totalPages}`, { size: 13 }),
         pos(width() / 2, 72),
         anchor("center"),
-        color(currentPage === 0 ? 180 : 160, currentPage === 0 ? 160 : 100, currentPage === 0 ? 120 : 130),
+        color(...book.titleColor),
         fixed(),
       ]);
     }
 
     // Levels for this page
-    const startIdx = currentPage * LEVELS_PER_PAGE;
-    const endIdx = Math.min(startIdx + LEVELS_PER_PAGE, ALL_LEVELS.length);
+    const startIdx = book.start;
+    const endIdx = Math.min(book.end, ALL_LEVELS.length);
 
     for (let i = startIdx; i < endIdx; i++) {
       const level = ALL_LEVELS[i];
@@ -2837,6 +3065,12 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   menuMusic.stop();
   const isSecret = (levelIndex === "secret");
   const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
+  // Fire-hero level: you play as Fiery and Space spits fire instead of a tail spin!
+  const isFireHero = !isSecret && !!level.fireHero;
+  const heroSprite = isFireHero ? "fiery" : "rufus";
+  // In-level background music (e.g. Level 11's volcano theme). Other levels stay silent.
+  if (!isSecret && level.music) levelMusic.start(level.music);
+  else levelMusic.stop();
   let score = 0;
   let isSpinning = false;
   const defaultLives = isSecret ? 3 : (level.startLives || 3);
@@ -3762,6 +3996,56 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     });
   }
 
+  // --- RISING LAVA (climb up before it catches you!) ---
+  // level.risingLava = { startY: <where the lava top starts>, speed: <px per second> }
+  if (level.risingLava) {
+    const lavaSpeed = level.risingLava.speed || 18;
+    let lavaY = (level.risingLava.startY != null) ? level.risingLava.startY : 640;
+    const lavaWide = (level.width || 1000) + 800;
+
+    // Glowing molten body (world-space, so it scrolls with the camera)
+    const lavaBody = add([
+      rect(lavaWide, 1600),
+      pos(-400, lavaY),
+      color(255, 70, 0),
+      z(8),
+      "lava",
+    ]);
+    // Bright molten surface line on top
+    const lavaTop = add([
+      rect(lavaWide, 10),
+      pos(-400, lavaY - 5),
+      color(255, 210, 40),
+      z(9),
+    ]);
+
+    onUpdate(() => {
+      if (!rufus.exists()) return;
+      // Lava creeps upward (y gets smaller)
+      lavaY -= lavaSpeed * dt();
+      lavaBody.pos.y = lavaY;
+      lavaTop.pos.y = lavaY - 5;
+
+      // Bubbling lava particles near the surface, around the player
+      if (Math.random() < 0.35) {
+        add([
+          rect(rand(4, 9), rand(4, 9)),
+          pos(rufus.pos.x + rand(-380, 380), lavaY + rand(0, 14)),
+          color(255, rand(120, 200), 0),
+          opacity(0.9),
+          lifespan(0.5),
+          move(270, rand(40, 130)), // float upward
+          z(9),
+        ]);
+      }
+
+      // Touching the lava hurts! (restarting the scene resets the lava)
+      if (!isInvincible && rufus.pos.y + 16 >= lavaY) {
+        hurtRufus();
+      }
+    });
+  }
+
   // --- CRATES ---
   level.crates.forEach((c) => {
     add([
@@ -3909,7 +4193,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // 🦊 RUFUS (the player)
   // =====================
   const rufus = add([
-    sprite("rufus"),
+    sprite(heroSprite),
     pos(playerSpawn.x, playerSpawn.y),
     area({ shape: new Rect(vec2(0, 0), 28, 30) }),
     body(),
@@ -3946,7 +4230,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // --- JUMPING ---
   // --- JETPACK (6 seconds fly, 6 seconds recharge) ---
-  const jetpackUnlocked = hasJetpack() && !isSecret && typeof levelIndex === "number" && levelIndex >= 6;
+  // Fire-hero levels and any level with noJetpack:true never get the jetpack
+  // (Fiery uses Up to jump and Space to spit fire, so flying would clash).
+  const jetpackUnlocked = hasJetpack() && !isSecret && !isFireHero && !level.noJetpack && typeof levelIndex === "number" && levelIndex >= 6;
   let jetpackActive = false;
   let jetpackFlySpeed = 250;
   let touchJumpHeld = false;
@@ -4298,10 +4584,10 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     ]);
     spinBtnRef = btnSpin;
     spinBtnLabel = add([
-      text("SPIN", { size: 22 }),
+      text(isFireHero ? "FIRE" : "SPIN", { size: 22 }),
       pos(width() - 50, height() - 55),
       anchor("center"),
-      color(255, 165, 0),
+      color(isFireHero ? rgb(255, 80, 0) : rgb(255, 165, 0)),
       fixed(),
       z(201),
     ]);
@@ -4397,6 +4683,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
             if (currentPower === "spin") doTailSpin();
             else if (currentPower === "fire") fireBreath();
             else if (currentPower === "float") activateFloat();
+          } else if (isFireHero) {
+            fireBreath();
           } else {
             doTailSpin();
           }
@@ -4604,6 +4892,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       if (currentPower === "spin") doTailSpin();
       else if (currentPower === "fire") fireBreath();
       else if (currentPower === "float") activateFloat();
+    } else if (isFireHero) {
+      fireBreath();
     } else {
       doTailSpin();
     }
@@ -5834,7 +6124,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // Controls hint (fades away)
   const hint = add([
-    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap" : jetpackUnlocked ? "Hold UP: Fly! | Left/Right: Steer | Space: Spin" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
+    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap" : isFireHero ? "Arrows: Move | Up: Jump | Space: SPIT FIRE!" : jetpackUnlocked ? "Hold UP: Fly! | Left/Right: Steer | Space: Spin" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
     pos(width() / 2, height() - 30),
     anchor("center"),
     color(255, 255, 255),
@@ -5852,6 +6142,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 // LEVEL COMPLETE
 // ============================================
 scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) => {
+  levelMusic.stop();
   const level = ALL_LEVELS[levelIndex];
   const nextLevel = levelIndex + 1;
   const isTouchLC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
@@ -6103,6 +6394,7 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
 // GAME OVER
 // ============================================
 scene("gameOver", ({ score, levelIndex }) => {
+  levelMusic.stop();
   const isTouchGO = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   // Dark cozy night background
@@ -6241,6 +6533,7 @@ scene("gameOver", ({ score, levelIndex }) => {
 // SECRET LEVEL COMPLETE - The Ultimate Fox Party!
 // ============================================
 scene("secretComplete", ({ score }) => {
+  levelMusic.stop();
   const isTouchSC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   // Warm golden background
