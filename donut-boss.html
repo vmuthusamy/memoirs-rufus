@@ -442,9 +442,9 @@
         ? '💎 Gem + YELLOW GEM earned — flawless run! Press R to play again.'
         : '🎉 You beat Mr. Donut — gem earned! (zero hits = YELLOW GEM too) Press R.';
     } else if (state.lost) {
-      status.textContent = '💔 Rufus got too many spikes. Press R to try again.';
+      status.textContent = `💔 ${HERO_NAME} got too many spikes. Press R to try again.`;
     } else {
-      status.textContent = `Hits: ${state.donut.hits} / 3  ·  Rufus health: ${state.rufusHealth} ❤`;
+      status.textContent = `Hits: ${state.donut.hits} / 3  ·  ${HERO_NAME} health: ${state.rufusHealth} ❤`;
     }
   }
 
@@ -497,28 +497,42 @@
     ctx.fillRect(0, GROUND_Y - 1, W, 1);
   }
 
+  // Which hero you picked in the main menu (Rufus or Renard)
+  const HERO = (localStorage.getItem('rufus_character') === 'renard') ? 'renard' : 'rufus';
+  const HERO_NAME = HERO === 'renard' ? 'Renard' : 'Rufus';
+
   function drawRufus(x, y, hurt) {
     if (hurt && Math.floor(hurt / 4) % 2 === 0) return; // flicker
-    // Pixel-art Rufus, simplified from game's drawFoxSprite
     const s = 1.25; // scale factor for 40px box (32 * 1.25)
     function r(rx, ry, rw, rh, c) {
       ctx.fillStyle = c;
       ctx.fillRect(x + rx * s, y + ry * s, rw * s, rh * s);
     }
+    const renard = HERO === 'renard';
+    // Color palette differs for Renard (darker, grumpier French fox)
+    const FUR   = renard ? '#B85C2A' : '#D2691E';
+    const EARIN = renard ? '#8B4513' : '#A0522D';
+    const BELLY = renard ? '#DEB887' : '#F4A460';
+    const LEGS  = renard ? '#6B3410' : '#8B4513';
+
     // Tail
     r(0, 14, 4, 4, '#FFFFFF');
-    r(2, 14, 6, 4, '#D2691E');
+    r(2, 14, 6, 4, FUR);
     // Body
-    r(8, 12, 16, 12, '#D2691E');
+    r(8, 12, 16, 12, FUR);
     // Head
-    r(10, 4, 14, 12, '#D2691E');
+    r(10, 4, 14, 12, FUR);
     // Ears
-    r(10, 0, 4, 6, '#D2691E');
-    r(20, 0, 4, 6, '#D2691E');
-    r(11, 1, 2, 4, '#A0522D');
-    r(21, 1, 2, 4, '#A0522D');
+    r(10, 0, 4, 6, FUR);
+    r(20, 0, 4, 6, FUR);
+    if (renard) { // dark ear tips
+      r(10, 0, 4, 2, '#333');
+      r(20, 0, 4, 2, '#333');
+    }
+    r(11, 1, 2, 4, EARIN);
+    r(21, 1, 2, 4, EARIN);
     // Belly
-    r(12, 16, 10, 6, '#F4A460');
+    r(12, 16, 10, 6, BELLY);
     // Eyes
     r(13, 7, 3, 3, '#000');
     r(19, 7, 3, 3, '#000');
@@ -526,15 +540,24 @@
     r(20, 7, 1, 1, '#FFF');
     // Nose
     r(16, 10, 2, 2, '#000');
-    // Grin
-    r(12, 13, 2, 2, '#FFF');
-    r(14, 12, 2, 2, '#FFF');
-    r(16, 13, 2, 2, '#FFF');
-    r(18, 12, 2, 2, '#FFF');
-    r(20, 13, 2, 2, '#FFF');
+    if (renard) {
+      // Grumpy eyebrows + frown
+      r(12, 5, 4, 1, '#333');
+      r(19, 5, 4, 1, '#333');
+      r(13, 13, 2, 1, '#8B4513');
+      r(15, 14, 4, 1, '#8B4513');
+      r(19, 13, 2, 1, '#8B4513');
+    } else {
+      // Rufus's big toothy grin
+      r(12, 13, 2, 2, '#FFF');
+      r(14, 12, 2, 2, '#FFF');
+      r(16, 13, 2, 2, '#FFF');
+      r(18, 12, 2, 2, '#FFF');
+      r(20, 13, 2, 2, '#FFF');
+    }
     // Legs
-    r(10, 24, 4, 6, '#8B4513');
-    r(20, 24, 4, 6, '#8B4513');
+    r(10, 24, 4, 6, LEGS);
+    r(20, 24, 4, 6, LEGS);
   }
 
   function drawDonut(d) {

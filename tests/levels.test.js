@@ -939,6 +939,11 @@ describe("Donut boss page (donut-boss.html)", () => {
     expect(bossHtml).toMatch(/c\.gems\[9\] = true/);
   });
 
+  test("draws the chosen hero (Rufus or Renard) from rufus_character", () => {
+    expect(bossHtml).toContain("rufus_character");
+    expect(bossHtml).toMatch(/HERO === 'renard'/);
+  });
+
   test("has the yellow gem celebration screen", () => {
     expect(bossHtml).toContain("YOU GOT THE YELLOW GEM");
   });

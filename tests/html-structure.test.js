@@ -1242,12 +1242,88 @@ describe("Fire hero (play as Fiery)", () => {
 
   test("renders the player as the fiery sprite on a fire-hero level", () => {
     expect(htmlContent).toContain("heroSprite");
-    expect(htmlContent).toMatch(/isFireHero \? "fiery" : "rufus"/);
+    expect(htmlContent).toMatch(/isFireHero \? "fiery"/);
   });
 
   test("space and touch attack spit fire on a fire-hero level", () => {
     const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
     expect(gameScene).toMatch(/else if \(isFireHero\) \{\s*fireBreath\(\);/);
+  });
+});
+
+describe("Secret custom hat", () => {
+  test("has hat storage + a bad-word filter", () => {
+    expect(htmlContent).toContain("function getHat()");
+    expect(htmlContent).toContain("function setHat(");
+    expect(htmlContent).toContain("function getHatText()");
+    expect(htmlContent).toContain("function isCleanHatText(");
+    expect(htmlContent).toContain("rufus_hat");
+  });
+
+  test("has the hat yes/no chain reachable from the title", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("openHatFlow");
+    expect(titleScene).toContain("Want a hat?");
+    expect(titleScene).toContain("Want text on the hat?");
+    expect(titleScene).toContain("Want custom text?");
+    expect(titleScene).toContain("titleText.onClick");
+  });
+
+  test("blocks inappropriate hat text with a please-change message", () => {
+    expect(htmlContent).toContain("Too inappropriate for game");
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toMatch(/!isCleanHatText\(/);
+  });
+
+  test("draws the hat on the player in-game", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("if (getHat())");
+    expect(gameScene).toContain('"playerHat"');
+  });
+});
+
+describe("Secret pixel-art hat painter", () => {
+  test("has painted-hat storage helpers", () => {
+    expect(htmlContent).toContain("function getHatPaint()");
+    expect(htmlContent).toContain("function setHatPaint(");
+    expect(htmlContent).toContain("function hasHatPaint()");
+    expect(htmlContent).toContain("rufus_hat_paint");
+  });
+
+  test("clicking Fiery opens the paint dialog + editor", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Want to paint your hat?");
+    expect(titleScene).toContain("function openHatPainter()");
+    expect(titleScene).toContain("titleFirey.onClick");
+  });
+
+  test("draws the painted hat on the player in-game", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("getHatPaint()");
+    expect(gameScene).toMatch(/PAINTED pixel-art hat/);
+  });
+});
+
+describe("Play as Renard (main-menu character picker)", () => {
+  test("has getCharacter/setCharacter helpers", () => {
+    expect(htmlContent).toContain("function getCharacter()");
+    expect(htmlContent).toContain("function setCharacter(");
+    expect(htmlContent).toContain("rufus_character");
+  });
+
+  test("renders Renard sprite and uses dash when Renard is chosen", () => {
+    expect(htmlContent).toContain("const isRenard");
+    expect(htmlContent).toMatch(/isRenard \? "renard" : "rufus"/);
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/else if \(isRenard\) \{\s*doDash\(\);/);
+    expect(gameScene).toContain("function doDash()");
+  });
+
+  test("main menu has a character-pick dialog with YES/NO", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("openCharDialog");
+    expect(titleScene).toContain("Want to play as Renard?");
+    expect(titleScene).toContain("setCharacter");
   });
 });
 

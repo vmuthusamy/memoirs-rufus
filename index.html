@@ -1663,6 +1663,45 @@ function unlockJetpack() {
   localStorage.setItem("rufus_jetpack", "true");
 }
 
+// Which character you play as (chosen from the main menu): "rufus" or "renard".
+// (Level 11 always makes you Fiery; this picks the hero for every other level.)
+function getCharacter() {
+  return localStorage.getItem("rufus_character") === "renard" ? "renard" : "rufus";
+}
+function setCharacter(c) {
+  localStorage.setItem("rufus_character", c === "renard" ? "renard" : "rufus");
+}
+
+// Secret HAT feature — whether you wear a hat and what text is on it.
+function getHat() { return localStorage.getItem("rufus_hat") === "1"; }
+function setHat(on) { localStorage.setItem("rufus_hat", on ? "1" : "0"); }
+function getHatText() { return localStorage.getItem("rufus_hat_text") || ""; }
+function setHatText(s) { localStorage.setItem("rufus_hat_text", (s || "").slice(0, 25)); }
+
+// Keep hat text family-friendly. Returns true if the text is OK to use.
+const HAT_BAD_WORDS = [
+  "fuck", "shit", "bitch", "asshole", "bastard", "damn", "crap",
+  "dick", "piss", "cock", "pussy", "slut", "whore", "fag", "nigger",
+  "nigga", "cunt", "retard", "sex", "penis", "boob", "butt", "poop",
+];
+function isCleanHatText(s) {
+  const t = (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return !HAT_BAD_WORDS.some((w) => t.includes(w));
+}
+
+// Painted hat — a 10x5 grid of pixels (each cell is [r,g,b] or null/empty).
+const HAT_PAINT_COLS = 10;
+const HAT_PAINT_ROWS = 5;
+function getHatPaint() {
+  try { return JSON.parse(localStorage.getItem("rufus_hat_paint")) || null; }
+  catch (e) { return null; }
+}
+function setHatPaint(arr) { localStorage.setItem("rufus_hat_paint", JSON.stringify(arr)); }
+function hasHatPaint() {
+  const p = getHatPaint();
+  return Array.isArray(p) && p.some((c) => c);
+}
+
 // ============================================
 // NAME ENTRY SCENE - arcade-style initials!
 // ============================================
@@ -2090,16 +2129,19 @@ scene("title", () => {
     }
   });
 
-  // Title with glow effect
-  add([
+  // Title with glow effect (also the SECRET hat button — click it!)
+  const titleText = add([
     text("Adventures of Rufus", { size: 50 }),
     pos(width() / 2, 80),
     anchor("center"),
     color(255, 165, 0),
     outline(3, rgb(150, 80, 0)),
+    area(),
     fixed(),
+    z(3),
     { t: 0 },
-  ]).onUpdate(function() {
+  ]);
+  titleText.onUpdate(function() {
     this.t += dt();
     this.scale = vec2(1 + Math.sin(this.t * 1.5) * 0.03);
   });
@@ -2120,7 +2162,9 @@ scene("title", () => {
     pos(width() / 2, 280),
     anchor("center"),
     scale(5),
+    area(),
     fixed(),
+    z(2),
   ]);
   titleFox.onUpdate(() => {
     titleFox.pos.y = 280 + Math.sin(time() * 3) * 20;
@@ -2146,11 +2190,188 @@ scene("title", () => {
     pos(width() / 2 + 160, 315),
     anchor("center"),
     scale(3.5),
+    area(),
     fixed(),
+    z(2),
   ]);
   titleRenard.onUpdate(() => {
     titleRenard.pos.y = 315 + Math.sin(time() * 0.8) * 5;
     titleRenard.angle = Math.sin(time() * 0.5) * 3;
+  });
+
+  // ===== SECRET CHARACTER PICKER — click Rufus or Renard to choose who you play as =====
+  let dialogOpen = false;
+
+  function closeCharDialog() {
+    get("charDialog").forEach((o) => destroy(o));
+    dialogOpen = false;
+    hatInputActive = false;
+  }
+
+  function openCharDialog(targetChar) {
+    if (dialogOpen) return;
+    // Already that character? Just say so.
+    if (getCharacter() === targetChar) {
+      const msg = add([
+        text(targetChar === "renard" ? "You're already Renard!" : "You're already Rufus!", { size: 16 }),
+        pos(width() / 2, 360), anchor("center"),
+        color(255, 230, 150), outline(2, rgb(0, 0, 0)),
+        opacity(1), lifespan(1.5), fixed(), z(220),
+      ]);
+      return;
+    }
+    dialogOpen = true;
+    const niceName = targetChar === "renard" ? "Renard" : "Rufus";
+    // Dim overlay
+    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.6), fixed(), z(200), area(), "charDialog" ]);
+    // Panel
+    add([ rect(440, 180), pos(width() / 2, height() / 2), anchor("center"), color(40, 30, 50), outline(3, rgb(180, 160, 255)), fixed(), z(201), "charDialog" ]);
+    add([
+      text(targetChar === "renard" ? "Want to play as Renard?" : "Want to switch back to Rufus?", { size: 20, width: 400 }),
+      pos(width() / 2, height() / 2 - 40), anchor("center"),
+      color(255, 255, 255), fixed(), z(202), "charDialog",
+    ]);
+    // YES button
+    const yesBtn = add([ rect(120, 48), pos(width() / 2 - 75, height() / 2 + 35), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("YES", { size: 22 }), pos(width() / 2 - 75, height() / 2 + 35), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    // NO button
+    const noBtn = add([ rect(120, 48), pos(width() / 2 + 75, height() / 2 + 35), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("NO", { size: 22 }), pos(width() / 2 + 75, height() / 2 + 35), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+
+    yesBtn.onClick(() => {
+      setCharacter(targetChar);
+      titleFox.use(sprite(targetChar === "renard" ? "renard" : "rufus"));
+      closeCharDialog();
+      add([
+        text("Now playing as " + niceName + "!", { size: 18 }),
+        pos(width() / 2, height() / 2), anchor("center"),
+        color(120, 255, 150), outline(2, rgb(0, 0, 0)),
+        opacity(1), lifespan(2), fixed(), z(220),
+      ]);
+    });
+    noBtn.onClick(() => closeCharDialog());
+  }
+
+  titleFox.onClick(() => openCharDialog("rufus"));
+  titleRenard.onClick(() => openCharDialog("renard"));
+
+  // ===== SECRET HAT FEATURE — click the title to set up a custom hat! =====
+  // Reusable YES/NO popup
+  function showYesNo(question, onYes, onNo) {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.6), fixed(), z(200), area(), "charDialog" ]);
+    add([ rect(480, 180), pos(width() / 2, height() / 2), anchor("center"), color(40, 30, 50), outline(3, rgb(180, 160, 255)), fixed(), z(201), "charDialog" ]);
+    add([ text(question, { size: 18, width: 440 }), pos(width() / 2, height() / 2 - 42), anchor("center"), color(255, 255, 255), fixed(), z(202), "charDialog" ]);
+    const yes = add([ rect(120, 48), pos(width() / 2 - 75, height() / 2 + 38), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("YES", { size: 22 }), pos(width() / 2 - 75, height() / 2 + 38), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    const no = add([ rect(120, 48), pos(width() / 2 + 75, height() / 2 + 38), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("NO", { size: 22 }), pos(width() / 2 + 75, height() / 2 + 38), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    yes.onClick(() => { closeCharDialog(); if (onYes) onYes(); });
+    no.onClick(() => { closeCharDialog(); if (onNo) onNo(); });
+  }
+
+  function hatConfirm(msg) {
+    add([
+      text(msg, { size: 18 }), pos(width() / 2, height() / 2), anchor("center"),
+      color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(2), fixed(), z(220),
+    ]);
+  }
+
+  // The yes/no chain: hat? -> text on hat? -> custom text? -> type it
+  function openHatFlow() {
+    showYesNo("Want a hat?",
+      () => {
+        setHat(true);
+        showYesNo("Want text on the hat?",
+          () => {
+            showYesNo("Want custom text?",
+              () => startHatTextInput(),
+              () => { setHatText("COOL"); hatConfirm("Hat says: COOL"); }
+            );
+          },
+          () => { setHatText(""); hatConfirm("Plain hat on!"); }
+        );
+      },
+      () => { setHat(false); hatConfirm("No hat."); }
+    );
+  }
+
+  // --- Typing the custom hat text ---
+  let hatInputActive = false;
+  let hatTyped = "";
+  let hatTextDisplay = null;
+  let hatErrText = null;
+
+  function refreshHatDisplay() {
+    if (hatTextDisplay) hatTextDisplay.text = (hatTyped || "") + "_";
+  }
+
+  function startHatTextInput() {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    hatInputActive = true;
+    hatTyped = "";
+    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.7), fixed(), z(200), area(), "charDialog" ]);
+    add([ rect(500, 220), pos(width() / 2, height() / 2), anchor("center"), color(40, 30, 50), outline(3, rgb(180, 160, 255)), fixed(), z(201), "charDialog" ]);
+    add([ text("Type your hat text, then press ENTER", { size: 16, width: 460 }), pos(width() / 2, height() / 2 - 60), anchor("center"), color(255, 255, 255), fixed(), z(202), "charDialog" ]);
+    add([ rect(360, 46), pos(width() / 2, height() / 2 - 6), anchor("center"), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(202), "charDialog" ]);
+    hatTextDisplay = add([ text("_", { size: 24 }), pos(width() / 2, height() / 2 - 6), anchor("center"), color(255, 230, 150), fixed(), z(203), "charDialog" ]);
+    hatErrText = add([ text("", { size: 13, width: 460 }), pos(width() / 2, height() / 2 + 44), anchor("center"), color(255, 100, 100), fixed(), z(203), "charDialog" ]);
+    // DONE button (press ENTER or click this)
+    const doneBtn = add([ rect(120, 40), pos(width() / 2, height() / 2 + 78), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), z(203), "charDialog" ]);
+    add([ text("DONE", { size: 18 }), pos(width() / 2, height() / 2 + 78), anchor("center"), color(255, 255, 255), fixed(), z(204), "charDialog" ]);
+    doneBtn.onClick(() => { if (hatInputActive) submitHatText(); });
+    add([ text("letters & numbers, up to 25  •  ENTER or DONE", { size: 11 }), pos(width() / 2, height() / 2 + 104), anchor("center"), color(180, 170, 200), fixed(), z(203), "charDialog" ]);
+  }
+
+  function submitHatText() {
+    const t = hatTyped.trim();
+    if (!t) { setHatText(""); hatInputActive = false; closeCharDialog(); hatConfirm("Plain hat on!"); return; }
+    if (!isCleanHatText(t)) {
+      if (hatErrText) hatErrText.text = "Too inappropriate for game — please change hat text!";
+      hatTyped = "";
+      refreshHatDisplay();
+      return;
+    }
+    setHatText(t);
+    hatInputActive = false;
+    closeCharDialog();
+    hatConfirm("Hat says: " + t);
+  }
+
+  onCharInput((ch) => {
+    if (!hatInputActive) return;
+    if (hatTyped.length >= 25) return;
+    if (/[a-zA-Z0-9 ]/.test(ch)) { hatTyped += ch.toUpperCase(); refreshHatDisplay(); }
+  });
+  onKeyPress("backspace", () => { if (hatInputActive) { hatTyped = hatTyped.slice(0, -1); refreshHatDisplay(); } });
+
+  titleText.onClick(() => openHatFlow());
+
+  // Live HAT PREVIEW on the menu fox (shows your hat above the big character)
+  const mBrim = add([ rect(72, 8), pos(0, 0), anchor("center"), color(35, 35, 40), fixed(), z(4) ]);
+  const mTop  = add([ rect(48, 30), pos(0, 0), anchor("bot"), color(35, 35, 40), fixed(), z(4) ]);
+  const mBand = add([ rect(48, 7), pos(0, 0), anchor("center"), color(220, 40, 40), fixed(), z(5) ]);
+  const mHatLabel = add([ text("", { size: 14 }), pos(0, 0), anchor("center"), color(255, 255, 255), outline(1, rgb(0, 0, 0)), fixed(), z(6) ]);
+  onUpdate(() => {
+    // Show the plain top-hat preview only when wearing a hat with NO painted design
+    const painted = hasHatPaint();
+    const on = getHat() && !painted;
+    const op = on ? 1 : 0;
+    mBrim.opacity = op; mTop.opacity = op; mBand.opacity = op;
+    const hx = titleFox.pos.x, hy = titleFox.pos.y - 95;
+    mBrim.pos.x = hx; mBrim.pos.y = hy;
+    mTop.pos.x = hx;  mTop.pos.y = hy + 3;
+    mBand.pos.x = hx; mBand.pos.y = hy - 12;
+    // Hat text — neon green and centered on the painted hat, else white on the plain hat
+    const txt = getHatText();
+    const wearing = getHat();
+    mHatLabel.text = (wearing && txt) ? txt : "";
+    mHatLabel.opacity = (wearing && txt) ? 1 : 0;
+    mHatLabel.color = painted ? rgb(57, 255, 20) : rgb(255, 255, 255);
+    mHatLabel.pos.x = hx;
+    mHatLabel.pos.y = painted ? (titleFox.pos.y - 88 - (HAT_PAINT_ROWS * 7) / 2) : (hy - 12);
   });
 
   // Fiery in the top-left corner — flying around with fire particles!
@@ -2159,7 +2380,9 @@ scene("title", () => {
     pos(60, 170),
     anchor("center"),
     scale(2.5),
+    area(),
     fixed(),
+    z(3),
   ]);
   titleFirey.onUpdate(() => {
     titleFirey.pos.x = 60 + Math.sin(time() * 1.2) * 20;
@@ -2177,6 +2400,102 @@ scene("title", () => {
       ]);
     }
   });
+
+  // ===== SECRET HAT PAINTER — click Fiery to pixel-art your hat! =====
+  function openHatPainter() {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    const cols = HAT_PAINT_COLS, rows = HAT_PAINT_ROWS, cell = 26;
+    const gridW = cols * cell, gridH = rows * cell;
+    const gx = width() / 2 - gridW / 2, gy = 110;
+    const existing = getHatPaint();
+    const grid = new Array(cols * rows).fill(null);
+    if (existing) for (let i = 0; i < grid.length && i < existing.length; i++) grid[i] = existing[i];
+    let selColor = [220, 40, 40];
+
+    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.8), fixed(), z(200), area(), "charDialog" ]);
+    add([ text("Paint your hat! Click squares to color them.", { size: 18 }), pos(width() / 2, 64), anchor("center"), color(255, 255, 255), fixed(), z(202), "charDialog" ]);
+    add([ rect(gridW + 8, gridH + 8), pos(gx - 4, gy - 4), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(201), "charDialog" ]);
+
+    const cellEnts = [];
+    for (let i = 0; i < grid.length; i++) {
+      const c = i % cols, r = Math.floor(i / cols);
+      const f = grid[i];
+      const e = add([
+        rect(cell - 2, cell - 2), pos(gx + c * cell + 1, gy + r * cell + 1),
+        color(f ? f[0] : 35, f ? f[1] : 30, f ? f[2] : 45),
+        area(), fixed(), z(202), "charDialog",
+      ]);
+      e.onClick(() => {
+        if (selColor === null) { grid[i] = null; e.color = rgb(35, 30, 45); }
+        else { grid[i] = selColor.slice(); e.color = rgb(selColor[0], selColor[1], selColor[2]); }
+      });
+      cellEnts.push(e);
+    }
+
+    // Color palette + eraser
+    const palette = [
+      [220, 40, 40], [255, 140, 0], [255, 220, 40], [60, 200, 70], [60, 140, 255],
+      [160, 80, 220], [255, 255, 255], [20, 20, 20], [150, 90, 40], [255, 150, 200],
+    ];
+    const py = gy + gridH + 34;
+    const totalW = (palette.length + 1) * 40;
+    let sx0 = width() / 2 - totalW / 2 + 20;
+    // eraser first
+    const er = add([ rect(30, 30), pos(sx0, py), anchor("center"), color(60, 60, 70), outline(2, rgb(255, 255, 255)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("X", { size: 16 }), pos(sx0, py), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    er.onClick(() => { selColor = null; });
+    palette.forEach((col, i) => {
+      const sx = sx0 + (i + 1) * 40;
+      const sw = add([ rect(30, 30), pos(sx, py), anchor("center"), color(col[0], col[1], col[2]), outline(2, rgb(255, 255, 255)), area(), fixed(), z(202), "charDialog" ]);
+      sw.onClick(() => { selColor = col.slice(); });
+    });
+
+    // DONE / CLEAR / CANCEL
+    const by = py + 52;
+    const doneB = add([ rect(130, 44), pos(width() / 2 - 150, by), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("DONE", { size: 18 }), pos(width() / 2 - 150, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    doneB.onClick(() => {
+      setHatPaint(grid);
+      if (grid.some((g) => g)) setHat(true);
+      go("title"); // reload menu so the painted hat shows up everywhere
+    });
+    const clearB = add([ rect(130, 44), pos(width() / 2, by), anchor("center"), color(120, 100, 60), outline(2, rgb(255, 220, 120)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("CLEAR", { size: 18 }), pos(width() / 2, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    clearB.onClick(() => { for (let i = 0; i < grid.length; i++) { grid[i] = null; cellEnts[i].color = rgb(35, 30, 45); } });
+    const cancelB = add([ rect(130, 44), pos(width() / 2 + 150, by), anchor("center"), color(120, 60, 70), outline(2, rgb(255, 150, 150)), area(), fixed(), z(202), "charDialog" ]);
+    add([ text("CANCEL", { size: 16 }), pos(width() / 2 + 150, by), anchor("center"), color(255, 255, 255), fixed(), z(203), "charDialog" ]);
+    cancelB.onClick(() => closeCharDialog());
+  }
+
+  titleFirey.onClick(() => {
+    showYesNo("Want to paint your hat?", () => openHatPainter(), null);
+  });
+
+  // Menu preview: if you've painted a hat, show the painted pixels (on a brim).
+  // Created whenever a painted design exists; visibility follows getHat() live.
+  if (hasHatPaint()) {
+    const paintArr = getHatPaint();
+    const PS = 7;
+    const pBrimM = add([ rect(HAT_PAINT_COLS * PS + 22, 8), pos(0, 0), anchor("center"), color(35, 35, 40), fixed(), z(4) ]);
+    const pcells = [];
+    for (let i = 0; i < paintArr.length; i++) {
+      if (!paintArr[i]) continue;
+      const c = i % HAT_PAINT_COLS, r = Math.floor(i / HAT_PAINT_COLS);
+      const e = add([ rect(PS, PS), pos(0, 0), color(paintArr[i][0], paintArr[i][1], paintArr[i][2]), anchor("center"), fixed(), z(5) ]);
+      e.gridOX = (c - (HAT_PAINT_COLS - 1) / 2) * PS;
+      e.gridOY = -(HAT_PAINT_ROWS - r) * PS;
+      pcells.push(e);
+    }
+    onUpdate(() => {
+      // Hide instantly if the hat gets turned off (e.g. you said NO to "Want a hat?")
+      const vis = getHat() ? 1 : 0;
+      pBrimM.opacity = vis;
+      const hx = titleFox.pos.x, hy = titleFox.pos.y - 88;
+      pBrimM.pos.x = hx; pBrimM.pos.y = hy + 2; // brim under the painted pixels
+      pcells.forEach((e) => { e.opacity = vis; e.pos.x = hx + e.gridOX; e.pos.y = hy + e.gridOY; });
+    });
+  }
 
   // Enemies marching across the bottom!
   loop(1.2, () => {
@@ -2372,12 +2691,20 @@ scene("title", () => {
     area(),
     z(-1),
   ]);
-  playBtn.onClick(() => go("levelSelect"));
+  // Don't start the game if the click was on a character/title or a dialog is open
+  playBtn.onClick(() => {
+    if (dialogOpen || titleFox.isHovering() || titleRenard.isHovering() || titleText.isHovering() || titleFirey.isHovering()) return;
+    go("levelSelect");
+  });
 
-  onKeyPress("enter", () => go("levelSelect"));
-  onKeyPress("a", () => go("about"));
-  onKeyPress("h", () => go("leaderboard"));
+  onKeyPress("enter", () => {
+    if (hatInputActive) { submitHatText(); return; } // confirm hat text
+    if (!dialogOpen) go("levelSelect");
+  });
+  onKeyPress("a", () => { if (!dialogOpen) go("about"); });
+  onKeyPress("h", () => { if (!dialogOpen) go("leaderboard"); });
   onKeyPress("m", () => {
+    if (dialogOpen) return; // don't toggle music while a dialog/typing is open
     const muted = menuMusic.toggleMute();
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
@@ -3128,7 +3455,11 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
   // Fire-hero level: you play as Fiery and Space spits fire instead of a tail spin!
   const isFireHero = !isSecret && !!level.fireHero;
-  const heroSprite = isFireHero ? "fiery" : "rufus";
+  // Which character you chose in the main menu (Rufus or Renard). Fiery levels
+  // and the secret level override this.
+  const chosenChar = getCharacter();
+  const isRenard = !isFireHero && !isSecret && chosenChar === "renard";
+  const heroSprite = isFireHero ? "fiery" : (isRenard ? "renard" : "rufus");
   // In-level background music (e.g. Level 11's volcano theme). Other levels stay silent.
   if (!isSecret && level.music) levelMusic.start(level.music);
   else levelMusic.stop();
@@ -3147,6 +3478,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   let currentPower = "spin";
   let isFloating = false;
   let floatTimer = 0;
+  // Renard's dash
+  let isDashing = false;
+  let dashTimer = 0;
   const floatDuration = 1.5;
   let powerHUD = null;
   let powerIcon = null;
@@ -4456,6 +4790,50 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     camPos(rufus.pos.x, camY);
   });
 
+  // --- SECRET HAT (rides on top of whoever you're playing as) ---
+  if (getHat()) {
+    const hatText = getHatText();
+    const paintArr = getHatPaint();
+    const hLabel = hatText
+      ? add([ text(hatText, { size: 10 }), pos(0, 0), anchor("center"), color(255, 255, 255), outline(1, rgb(0, 0, 0)), z(13), "playerHat" ])
+      : null;
+
+    if (paintArr && paintArr.some((c) => c)) {
+      // PAINTED pixel-art hat (pixels sit on a brim so it reads as a hat)
+      const PS = 4;
+      if (hLabel) hLabel.color = rgb(57, 255, 20); // neon green text on a painted hat
+      const pBrim = add([ rect(HAT_PAINT_COLS * PS + 14, 5), pos(0, 0), anchor("center"), color(35, 35, 40), z(10), "playerHat" ]);
+      const pcells = [];
+      for (let i = 0; i < paintArr.length; i++) {
+        if (!paintArr[i]) continue;
+        const c = i % HAT_PAINT_COLS, r = Math.floor(i / HAT_PAINT_COLS);
+        const e = add([ rect(PS, PS), pos(0, 0), color(paintArr[i][0], paintArr[i][1], paintArr[i][2]), anchor("center"), z(11), "playerHat" ]);
+        e.gridOX = (c - (HAT_PAINT_COLS - 1) / 2) * PS;
+        e.gridOY = -(HAT_PAINT_ROWS - r) * PS;
+        pcells.push(e);
+      }
+      rufus.onUpdate(() => {
+        const hx = rufus.pos.x, hy = rufus.pos.y - 26;
+        pBrim.pos.x = hx; pBrim.pos.y = hy + 1; // brim under the pixels
+        pcells.forEach((e) => { e.pos.x = hx + e.gridOX; e.pos.y = hy + e.gridOY; });
+        if (hLabel) { hLabel.pos.x = hx; hLabel.pos.y = hy - (HAT_PAINT_ROWS * PS) / 2; } // text ON the painted hat
+      });
+    } else {
+      // Plain black top hat
+      const hBrim = add([ rect(38, 5), pos(0, 0), anchor("center"), color(35, 35, 40), z(11), "playerHat" ]);
+      const hTop  = add([ rect(26, 18), pos(0, 0), anchor("bot"), color(35, 35, 40), z(11), "playerHat" ]);
+      const hBand = add([ rect(26, 4), pos(0, 0), anchor("center"), color(220, 40, 40), z(12), "playerHat" ]);
+      rufus.onUpdate(() => {
+        const hx = rufus.pos.x;
+        const hy = rufus.pos.y - 30; // just above the head
+        hBrim.pos.x = hx; hBrim.pos.y = hy;
+        hTop.pos.x = hx;  hTop.pos.y = hy + 2;
+        hBand.pos.x = hx; hBand.pos.y = hy - 9;
+        if (hLabel) { hLabel.pos.x = hx; hLabel.pos.y = hy - 9; } // text ON the hat band
+      });
+    }
+  }
+
   // --- MOVEMENT ---
   onKeyDown("left", () => {
     rufus.move(-foxSpeed, 0);
@@ -4534,7 +4912,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
                   color(255, 170, 210), fixed(), z(301), "cutscene1",
                 ]);
                 add([
-                  sprite("rufus"), pos(width() / 2, 280),
+                  sprite(heroSprite), pos(width() / 2, 280),
                   anchor("center"), scale(6), fixed(), z(302), "cutscene1",
                 ]);
                 const cutJP = add([
@@ -4605,7 +4983,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
                 color(255, 170, 210), fixed(), z(301), "cutscene2",
               ]);
               add([
-                sprite("rufus"), pos(width() / 2, 280),
+                sprite(heroSprite), pos(width() / 2, 280),
                 anchor("center"), scale(6), fixed(), z(302), "cutscene2",
               ]);
               const cutJP2 = add([
@@ -4825,10 +5203,10 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     ]);
     spinBtnRef = btnSpin;
     spinBtnLabel = add([
-      text(isFireHero ? "FIRE" : "SPIN", { size: 22 }),
+      text(isFireHero ? "FIRE" : isRenard ? "DASH" : "SPIN", { size: 22 }),
       pos(width() - 50, height() - 55),
       anchor("center"),
-      color(isFireHero ? rgb(255, 80, 0) : rgb(255, 165, 0)),
+      color(isFireHero ? rgb(255, 80, 0) : isRenard ? rgb(120, 150, 255) : rgb(255, 165, 0)),
       fixed(),
       z(201),
     ]);
@@ -4926,6 +5304,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
             else if (currentPower === "float") activateFloat();
           } else if (isFireHero) {
             fireBreath();
+          } else if (isRenard) {
+            doDash();
           } else {
             doTailSpin();
           }
@@ -4988,6 +5368,27 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
           z(9),
         ]);
       }
+    }
+  }
+
+  // Renard's DASH — zoom forward and smash through enemies and crates!
+  function doDash() {
+    if (isDashing || spinCooldown > 0) return;
+    isDashing = true;
+    dashTimer = 0.3;
+    spinCooldown = 0.6;
+    const dir = rufus.flipX ? -1 : 1;
+    rufus.dashDir = dir;
+    // Speed streaks behind Renard
+    for (let i = 0; i < 6; i++) {
+      add([
+        rect(rand(12, 26), 3),
+        pos(rufus.pos.x - dir * rand(10, 45), rufus.pos.y + rand(-14, 14)),
+        color(120, 150, 255),
+        opacity(0.7),
+        lifespan(0.3),
+        z(9),
+      ]);
     }
   }
 
@@ -5135,6 +5536,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       else if (currentPower === "float") activateFloat();
     } else if (isFireHero) {
       fireBreath();
+    } else if (isRenard) {
+      doDash();
     } else {
       doTailSpin();
     }
@@ -5152,10 +5555,32 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       rufus.angle += 1200 * dt();
       if (rufus.spinTimer <= 0) {
         rufus.isSpinning = false;
-        rufus.use(sprite("rufus"));
+        rufus.use(sprite(heroSprite));
         rufus.use(scale(2));
         rufus.angle = 0;
       }
+    }
+    // Renard's dash — zoom forward and smash enemies/crates in the way
+    if (isDashing) {
+      dashTimer -= dt();
+      rufus.pos.x += (rufus.dashDir || 1) * 520 * dt();
+      get("enemy").forEach((e) => {
+        if (!e.exists()) return;
+        if (Math.abs(e.pos.x - rufus.pos.x) < 36 && Math.abs(e.pos.y - rufus.pos.y) < 36) {
+          if (e.isClown) { /* clowns bounce off — ignore */ }
+          else if (e.enemyType === "armored" && !e.isDisarmed) { e.isDisarmed = true; e.use(sprite("disarmed")); }
+          else { destroyEnemy(e); }
+        }
+      });
+      get("destructible").forEach((cr) => {
+        if (!cr.exists()) return;
+        if (Math.abs(cr.pos.x - rufus.pos.x) < 36 && Math.abs(cr.pos.y - rufus.pos.y) < 36) {
+          destroy(cr);
+          score += 25;
+          scoreText.text = `Treats: ${score}`;
+        }
+      });
+      if (dashTimer <= 0) isDashing = false;
     }
     if (spinCooldown > 0) {
       spinCooldown -= dt();
@@ -5407,7 +5832,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       color(255, 170, 210), fixed(), z(300), "startCutscene",
     ]);
     add([
-      sprite("rufus"), pos(width() / 2, 280),
+      sprite(heroSprite), pos(width() / 2, 280),
       anchor("center"), scale(6), fixed(), z(301), "startCutscene",
     ]);
     add([
@@ -5446,15 +5871,16 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   }
 
   rufus.onCollide("enemy", (enemy) => {
-    // Skip ALL enemy interactions during invincibility
-    if (isInvincible) return;
+    // Skip ALL enemy interactions during invincibility — or while Renard is
+    // dashing (the dash loop smashes enemies itself, so contact shouldn't hurt).
+    if (isInvincible || isDashing) return;
 
     // Check if we're spinning (tail attack)
     if (rufus.isSpinning) {
       if (enemy.isClown) {
         // Can't spin a clown! They honk and Rufus bounces off!
         rufus.isSpinning = false;
-        rufus.use(sprite("rufus"));
+        rufus.use(sprite(heroSprite));
         rufus.use(scale(2));
         rufus.angle = 0;
         // Honk effect — colorful confetti instead of sparks
@@ -5478,7 +5904,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         // Can't spin an armored enemy! Rufus gets hurt!
         // Stop the spin immediately
         rufus.isSpinning = false;
-        rufus.use(sprite("rufus"));
+        rufus.use(sprite(heroSprite));
         rufus.use(scale(2));
         rufus.angle = 0;
         // Visual feedback - sparks!
@@ -6401,7 +6827,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // Controls hint (fades away)
   const hint = add([
-    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap" : isFireHero ? "Arrows: Move | Up: Jump | Space: SPIT FIRE!" : jetpackUnlocked ? "Hold UP: Fly! | Left/Right: Steer | Space: Spin" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
+    text(isSecret ? "Arrows: Move | Up: Jump | Space: Power | Tab: Swap" : isFireHero ? "Arrows: Move | Up: Jump | Space: SPIT FIRE!" : isRenard ? "Arrows: Move | Up: Jump | Space: DASH!" : jetpackUnlocked ? "Hold UP: Fly! | Left/Right: Steer | Space: Spin" : "Arrows: Move | Up: Jump | Space: Tail Spin!", { size: 14 }),
     pos(width() / 2, height() - 30),
     anchor("center"),
     color(255, 255, 255),
@@ -6511,9 +6937,10 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
     fixed(),
   ]);
 
-  // Happy Rufus bouncing with joy!
+  // Happy hero bouncing with joy! (Fiery if it was a Fiery level, else your pick)
+  const victoryChar = level.fireHero ? "fiery" : (getCharacter() === "renard" ? "renard" : "rufus");
   const victoryFox = add([
-    sprite("rufus"),
+    sprite(victoryChar),
     pos(width() / 2, 220),
     anchor("center"),
     scale(5),
