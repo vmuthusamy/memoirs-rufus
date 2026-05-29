@@ -1281,6 +1281,25 @@ describe("Secret custom hat", () => {
   });
 });
 
+describe("Space level (Level 14)", () => {
+  test("level music engine has a moon theme with a sudden drop", () => {
+    expect(htmlContent).toContain("moonStep");
+    expect(htmlContent).toMatch(/MOON \/ SPACE THEME/);
+    expect(htmlContent).toMatch(/this\.theme === "moon"/);
+  });
+
+  test("draws moon-rock platforms on space levels", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/} else if \(isSpace\) \{/);
+    expect(gameScene).toContain("MOON ROCK");
+  });
+
+  test("the start cutscene can show a 'no jetpack' mark", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("noMark");
+  });
+});
+
 describe("Rocket-launch finale (Level 13)", () => {
   test("has a launch cutscene triggered by level.launchCutscene", () => {
     expect(htmlContent).toContain("function playLaunchCutscene(");
