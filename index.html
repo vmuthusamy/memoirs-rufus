@@ -3102,6 +3102,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const isNeighborhood = level.name === "The Neighborhood";
   const isThemePark = level.name === "The Theme Park";
   const isCandy = level.name === "Candy Kingdom" || level.name === "Jetpack Training";
+  const isVolcano = !!level.fireHero;
 
   // Background sky
   add([
@@ -3111,6 +3112,49 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     fixed(),
     z(-10),
   ]);
+
+  // === ERUPTING VOLCANO BACKDROP (Level 11) ===
+  if (isVolcano) {
+    const cx = width() / 2;
+    const baseY = height();
+    const peakY = 110, peakW = 140, baseW = 760;
+    const layers = 18;
+    // Mountain built from stacked dark-rock layers (wide base, narrow crater on top)
+    for (let i = 0; i < layers; i++) {
+      const t = i / (layers - 1);
+      const ly = peakY + t * (baseY - peakY);
+      const lw = peakW + t * (baseW - peakW);
+      const sh = 55 + Math.floor(t * 28);
+      add([ rect(lw, (baseY - peakY) / layers + 2), pos(cx - lw / 2, ly), color(sh, Math.floor(sh * 0.5), Math.floor(sh * 0.42)), fixed(), z(-9) ]);
+    }
+    // Glowing lava crater at the top
+    add([ rect(peakW, 20), pos(cx - peakW / 2, peakY), color(255, 110, 0), fixed(), z(-8) ]);
+    add([ rect(peakW - 34, 9), pos(cx - (peakW - 34) / 2, peakY + 3), color(255, 220, 70), fixed(), z(-8) ]);
+    // Two glowing lava streaks running down the sides
+    add([ rect(8, 220), pos(cx - 40, peakY + 16), color(255, 120, 0), opacity(0.8), fixed(), z(-8) ]);
+    add([ rect(7, 170), pos(cx + 36, peakY + 16), color(255, 90, 0), opacity(0.8), fixed(), z(-8) ]);
+    // Animated eruption — lava blobs + smoke puffs from the crater
+    onUpdate(() => {
+      if (Math.random() < 0.25) {
+        add([
+          rect(rand(6, 12), rand(6, 12)),
+          pos(cx + rand(-45, 45), peakY),
+          color(255, rand(80, 170), 0),
+          opacity(0.9), fixed(), lifespan(1.2),
+          move(rand(250, 290), rand(120, 260)), z(-7),
+        ]);
+      }
+      if (Math.random() < 0.14) {
+        add([
+          rect(rand(22, 42), rand(22, 42)),
+          pos(cx + rand(-55, 55), peakY - 12),
+          color(95, 85, 85),
+          opacity(0.35), fixed(), lifespan(2),
+          move(rand(255, 285), rand(18, 48)), z(-8),
+        ]);
+      }
+    });
+  }
 
   // Draw some background clouds (or themed backgrounds)
   if (isThemePark) {
@@ -3791,6 +3835,29 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
             sparkle.opacity = Math.sin(sparkle.t) * 0.3 + 0.5;
           });
         }
+      }
+    } else if (isVolcano) {
+      // JAGGED VOLCANO ROCK with glowing lava cracks
+      add([
+        rect(p.width, p.height),
+        pos(p.x, p.y),
+        color(48, 30, 28),
+        outline(2, rgb(20, 12, 12)),
+        area(),
+        body({ isStatic: true }),
+        "platform",
+      ]);
+      // Glowing molten cracks running through the rock
+      for (let gx = p.x + 6; gx < p.x + p.width - 6; gx += rand(16, 28)) {
+        add([ rect(rand(3, 6), p.height - 6), pos(gx, p.y + 3), color(255, rand(90, 150), 0), opacity(0.85), z(1) ]);
+      }
+      // Hot glowing top edge (lava-warmed rock)
+      add([ rect(p.width, 4), pos(p.x, p.y - 2), color(255, 100, 0), z(1) ]);
+      // Jagged dark rock chunks poking up along the top
+      for (let rx = p.x + 4; rx < p.x + p.width - 12; rx += rand(20, 34)) {
+        const cw = rand(8, 16);
+        add([ rect(cw, 6), pos(rx, p.y - 6), color(38, 22, 20), z(1) ]);
+        add([ rect(cw - 4, 4), pos(rx + 2, p.y - 9), color(30, 17, 16), z(1) ]);
       }
     } else {
       // Default platforms — books in library, wood/earth elsewhere

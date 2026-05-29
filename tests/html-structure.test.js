@@ -1159,6 +1159,22 @@ describe("8-bit menu music", () => {
   });
 });
 
+describe("Volcano theme (Level 11 looks)", () => {
+  test("detects the volcano theme from a fire-hero level", () => {
+    expect(htmlContent).toContain("const isVolcano");
+  });
+
+  test("draws an erupting volcano backdrop", () => {
+    expect(htmlContent).toContain("ERUPTING VOLCANO BACKDROP");
+  });
+
+  test("draws jagged volcano-rock platforms with lava cracks", () => {
+    expect(htmlContent).toContain("JAGGED VOLCANO ROCK");
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/} else if \(isVolcano\) \{/);
+  });
+});
+
 describe("Rising lava hazard", () => {
   test("renders rising lava from level.risingLava", () => {
     expect(htmlContent).toContain("level.risingLava");
