@@ -1689,6 +1689,34 @@ function isCleanHatText(s) {
   return !HAT_BAD_WORDS.some((w) => t.includes(w));
 }
 
+// Menu theme color — recolors the title on the main menu.
+const THEME_COLORS = {
+  default: [255, 165, 0],
+  red:     [225, 55, 55],
+  orange:  [255, 140, 30],
+  yellow:  [255, 220, 45],
+  green:   [70, 200, 90],
+  blue:    [80, 150, 255],
+  purple:  [175, 95, 235],
+  pink:    [255, 120, 200],
+  gold:    [255, 200, 45],
+  silver:  [205, 205, 215],
+  bronze:  [190, 120, 70],
+};
+function getTheme() {
+  const t = localStorage.getItem("rufus_theme");
+  return (t && THEME_COLORS[t]) ? t : "default";
+}
+function setTheme(t) { if (THEME_COLORS[t]) localStorage.setItem("rufus_theme", t); }
+function getThemeColor() { return THEME_COLORS[getTheme()]; }
+// A dark tint of the theme color for the menu background (default = dark night sky).
+// Kept dark so white text, stars, and the characters/hats stay easy to see.
+function getThemeBg() {
+  if (getTheme() === "default") return [15, 10, 40];
+  const c = getThemeColor();
+  return [Math.round(c[0] * 0.22), Math.round(c[1] * 0.22), Math.round(c[2] * 0.22)];
+}
+
 // Painted hat — a 10x5 grid of pixels (each cell is [r,g,b] or null/empty).
 const HAT_PAINT_COLS = 10;
 const HAT_PAINT_ROWS = 5;
@@ -2055,12 +2083,13 @@ scene("leaderboard", () => {
 // ============================================
 scene("title", () => {
   menuMusic.start();
-  // Dark sky background
-  add([
+  // Background — tinted to the chosen theme color (kept dark for contrast)
+  const titleBg = add([
     rect(width(), height()),
     pos(0, 0),
-    color(15, 10, 40),
+    color(...getThemeBg()),
     fixed(),
+    z(-20),
   ]);
 
   // TONS of twinkling stars
@@ -2134,7 +2163,7 @@ scene("title", () => {
     text("Adventures of Rufus", { size: 50 }),
     pos(width() / 2, 80),
     anchor("center"),
-    color(255, 165, 0),
+    color(...getThemeColor()),
     outline(3, rgb(150, 80, 0)),
     area(),
     fixed(),
@@ -2177,7 +2206,9 @@ scene("title", () => {
     pos(width() / 2 - 160, 310),
     anchor("center"),
     scale(3.5),
+    area(),
     fixed(),
+    z(2),
   ]);
   titleMarthina.onUpdate(() => {
     titleMarthina.pos.y = 310 + Math.abs(Math.sin(time() * 2.5 + 1)) * -15;
@@ -2254,6 +2285,10 @@ scene("title", () => {
 
   titleFox.onClick(() => openCharDialog("rufus"));
   titleRenard.onClick(() => openCharDialog("renard"));
+  // Click Marthina to jump straight into the secret level!
+  titleMarthina.onClick(() => {
+    showYesNo("Want to play the secret level?", () => go("memoir", "secret"), null);
+  });
 
   // ===== SECRET HAT FEATURE — click the title to set up a custom hat! =====
   // Reusable YES/NO popup
@@ -2472,6 +2507,40 @@ scene("title", () => {
     showYesNo("Want to paint your hat?", () => openHatPainter(), null);
   });
 
+  // ===== THEME PICKER — top-right button to recolor the menu =====
+  const themeBtn = add([
+    rect(120, 30), pos(width() - 70, 30), anchor("center"),
+    color(60, 60, 80), opacity(0.85), outline(1, rgb(200, 200, 230)),
+    area(), fixed(), z(5),
+  ]);
+  add([ text("Theme", { size: 13 }), pos(width() - 70, 30), anchor("center"), color(230, 230, 255), fixed(), z(6) ]);
+
+  function openThemeDialog() {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    const keys = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "gold", "silver", "bronze", "default"];
+    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.7), fixed(), z(200), area(), "charDialog" ]);
+    add([ rect(560, 300), pos(width() / 2, height() / 2), anchor("center"), color(40, 30, 50), outline(3, rgb(180, 160, 255)), fixed(), z(201), "charDialog" ]);
+    add([ text("Want to change theme?", { size: 22 }), pos(width() / 2, height() / 2 - 110), anchor("center"), color(255, 255, 255), fixed(), z(202), "charDialog" ]);
+    const perRow = 4, sw = 110, sh = 52;
+    const startX = width() / 2 - ((perRow - 1) * sw) / 2;
+    const startY = height() / 2 - 50;
+    keys.forEach((k, i) => {
+      const col = THEME_COLORS[k];
+      const row = Math.floor(i / perRow), c = i % perRow;
+      const x = startX + c * sw, y = startY + row * (sh + 8);
+      const box = add([ rect(96, sh), pos(x, y), anchor("center"), color(col[0], col[1], col[2]), outline(2, rgb(255, 255, 255)), area(), fixed(), z(202), "charDialog" ]);
+      add([ text(k, { size: 12 }), pos(x, y), anchor("center"), color(k === "yellow" || k === "silver" || k === "gold" ? 30 : 255, k === "yellow" || k === "silver" || k === "gold" ? 30 : 255, k === "yellow" || k === "silver" || k === "gold" ? 30 : 255), fixed(), z(203), "charDialog" ]);
+      box.onClick(() => {
+        setTheme(k);
+        titleText.color = rgb(...getThemeColor());
+        titleBg.color = rgb(...getThemeBg());
+        closeCharDialog();
+      });
+    });
+  }
+  themeBtn.onClick(() => openThemeDialog());
+
   // Menu preview: if you've painted a hat, show the painted pixels (on a brim).
   // Created whenever a painted design exists; visibility follows getHat() live.
   if (hasHatPaint()) {
@@ -2594,18 +2663,22 @@ scene("title", () => {
   // Detect touch device
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
-  // "PLAY!" prompt
-  add([
-    text(isTouch ? "Tap anywhere to play!" : "Press ENTER to start!", { size: 22 }),
-    pos(width() / 2, 480),
-    anchor("center"),
-    color(255, 255, 255),
-    fixed(),
+  // PLAY button (the only way to start — keeps the menu secrets from being
+  // triggered by accident when someone just wants to play)
+  const playButton = add([
+    rect(220, 52), pos(width() / 2, 478), anchor("center"),
+    color(50, 170, 70), outline(3, rgb(120, 255, 150)), area(), fixed(), z(7),
     { flashTimer: 0 },
-  ]).onUpdate(function() {
+  ]);
+  playButton.onUpdate(function() {
     this.flashTimer += dt();
-    this.opacity = Math.sin(this.flashTimer * 3) * 0.4 + 0.6;
+    this.scale = vec2(1 + Math.sin(this.flashTimer * 3) * 0.03);
   });
+  add([
+    text("PLAY", { size: 26 }), pos(width() / 2, 478), anchor("center"),
+    color(255, 255, 255), fixed(), z(8),
+  ]);
+  playButton.onClick(() => { if (!dialogOpen) go("levelSelect"); });
 
   // Controls help
   add([
@@ -2682,20 +2755,8 @@ scene("title", () => {
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
 
-  // Big "Play" tap area (everything above the buttons)
-  const playBtn = add([
-    rect(width(), 520),
-    pos(0, 0),
-    opacity(0),
-    fixed(),
-    area(),
-    z(-1),
-  ]);
-  // Don't start the game if the click was on a character/title or a dialog is open
-  playBtn.onClick(() => {
-    if (dialogOpen || titleFox.isHovering() || titleRenard.isHovering() || titleText.isHovering() || titleFirey.isHovering()) return;
-    go("levelSelect");
-  });
+  // (No more tap-anywhere area — you start with the PLAY button above, so the
+  // dancing characters stay as hidden secrets you have to click on purpose.)
 
   onKeyPress("enter", () => {
     if (hatInputActive) { submitHatText(); return; } // confirm hat text

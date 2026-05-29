@@ -337,7 +337,6 @@ describe("Touch controls", () => {
   });
 
   test("shows touch-friendly text on touch devices", () => {
-    expect(htmlContent).toContain("Tap anywhere to play!");
     expect(htmlContent).toContain("About Rufus");
   });
 
@@ -1279,6 +1278,30 @@ describe("Secret custom hat", () => {
     const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
     expect(gameScene).toContain("if (getHat())");
     expect(gameScene).toContain('"playerHat"');
+  });
+});
+
+describe("Menu theme, PLAY button & Marthina secret-level shortcut", () => {
+  test("has theme colors + storage and recolors title and whole background", () => {
+    expect(htmlContent).toContain("THEME_COLORS");
+    expect(htmlContent).toContain("function getTheme()");
+    expect(htmlContent).toContain("function getThemeBg()");
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Want to change theme?");
+    expect(titleScene).toContain("titleBg.color");
+    expect(titleScene).toContain("titleText.color");
+  });
+
+  test("uses a dedicated PLAY button instead of tap-anywhere", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("playButton");
+    expect(titleScene).not.toContain("const playBtn = add");
+  });
+
+  test("clicking Marthina offers the secret level", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("titleMarthina.onClick");
+    expect(titleScene).toContain("Want to play the secret level?");
   });
 });
 
