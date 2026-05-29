@@ -247,7 +247,8 @@ const levelMusic = {
   start(theme) {
     if (this.playing || this.isMuted()) return;
     this.theme = theme || "volcano";
-    this.bpm = this.theme === "moon" ? 134 : 116; // moon theme is faster/peppier
+    const bpmByTheme = { moon: 134, volcano: 116, adventure: 132, candy: 142, circus: 122, outside: 130, gym: 138, library: 96 };
+    this.bpm = bpmByTheme[this.theme] || 124;
     this.init();
     if (!this.ctx) return;
     const begin = () => {
@@ -334,6 +335,26 @@ const levelMusic = {
     n.start(time);
   },
 
+  // BUZZ — a wasp/bee buzzing sound (sawtooth with a fast pitch wobble)
+  buzz(time, dur, baseMidi, vol) {
+    if (!this.ctx) return;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = "sawtooth";
+    const f = this.freq(baseMidi || 58);
+    o.frequency.setValueAtTime(f, time);
+    // fast vibrato = buzzy insect sound
+    const lfo = this.ctx.createOscillator(), lfoG = this.ctx.createGain();
+    lfo.frequency.value = 32;
+    lfoG.gain.value = f * 0.07;
+    lfo.connect(lfoG).connect(o.frequency);
+    g.gain.setValueAtTime(0.001, time);
+    g.gain.linearRampToValueAtTime(vol || 0.045, time + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(time); o.stop(time + dur + 0.02);
+    lfo.start(time); lfo.stop(time + dur + 0.02);
+  },
+
   // Rising "riser" tone that builds tension right before the drop
   riser(time, dur, startMidi, endMidi) {
     if (!this.ctx) return;
@@ -351,7 +372,229 @@ const levelMusic = {
   // Pick the right tune for the current theme
   playStep(step, time) {
     if (this.theme === "moon") return this.moonStep(step, time);
+    if (this.theme === "adventure") return this.adventureStep(step, time);
+    if (this.theme === "candy") return this.candyStep(step, time);
+    if (this.theme === "circus") return this.circusStep(step, time);
+    if (this.theme === "outside") return this.outsideStep(step, time);
+    if (this.theme === "gym") return this.gymStep(step, time);
+    if (this.theme === "library") return this.libraryStep(step, time);
     return this.volcanoStep(step, time);
+  },
+
+  // LIBRARY THEME — calm, quiet, gentle 8-bit (no beat drop, no drums).
+  // Soft music-box arpeggio over a quiet pad. Progression: C - Am - F - G.
+  libraryStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const chords = [
+      { root: 48, notes: [60, 64, 67, 72] }, // C
+      { root: 45, notes: [57, 60, 64, 69] }, // Am
+      { root: 41, notes: [60, 65, 69, 72] }, // F
+      { root: 43, notes: [62, 67, 71, 74] }, // G
+    ];
+    const c = chords[bar % 4];
+    // Soft low pad on the downbeat
+    if (inBar === 0) this.note(this.freq(c.root - 12), time, 1.1, "triangle", 0.11);
+    // Gentle music-box arpeggio on the off-beats — sparse and quiet
+    if (inBar % 2 === 0) {
+      const arp = [0, 2, 1, 3, 2, 1, 2, 0];
+      const idx = arp[(inBar / 2) % 8];
+      this.note(this.freq(c.notes[idx] + 12), time, 0.4, "triangle", 0.055);
+    }
+    // A single soft sparkle high note near the end of each bar
+    if (inBar === 14) this.note(this.freq(c.notes[3] + 24), time, 0.3, "square", 0.025);
+  },
+
+  // GYM THEME — sporty driving 8-bit with WASPS buzzing in the background and a
+  // beat drop. (16-bar loop) Bars 0-3 build-up, bars 4-15 drop. Am - G - C - E.
+  gymStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const dropped = bar >= 4;
+    const chords = [
+      { root: 45, notes: [69, 72, 76, 81] }, // Am
+      { root: 43, notes: [67, 71, 74, 79] }, // G
+      { root: 48, notes: [72, 76, 79, 84] }, // C
+      { root: 40, notes: [68, 71, 76, 80] }, // E
+    ];
+    const c = chords[bar % 4];
+
+    // Wasps buzzing in the background — drift in now and then (more during the drop)
+    if (inBar === 0) this.buzz(time, 0.7, 56 + (bar % 3) * 3, 0.04);
+    if (dropped && inBar === 8) this.buzz(time, 0.5, 62 + (bar % 2) * 4, 0.035);
+
+    if (!dropped) {
+      // Build-up — light bass + sparse lead, "ready, set..."
+      if (inBar % 4 === 0) this.note(this.freq(c.root), time, 0.16, "triangle", 0.22);
+      const bl = [
+        [0, -1, 2, -1, 1, -1, 2, -1, 0, -1, 2, -1, 3, -1, 2, -1],
+        [2, -1, 1, -1, 0, -1, 2, -1, 1, -1, 0, -1, 1, -1, 2, -1],
+        [0, -1, 1, 2, -1, 1, 0, -1, 2, -1, 1, -1, 0, 1, 2, -1],
+        [3, -1, 2, -1, 1, -1, 0, -1, 1, 2, 3, -1, 2, 1, 0, -1],
+      ];
+      const idx = bl[bar % 4][inBar];
+      if (idx >= 0) this.note(this.freq(c.notes[idx]), time, 0.13, "square", 0.06);
+      if (bar === 3 && inBar >= 10) this.hat(time, 0.03 + (inBar - 10) * 0.01);
+      if (bar === 3 && inBar >= 13) this.drum(time, "kick");
+    } else {
+      // THE DROP — full sporty workout beat
+      if (inBar % 2 === 0) this.note(this.freq(c.root), time, 0.13, "triangle", 0.3);
+      if (inBar % 4 === 2) this.note(this.freq(c.root + 12), time, 0.1, "triangle", 0.18);
+      const dl = [
+        [0, 2, 3, 2, 0, 2, 3, 2, 1, 3, 2, 3, 0, 2, 3, 2],
+        [3, 2, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 2, 3, 2],
+        [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3],
+        [0, 3, 2, 3, 1, 3, 2, 3, 0, 2, 3, 2, 1, 2, 1, 0],
+      ];
+      const idx = dl[bar % 4][inBar];
+      this.note(this.freq(c.notes[idx]), time, 0.085, "square", 0.08);
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (inBar === 4 || inBar === 12) this.rumble(time, 0.11);
+      if (inBar % 2 === 1) this.hat(time, 0.045);
+      if (bar === 4 && inBar === 0) this.rumble(time, 0.28); // drop hit
+    }
+  },
+
+  // OUTSIDE THEME — sunny outdoors 8-bit with a beat drop! (16-bar loop)
+  // Bars 0-3 = breezy build-up, bars 4-15 = the drop. Progression: G - D - Em - C.
+  outsideStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const dropped = bar >= 4;
+    const chords = [
+      { root: 43, notes: [67, 71, 74, 79] }, // G
+      { root: 38, notes: [62, 66, 69, 74] }, // D
+      { root: 40, notes: [64, 67, 71, 76] }, // Em
+      { root: 36, notes: [60, 64, 67, 72] }, // C
+    ];
+    const c = chords[bar % 4];
+
+    if (!dropped) {
+      // Breezy build-up — soft pad + sparse cheerful lead
+      if (inBar === 0) this.note(this.freq(c.root), time, 0.8, "triangle", 0.16);
+      const bl = [
+        [0, -1, 2, -1, 1, -1, 2, -1, 0, -1, 2, 3, -1, 2, 1, -1],
+        [1, -1, 2, -1, 3, -1, 2, -1, 1, -1, 0, -1, 2, -1, 1, -1],
+        [2, -1, 1, -1, 0, -1, 2, -1, 3, -1, 2, -1, 1, 0, 1, -1],
+        [0, 1, 2, 3, -1, 2, -1, 1, 0, -1, 1, 2, 3, -1, 2, -1],
+      ];
+      const idx = bl[bar % 4][inBar];
+      if (idx >= 0) this.note(this.freq(c.notes[idx] + 12), time, 0.18, "square", 0.06);
+      // accelerating hats through bar 3 to lead into the drop
+      if (bar === 3 && inBar >= 8) this.hat(time, 0.03 + (inBar - 8) * 0.008);
+      if (bar === 3 && inBar >= 12) this.drum(time, "kick");
+    } else {
+      // THE DROP — full sunny dance beat
+      if (inBar % 2 === 0) this.note(this.freq(c.root), time, 0.13, "triangle", 0.3);
+      if (inBar % 4 === 2) this.note(this.freq(c.root + 12), time, 0.1, "triangle", 0.18);
+      const dl = [
+        [0, 2, 3, 2, 0, 2, 3, 2, 1, 3, 2, 3, 0, 2, 3, 2],
+        [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3],
+        [3, 2, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 2, 3, 2],
+        [0, 3, 2, 3, 1, 3, 2, 3, 0, 2, 3, 2, 1, 2, 1, 0],
+      ];
+      const idx = dl[bar % 4][inBar];
+      this.note(this.freq(c.notes[idx]), time, 0.085, "square", 0.08);
+      if (inBar % 2 === 0) this.note(this.freq(c.notes[idx] + 7), time, 0.06, "square", 0.03);
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (inBar === 4 || inBar === 12) this.rumble(time, 0.11);
+      if (inBar % 2 === 1) this.hat(time, 0.045);
+      if (bar === 4 && inBar === 0) this.rumble(time, 0.28); // big hit on the drop
+    }
+  },
+
+  // ADVENTURE THEME — bright, bouncy 8-bit (C - G - Am - F). For the early levels.
+  adventureStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const chords = [
+      { root: 36, notes: [60, 64, 67, 72] }, // C
+      { root: 31, notes: [59, 62, 67, 71] }, // G
+      { root: 33, notes: [57, 60, 64, 69] }, // Am
+      { root: 29, notes: [60, 65, 69, 72] }, // F
+    ];
+    const c = chords[bar % 4];
+    if (inBar % 4 === 0) this.note(this.freq(c.root), time, 0.16, "triangle", 0.26);
+    else if (inBar % 4 === 2) this.note(this.freq(c.root + 7), time, 0.14, "triangle", 0.2);
+    const lp = [
+      [4, 2, 1, 2, 4, 4, 2, 1, 0, 1, 2, 4, 2, 1, 2, 4],
+      [2, 4, 2, 1, 2, 2, 1, 0, 1, 2, 4, 2, 1, 2, 1, 0],
+      [0, 1, 2, 4, 2, 1, 2, 4, 1, 2, 4, 2, 0, 1, 2, 1],
+      [4, 2, 1, 0, 1, 2, 4, 2, 4, 2, 1, 0, 2, 1, 0, 1],
+    ];
+    let idx = lp[bar % 4][inBar];
+    if (idx === 4) idx = 0; // safety: keep within chord notes
+    this.note(this.freq(c.notes[idx]), time, 0.1, "square", 0.08);
+    if (inBar % 8 === 0) this.drum(time, "kick");
+    if (inBar % 8 === 4) this.hat(time, 0.04);
+  },
+
+  // CANDY THEME — sweet & bouncy 8-bit with a beat drop! (16-bar loop)
+  // Bars 0-3 = sugary build-up, bars 4-15 = the drop. Progression: C - Am - F - G.
+  candyStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const dropped = bar >= 4;
+    const chords = [
+      { root: 48, notes: [72, 76, 79, 84] }, // C (high)
+      { root: 45, notes: [69, 72, 76, 81] }, // Am
+      { root: 41, notes: [65, 69, 72, 77] }, // F
+      { root: 43, notes: [67, 71, 74, 79] }, // G
+    ];
+    const c = chords[bar % 4];
+
+    if (!dropped) {
+      // Sugary build-up — light, twinkly
+      if (inBar === 0) this.note(this.freq(c.root - 24), time, 0.7, "triangle", 0.16);
+      const bl = [
+        [0, -1, 1, -1, 2, -1, 3, -1, 2, -1, 1, -1, 2, 3, 2, -1],
+        [3, -1, 2, -1, 1, -1, 0, -1, 1, -1, 2, -1, 1, 0, 1, -1],
+        [0, -1, 2, -1, 1, -1, 3, -1, 2, -1, 1, 0, 1, 2, 3, -1],
+        [2, -1, 1, -1, 0, -1, 1, 2, 3, -1, 2, -1, 1, 2, 1, -1],
+      ];
+      const idx = bl[bar % 4][inBar];
+      if (idx >= 0) this.note(this.freq(c.notes[idx]), time, 0.16, "square", 0.06);
+      if (bar === 3 && inBar >= 10) this.hat(time, 0.03 + (inBar - 10) * 0.01);
+      if (bar === 3 && inBar >= 13) this.drum(time, "kick");
+    } else {
+      // THE DROP — bouncy candy dance beat
+      if (inBar % 2 === 0) this.note(this.freq(c.root - 12), time, 0.12, "triangle", 0.28);
+      if (inBar % 4 === 2) this.note(this.freq(c.root), time, 0.1, "triangle", 0.16);
+      const dl = [
+        [0, 1, 2, 3, 2, 1, 0, 2, 3, 2, 1, 0, 1, 2, 3, 2],
+        [3, 2, 1, 0, 1, 2, 3, 2, 0, 1, 2, 3, 2, 1, 0, 1],
+        [0, 2, 1, 3, 2, 0, 1, 2, 3, 1, 2, 0, 1, 2, 3, 1],
+        [2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 2, 3, 2, 1, 0],
+      ];
+      const idx = dl[bar % 4][inBar];
+      this.note(this.freq(c.notes[idx]), time, 0.08, "square", 0.075);
+      if (inBar % 2 === 0) this.note(this.freq(c.notes[idx] + 5), time, 0.05, "square", 0.03);
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (inBar === 4 || inBar === 12) this.rumble(time, 0.1);
+      if (inBar % 2 === 1) this.hat(time, 0.04);
+      if (bar === 4 && inBar === 0) this.rumble(time, 0.26); // candy drop hit!
+    }
+  },
+
+  // CIRCUS THEME — playful, mischievous minor with an oom-pah bounce (Am - E - Dm - E).
+  circusStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const chords = [
+      { root: 45, notes: [69, 72, 76, 81] }, // Am
+      { root: 40, notes: [68, 71, 76, 80] }, // E
+      { root: 38, notes: [62, 65, 69, 74] }, // Dm
+      { root: 40, notes: [68, 71, 76, 80] }, // E
+    ];
+    const c = chords[bar % 4];
+    // oom-pah: low root on the beat, chord-ish on the off-beat
+    if (inBar % 4 === 0) this.note(this.freq(c.root - 12), time, 0.12, "triangle", 0.28);
+    if (inBar % 4 === 2) this.note(this.freq(c.notes[1]), time, 0.1, "square", 0.05);
+    // staccato playful lead
+    const lp = [
+      [0, -1, 2, -1, 1, -1, 2, -1, 0, -1, 2, 3, 2, -1, 1, -1],
+      [2, -1, 1, -1, 0, -1, 1, -1, 2, -1, 3, -1, 2, -1, 1, -1],
+      [0, -1, 1, 2, -1, 1, 0, -1, 2, -1, 1, -1, 0, 1, 2, -1],
+      [3, -1, 2, -1, 1, -1, 0, -1, 1, 2, 3, -1, 2, 1, 0, -1],
+    ];
+    const idx = lp[bar % 4][inBar];
+    if (idx >= 0) this.note(this.freq(c.notes[idx]), time, 0.09, "square", 0.07);
+    if (inBar % 8 === 0) this.drum(time, "kick");
+    if (inBar % 8 === 4) this.rumble(time, 0.1);
   },
 
   // MOON / SPACE THEME — dreamy floaty intro that SUDDENLY drops into a hard

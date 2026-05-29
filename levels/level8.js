@@ -6,6 +6,9 @@
 const LEVEL_8 = {
   name: "Candy Kingdom",
 
+  // Candy 8-bit music with a beat drop — shared with Levels 7 & 9
+  music: "candy",
+
   memoir: "Dear Diary, I flew through a rainbow portal into the CANDY KINGDOM! First I have to fly over giant lollipops and chocolate spikes with my jetpack. Then the sour candy forcefield kicks in and I lose my jetpack — time to platform through cookie bridges and gummy bear enemies the old-fashioned way!",
 
   // Minty blue candy sky — different from Level 7's pink!

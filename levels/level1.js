@@ -7,6 +7,9 @@ const LEVEL_1 = {
   // What's this level called?
   name: "The Backyard",
 
+  // Sunny outdoor 8-bit music with a beat drop — shared with Level 2
+  music: "outside",
+
   // What chapter of Rufus's memoir is this?
   memoir: "Dear Diary, today I discovered the backyard is full of surprises! There are crates everywhere and treats hidden behind them. Time to put my tail to work!",
 

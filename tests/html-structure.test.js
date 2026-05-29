@@ -1281,6 +1281,35 @@ describe("Secret custom hat", () => {
   });
 });
 
+describe("Per-level music themes", () => {
+  test("level-music engine defines all the themes", () => {
+    ["outsideStep", "gymStep", "libraryStep", "circusStep", "candyStep", "volcanoStep", "moonStep"].forEach((fn) => {
+      expect(htmlContent).toContain(fn);
+    });
+  });
+
+  test("gym theme has a wasp buzz sound", () => {
+    expect(htmlContent).toContain("buzz(time, dur");
+    expect(htmlContent).toMatch(/this\.buzz\(/);
+  });
+
+  test("each chapter level file picks a music theme", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const expected = {
+      "level1.js": "outside", "level2.js": "outside", "level3.js": "gym",
+      "level4.js": "library", "level5.js": "circus", "level6.js": "circus",
+      "level7.js": "candy", "level8.js": "candy", "level9.js": "candy",
+      "level11.js": "volcano", "level12.js": "volcano", "level13.js": "volcano",
+      "level14.js": "moon",
+    };
+    Object.entries(expected).forEach(([file, theme]) => {
+      const src = fs.readFileSync(path.join(__dirname, "..", "levels", file), "utf-8");
+      expect(src).toContain(`music: "${theme}"`);
+    });
+  });
+});
+
 describe("Space level (Level 14)", () => {
   test("level music engine has a moon theme with a sudden drop", () => {
     expect(htmlContent).toContain("moonStep");

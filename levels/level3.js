@@ -6,6 +6,9 @@
 const LEVEL_3 = {
   name: "The School Gym",
 
+  // Sporty gym 8-bit music with wasps buzzing in the background + a beat drop
+  music: "gym",
+
   memoir: "Dear Diary, I snuck into the school gym today. BIG MISTAKE. There are WASPS everywhere buzzing around the ceiling! And the squirrels followed me inside with their stupid helmets! Some wasps just fly around, but others DIVE at me when I get close. Time for some advanced tail work... I need to spin fast and dodge faster!",
 
   // Indoor gym - grayish ceiling

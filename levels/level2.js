@@ -7,6 +7,9 @@
 const LEVEL_2 = {
   name: "The Neighborhood",
 
+  // Sunny outdoor 8-bit music with a beat drop — shared with Level 1
+  music: "outside",
+
   memoir: "Dear Diary, I ventured past the fence today. The neighborhood squirrels have HELMETS now! And they're EVERYWHERE - on the ground, on platforms, even guarding the treats! I learned that if I jump on them first, their helmets pop off. Then my tail spin finishes the job. This is going to be tough!",
 
   skyColor: [180, 220, 255],

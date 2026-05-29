@@ -6,6 +6,9 @@
 const LEVEL_5 = {
   name: "The Theme Park",
 
+  // Carnival 8-bit music (playful, no beat drop) — shared with Level 6
+  music: "circus",
+
   memoir: "Dear Diary, I went to the carnival tent today for a fun day out... but the CIRCUS has gone WILD! There are CLOWN SQUIRRELS bouncing around — I can't spin them, I can only jump on their big red noses! The armored squirrels are driving bumper cars with racing goggles! Bookworms are chewing through the ticket stubs! And the wasps? They're doing aerial acrobatics from the tent ceiling, DIVE BOMBING me! I have to fight through the roller coaster, the bumper cars, the haunted house, AND the ferris wheel to escape this crazy carnival. Step right up, folks... it's showtime!",
 
   // Inside a big carnival tent — red and white striped canopy feel
@@ -14,8 +17,8 @@ const LEVEL_5 = {
   // Paved ground (asphalt paths)
   groundColor: [90, 85, 80],
 
-  // Start with 5 lives — this level is tough!
-  startLives: 5,
+  // Lots of lives — this level is long and tricky, so be generous!
+  startLives: 10,
 
   width: 6500,
 
@@ -27,9 +30,15 @@ const LEVEL_5 = {
   // You HAVE to fight through them all to grab it
   secretPaw: { x: 3150, y: 535 },
 
+  // Lots of checkpoints so you never lose much progress (about every 800px)
   checkpoints: [
+    { x: 1100, y: 560 },
     { x: 2000, y: 560 },
+    { x: 2750, y: 560 },
+    { x: 3600, y: 560 }, // right after the golden-paw gauntlet
     { x: 4200, y: 560 },
+    { x: 4900, y: 560 },
+    { x: 5700, y: 560 },
   ],
 
   platforms: [
@@ -160,28 +169,22 @@ const LEVEL_5 = {
     { x: 6000, y: 560 },
   ],
 
+  // No wasps or dive-wasps in this level — they made it too hard!
   enemies: [
     // === ENTRANCE: Meet the clown! ===
     { type: "walker", x: 400, y: 535, patrol: 80 },
     { type: "clown", x: 650, y: 535, patrol: 60, speed: 50 },  // First clown! Teach the stomp
-    { type: "wasp_patrol", x: 600, y: 280, patrol: 100 },
     { type: "walker", x: 900, y: 315, patrol: 35 },
 
-    // === ROLLER COASTER: Enemies on every platform ===
+    // === ROLLER COASTER ===
     { type: "armored", x: 1200, y: 535, patrol: 80, speed: 80 },
     { type: "walker", x: 1400, y: 315, patrol: 30, speed: 75 },
-    { type: "wasp_patrol", x: 1500, y: 220, patrol: 100 },
-    { type: "wasp_dive", x: 1700, y: 140, patrol: 50 },
     { type: "walker", x: 1800, y: 175, patrol: 30, speed: 80 },
     { type: "armored", x: 1950, y: 535, patrol: 70, speed: 85 },
-    // Drop enemies — fast, pressuring you down
-    { type: "wasp_dive", x: 2100, y: 150, patrol: 50 },
     { type: "walker", x: 2250, y: 535, patrol: 90, speed: 90 },
     { type: "armored", x: 2450, y: 535, patrol: 60, speed: 85 },
-    { type: "wasp_patrol", x: 2400, y: 280, patrol: 80 },
 
     // === BUMPER CAR ARENA: The golden paw gauntlet! ===
-    // Dense enemy cluster guarding the paw at x:3150 y:535
     { type: "clown", x: 2850, y: 535, patrol: 50, speed: 70 },
     { type: "armored", x: 3000, y: 535, patrol: 50, speed: 95 },
     { type: "bookworm", x: 3100, y: 535, patrol: 40 },
@@ -190,9 +193,6 @@ const LEVEL_5 = {
     { type: "bookworm", x: 3190, y: 535, patrol: 40 },
     { type: "armored", x: 3300, y: 535, patrol: 50, speed: 95 },
     { type: "walker", x: 3450, y: 535, patrol: 70, speed: 90 },
-    { type: "wasp_dive", x: 3050, y: 160, patrol: 50 },
-    { type: "wasp_dive", x: 3250, y: 170, patrol: 50 },
-    { type: "wasp_patrol", x: 3400, y: 230, patrol: 100 },
     // Platform guards in arena
     { type: "walker", x: 3020, y: 285, patrol: 20, speed: 85 },
     { type: "walker", x: 3360, y: 245, patrol: 20, speed: 90 },
@@ -200,20 +200,14 @@ const LEVEL_5 = {
 
     // === HAUNTED HOUSE: Clowns and enemies jump out! ===
     { type: "clown", x: 3800, y: 535, patrol: 70, speed: 65 },
-    { type: "wasp_dive", x: 3950, y: 160, patrol: 50 },
     { type: "bookworm", x: 4050, y: 535, patrol: 50 },
     { type: "bookworm", x: 4090, y: 535, patrol: 50 },
     { type: "bookworm", x: 4130, y: 535, patrol: 50 },
-    { type: "wasp_dive", x: 4250, y: 170, patrol: 50 },
     { type: "armored", x: 4400, y: 535, patrol: 60, speed: 95 },
     { type: "walker", x: 4150, y: 255, patrol: 25, speed: 80 },
     { type: "walker", x: 4550, y: 225, patrol: 25, speed: 85 },
 
-    // === FERRIS WHEEL: High enemies, dive bombers everywhere ===
-    { type: "wasp_patrol", x: 4850, y: 200, patrol: 100 },
-    { type: "wasp_dive", x: 5050, y: 150, patrol: 50 },
-    { type: "wasp_patrol", x: 5250, y: 160, patrol: 80 },
-    { type: "wasp_dive", x: 5450, y: 140, patrol: 50 },
+    // === FERRIS WHEEL ===
     { type: "armored", x: 4900, y: 535, patrol: 80, speed: 90 },
     { type: "walker", x: 5200, y: 535, patrol: 90, speed: 85 },
     { type: "armored", x: 5500, y: 535, patrol: 70, speed: 95 },
@@ -222,14 +216,12 @@ const LEVEL_5 = {
     { type: "walker", x: 5200, y: 145, patrol: 25, speed: 85 },
     { type: "walker", x: 5400, y: 205, patrol: 25, speed: 85 },
 
-    // === FINAL RIDE: Everything thrown at you ===
+    // === FINAL RIDE ===
     { type: "clown", x: 5750, y: 535, patrol: 50, speed: 75 },
     { type: "bookworm", x: 5900, y: 535, patrol: 50 },
     { type: "bookworm", x: 5940, y: 535, patrol: 50 },
     { type: "bookworm", x: 5980, y: 535, patrol: 50 },
-    { type: "wasp_dive", x: 6050, y: 160, patrol: 50 },
     { type: "armored", x: 6150, y: 535, patrol: 50, speed: 100 },
-    { type: "wasp_patrol", x: 6200, y: 230, patrol: 80 },
     { type: "walker", x: 6300, y: 535, patrol: 60, speed: 95 },
     { type: "walker", x: 6050, y: 295, patrol: 25, speed: 90 },
   ],

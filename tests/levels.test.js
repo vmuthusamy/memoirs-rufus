@@ -607,8 +607,8 @@ describe("Level 5: The Theme Park", () => {
     expect(LEVEL_5.memoir).toContain("CLOWN");
   });
 
-  test("starts with 5 lives", () => {
-    expect(LEVEL_5.startLives).toBe(5);
+  test("starts with lots of lives (made easier)", () => {
+    expect(LEVEL_5.startLives).toBe(10);
   });
 
   test("has clown enemies", () => {
@@ -616,14 +616,15 @@ describe("Level 5: The Theme Park", () => {
     expect(clowns.length).toBeGreaterThan(0);
   });
 
-  test("has mix of all enemy types", () => {
+  test("has a mix of ground enemy types (no wasps — made easier)", () => {
     const types = new Set(LEVEL_5.enemies.map((e) => e.type));
     expect(types.has("walker")).toBe(true);
     expect(types.has("armored")).toBe(true);
     expect(types.has("clown")).toBe(true);
-    expect(types.has("wasp_patrol")).toBe(true);
-    expect(types.has("wasp_dive")).toBe(true);
     expect(types.has("bookworm")).toBe(true);
+    // wasps were removed to make the level easier
+    expect(types.has("wasp_patrol")).toBe(false);
+    expect(types.has("wasp_dive")).toBe(false);
   });
 
   test("has a golden paw", () => {
@@ -638,9 +639,9 @@ describe("Level 5: The Theme Park", () => {
     expect(LEVEL_5.treats.length).toBeGreaterThan(40);
   });
 
-  test("has checkpoints", () => {
+  test("has lots of checkpoints (made easier)", () => {
     expect(LEVEL_5.checkpoints).toBeDefined();
-    expect(LEVEL_5.checkpoints.length).toBe(2);
+    expect(LEVEL_5.checkpoints.length).toBeGreaterThanOrEqual(5);
   });
 });
 

@@ -6,6 +6,9 @@
 const LEVEL_4 = {
   name: "The Library",
 
+  // Calm, quiet library 8-bit music (no beat drop)
+  music: "library",
+
   memoir: "Dear Diary, Fiery and I went to the library today to find him a bedtime story. He wanted to come inside but he's WAY too big for the door. 'I'll wait outside!' he said. Famous last words... The library is CRAWLING with bookworms! They're everywhere, chewing through the pages! I have to fight them alone... or do I?",
 
   // Indoor library - warm amber light

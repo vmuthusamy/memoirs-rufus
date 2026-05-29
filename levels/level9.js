@@ -6,6 +6,9 @@
 const LEVEL_9 = {
   name: "Candy Chaos",
 
+  // Candy 8-bit music with a beat drop — shared with Levels 7 & 8
+  music: "candy",
+
   memoir: "Dear Diary, the Candy Kingdom just got CRAZY! There are chocolate spikes on the ceiling AND the floor! I need to put on my jetpack and fly right through the middle without touching them! Then a big lollipop field to fly over! Next time... something BIG is waiting for me!",
 
   // Deep purple chaos sky — dark and dangerous!
