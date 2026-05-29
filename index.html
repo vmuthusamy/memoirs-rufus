@@ -27,6 +27,7 @@
 <script src="levels/level9.js"></script>
 <script src="levels/level10.js"></script>
 <script src="levels/level11.js"></script>
+<script src="levels/level12.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -426,7 +427,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12];
 
 // --- DRAW RUFUS AS PIXEL ART ---
 // This creates a little fox sprite that looks like the real Rufus!
@@ -1435,6 +1436,41 @@ function drawRedGem() {
   return c;
 }
 
+// --- DRAW A GREEN GEM (secret color gem!) ---
+function drawGreenGem() {
+  const c = document.createElement("canvas");
+  c.width = 20;
+  c.height = 20;
+  const ctx = c.getContext("2d");
+
+  // Diamond shape (green!)
+  ctx.fillStyle = "#22BB44";
+  ctx.fillRect(8, 1, 4, 2);
+  ctx.fillRect(6, 3, 8, 2);
+  ctx.fillRect(4, 5, 12, 2);
+  ctx.fillRect(2, 7, 16, 4);
+  ctx.fillRect(4, 11, 12, 2);
+  ctx.fillRect(6, 13, 8, 2);
+  ctx.fillRect(8, 15, 4, 2);
+
+  // Shine
+  ctx.fillStyle = "#66EE88";
+  ctx.fillRect(6, 5, 4, 4);
+  ctx.fillRect(8, 3, 3, 3);
+
+  // White sparkle
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(7, 5, 2, 2);
+  ctx.fillRect(9, 3, 1, 1);
+
+  // Dark edge
+  ctx.fillStyle = "#0A7A22";
+  ctx.fillRect(2, 10, 16, 1);
+  ctx.fillRect(8, 16, 4, 1);
+
+  return c;
+}
+
 // --- DRAW A YELLOW GEM (perfect-run reward from the Donut boss!) ---
 function drawYellowGem() {
   const c = document.createElement("canvas");
@@ -1492,6 +1528,7 @@ loadSprite("clown", drawClown().toDataURL());
 loadSprite("bossClown", drawBossClown().toDataURL());
 loadSprite("goldenPaw", drawGoldenPaw().toDataURL());
 loadSprite("redGem", drawRedGem().toDataURL());
+loadSprite("greenGem", drawGreenGem().toDataURL());
 loadSprite("yellowGem", drawYellowGem().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
@@ -1602,6 +1639,12 @@ function hasRedGem() {
 }
 function awardRedGem() {
   localStorage.setItem("rufus_red_gem", "true");
+}
+function hasGreenGem() {
+  return localStorage.getItem("rufus_green_gem") === "true";
+}
+function awardGreenGem() {
+  localStorage.setItem("rufus_green_gem", "true");
 }
 
 // Yellow gem — earned by beating Mr. Donut (Level 10) with ZERO damage.
@@ -2881,6 +2924,24 @@ scene("levelSelect", (startPage) => {
           fixed(),
         ]);
       }
+      if (level.greenGem) {
+        add([
+          sprite("greenGem"),
+          pos(width() / 2 + 240, y + 12),
+          anchor("center"),
+          scale(1.1),
+          opacity(hasGreenGem() ? 1 : 0.2),
+          fixed(),
+        ]);
+        add([
+          text("GREEN GEM", { size: 8 }),
+          pos(width() / 2 + 240, y + 28),
+          anchor("center"),
+          color(50, 200, 80),
+          opacity(hasGreenGem() ? 1 : 0.4),
+          fixed(),
+        ]);
+      }
     }
 
     // Secret level on last page
@@ -3102,7 +3163,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const isNeighborhood = level.name === "The Neighborhood";
   const isThemePark = level.name === "The Theme Park";
   const isCandy = level.name === "Candy Kingdom" || level.name === "Jetpack Training";
-  const isVolcano = !!level.fireHero;
+  // Volcano look: fire-hero levels, or any level that opts in with lavaTheme:true
+  const isVolcano = !!level.fireHero || !!level.lavaTheme;
 
   // Background sky
   add([
@@ -3358,16 +3420,51 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     });
   }
 
-  // Ground
-  const ground = add([
-    rect(level.width, 40),
-    pos(0, height() - 40),
-    color(...level.groundColor),
-    outline(2, isGym ? rgb(130, 95, 45) : isThemePark ? rgb(120, 115, 100) : isCandy ? rgb(80, 40, 20) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0)),
-    area(),
-    body({ isStatic: true }),
-    "ground",
-  ]);
+  // Ground — solid, but with optional LAVA-PIT gaps you must jump over
+  const groundOutline = isVolcano ? rgb(120, 40, 20) : isGym ? rgb(130, 95, 45) : isThemePark ? rgb(120, 115, 100) : isCandy ? rgb(80, 40, 20) : isSecret ? rgb(180, 150, 50) : rgb(0, 100, 0);
+  const lavaPits = level.lavaPits || [];
+
+  // Work out the solid ground segments (everything that's NOT a pit)
+  const groundSegs = [];
+  let segStart = 0;
+  [...lavaPits].sort((a, b) => a.x - b.x).forEach((p) => {
+    if (p.x > segStart) groundSegs.push({ x: segStart, w: p.x - segStart });
+    segStart = p.x + p.width;
+  });
+  if (segStart < level.width) groundSegs.push({ x: segStart, w: level.width - segStart });
+
+  groundSegs.forEach((seg) => {
+    add([
+      rect(seg.w, 40),
+      pos(seg.x, height() - 40),
+      color(...level.groundColor),
+      outline(2, groundOutline),
+      area(),
+      body({ isStatic: true }),
+      "ground",
+    ]);
+  });
+
+  // Render glowing lava in each pit + make it deadly to touch
+  if (lavaPits.length > 0) {
+    lavaPits.forEach((p) => {
+      add([ rect(p.width, 120), pos(p.x, height() - 40), color(255, 65, 0), z(-1), "lavaPit" ]);
+      add([ rect(p.width, 8), pos(p.x, height() - 42), color(255, 200, 50), z(0) ]); // bright molten surface
+      // a few bubbles
+      add([ rect(8, 8), pos(p.x + p.width * 0.3, height() - 36), color(255, 160, 0), z(0) ]);
+      add([ rect(6, 6), pos(p.x + p.width * 0.65, height() - 34), color(255, 180, 0), z(0) ]);
+    });
+    // Falling into a pit hurts! (jump over them)
+    onUpdate(() => {
+      if (!rufus.exists() || isInvincible) return;
+      for (const p of lavaPits) {
+        if (rufus.pos.x > p.x && rufus.pos.x < p.x + p.width && rufus.pos.y > height() - 70) {
+          hurtRufus();
+          return;
+        }
+      }
+    });
+  }
 
   if (isGym) {
     // Gym floor lines — like court markings on a wooden gym floor
@@ -3949,6 +4046,83 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     g.pos.y += Math.sin(time() * 2.5 + g.bobOffset) * 0.5;
     g.angle = Math.sin(time() * 3) * 10;
   });
+
+  // --- GREEN GEM (color gem collectible!) ---
+  // Normally the green gem just sits in the level. BUT if the level has a secret
+  // reverseButton, the gem stays hidden until you click that button (see below).
+  if (level.greenGem && !hasGreenGem() && !level.reverseButton) {
+    add([
+      sprite("greenGem"),
+      pos(level.greenGem.x, level.greenGem.y),
+      area(),
+      anchor("center"),
+      scale(2),
+      z(2),
+      "greenGem",
+      { collected: false, bobOffset: rand(0, 6.28) },
+    ]);
+  }
+
+  // Bob and glow the green gem (works for the button-spawned gem too)
+  onUpdate("greenGem", (g) => {
+    g.pos.y += Math.sin(time() * 2.5 + g.bobOffset) * 0.5;
+    g.angle = Math.sin(time() * 3) * 10;
+  });
+
+  // --- SECRET REVERSE BUTTON (hidden behind the exit flag!) ---
+  // Click it: Rufus warps back to the START and the GREEN GEM appears, so you
+  // travel back across the level to grab it.
+  if (level.reverseButton && level.greenGem && !hasGreenGem()) {
+    const rb = level.reverseButton;
+    // Button base + glowing top
+    const btn = add([
+      rect(34, 22), pos(rb.x, rb.y), color(40, 30, 30),
+      outline(2, rgb(20, 12, 12)), area(), z(5), "reverseButton",
+    ]);
+    const btnTop = add([
+      rect(30, 10), pos(rb.x + 2, rb.y - 8), color(50, 220, 80),
+      outline(2, rgb(0, 120, 0)), area(), z(6), "reverseButton",
+      { t: 0 },
+    ]);
+    btnTop.onUpdate(() => { btnTop.t += dt(); btnTop.opacity = Math.sin(btnTop.t * 4) * 0.3 + 0.7; });
+    // Little hint label
+    add([
+      text("secret!", { size: 10 }), pos(rb.x + 17, rb.y - 22),
+      anchor("center"), color(50, 220, 80), z(6),
+    ]);
+
+    let pressed = false;
+    function pressReverse() {
+      if (pressed || hasGreenGem()) return;
+      pressed = true;
+      // No teleport! You stay at the flag and now travel BACK (away from the
+      // flag, toward the start) — the GREEN GEM appears waiting at the start.
+      add([
+        sprite("greenGem"),
+        pos(level.greenGem.x, level.greenGem.y),
+        area(), anchor("center"), scale(2), z(2), "greenGem",
+        { collected: false, bobOffset: rand(0, 6.28) },
+      ]);
+      // Big message
+      add([
+        text("REVERSE! Head back to the START for the GREEN GEM!", { size: 20 }),
+        pos(width() / 2, 90), anchor("center"),
+        color(50, 220, 80), outline(2, rgb(0, 80, 0)),
+        opacity(1), lifespan(3.5), fixed(), z(200),
+      ]);
+      // Green sparkle puff on the button
+      for (let i = 0; i < 12; i++) {
+        add([
+          rect(rand(3, 6), rand(3, 6)), pos(btn.pos.x + 17, btn.pos.y),
+          color(rand(0, 80), 255, rand(0, 80)), opacity(1), lifespan(0.6),
+          move(rand(0, 360), rand(60, 180)), z(10),
+        ]);
+      }
+      destroy(btn); destroy(btnTop);
+    }
+    btn.onClick(pressReverse);
+    btnTop.onClick(pressReverse);
+  }
 
   // --- LOLLIPOPS (candy obstacles to fly over!) ---
   if (level.lollipops) {
@@ -5115,6 +5289,42 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         anchor("center"),
         color(255, 50, 50),
         outline(2, rgb(150, 0, 0)),
+        opacity(1),
+        lifespan(2),
+        z(100),
+      ]);
+      popup.onUpdate(() => { if (popup.exists()) popup.pos.y -= 25 * dt(); });
+
+      destroy(gem);
+    }
+  });
+
+  // --- COLLECT GREEN GEM ---
+  rufus.onCollide("greenGem", (gem) => {
+    if (!gem.collected) {
+      gem.collected = true;
+      awardGreenGem();
+
+      // Big GREEN sparkle burst!
+      for (let i = 0; i < 20; i++) {
+        add([
+          rect(rand(3, 7), rand(3, 7)),
+          pos(gem.pos),
+          color(rand(0, 80), 255, rand(0, 80)),
+          opacity(1),
+          lifespan(1),
+          move(rand(0, 360), rand(80, 300)),
+          z(100),
+        ]);
+      }
+
+      // "GREEN GEM!" popup
+      const popup = add([
+        text("GREEN GEM!", { size: 36 }),
+        pos(gem.pos.x, gem.pos.y - 40),
+        anchor("center"),
+        color(50, 220, 80),
+        outline(2, rgb(0, 120, 0)),
         opacity(1),
         lifespan(2),
         z(100),

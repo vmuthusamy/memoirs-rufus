@@ -1159,6 +1159,30 @@ describe("8-bit menu music", () => {
   });
 });
 
+describe("Green gem + secret reverse button", () => {
+  test("has green gem draw, sprite, and storage helpers", () => {
+    expect(htmlContent).toContain("function drawGreenGem()");
+    expect(htmlContent).toContain('loadSprite("greenGem"');
+    expect(htmlContent).toContain("function hasGreenGem()");
+    expect(htmlContent).toContain("function awardGreenGem()");
+    expect(htmlContent).toContain("rufus_green_gem");
+  });
+
+  test("green gem has a collection handler and a level-select label", () => {
+    expect(htmlContent).toContain('rufus.onCollide("greenGem"');
+    expect(htmlContent).toContain("GREEN GEM!");
+    expect(htmlContent).toContain("level.greenGem");
+  });
+
+  test("secret reverse button gates the green gem until clicked", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("level.reverseButton");
+    // Green gem only auto-spawns when there is NO reverse button
+    expect(gameScene).toMatch(/level\.greenGem && !hasGreenGem\(\) && !level\.reverseButton/);
+    expect(gameScene).toContain("pressReverse");
+  });
+});
+
 describe("Volcano theme (Level 11 looks)", () => {
   test("detects the volcano theme from a fire-hero level", () => {
     expect(htmlContent).toContain("const isVolcano");

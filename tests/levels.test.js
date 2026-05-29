@@ -934,6 +934,11 @@ describe("Donut boss page (donut-boss.html)", () => {
     expect(bossHtml).toContain("rufus-yellow-gem");
   });
 
+  test("awards Level 10's normal gem (index 9) on any win", () => {
+    expect(bossHtml).toContain("rufus_collectibles");
+    expect(bossHtml).toMatch(/c\.gems\[9\] = true/);
+  });
+
   test("has the yellow gem celebration screen", () => {
     expect(bossHtml).toContain("YOU GOT THE YELLOW GEM");
   });

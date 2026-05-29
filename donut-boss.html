@@ -439,8 +439,8 @@
     // Status text
     if (state.won) {
       status.textContent = state.perfectRun
-        ? '💎 YELLOW GEM earned — flawless run! Press R to play again.'
-        : '🎉 You beat Mr. Donut! (no gem — take zero hits for the YELLOW GEM) Press R.';
+        ? '💎 Gem + YELLOW GEM earned — flawless run! Press R to play again.'
+        : '🎉 You beat Mr. Donut — gem earned! (zero hits = YELLOW GEM too) Press R.';
     } else if (state.lost) {
       status.textContent = '💔 Rufus got too many spikes. Press R to try again.';
     } else {
@@ -451,6 +451,14 @@
   function explodeMrDonut() {
     state.donut.exploding = true;
     state.donut.explodeTimer = 0;
+    // NORMAL gem: beating Mr. Donut at all earns Level 10's cyan gem (index 9),
+    // even if you took damage — matches how every other level awards its gem.
+    try {
+      const c = JSON.parse(localStorage.getItem('rufus_collectibles')) || { gems: {}, paws: {} };
+      if (!c.gems) c.gems = {};
+      c.gems[9] = true; // Level 10 is index 9 in ALL_LEVELS
+      localStorage.setItem('rufus_collectibles', JSON.stringify(c));
+    } catch (e) {}
     // YELLOW GEM reward: beat Mr. Donut without losing a single hit point
     state.perfectRun = (state.rufusHealth === state.maxHealth);
     if (state.perfectRun) {
@@ -737,18 +745,21 @@
         ctx.font = '14px sans-serif';
         ctx.fillText('Press R to play again', cx, gemY + 180);
       } else {
-        // ===== Normal win (took at least one hit — no gem) =====
+        // ===== Normal win (took a hit) — you still earn the cyan gem! =====
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = '#ff85b6';
         ctx.font = 'bold 36px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('YOU BEAT MR. DONUT!', W / 2, H / 2 - 10);
+        ctx.fillStyle = '#4FC3F7';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText('💎 You earned the gem!', W / 2, H / 2 + 22);
         ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('No gem this time — finish without a single hit to win the YELLOW GEM!', W / 2, H / 2 + 24);
+        ctx.font = '14px sans-serif';
+        ctx.fillText('Finish without a single hit to also win the YELLOW GEM!', W / 2, H / 2 + 48);
         ctx.fillStyle = '#ffc4dd';
-        ctx.fillText('Press R to try again', W / 2, H / 2 + 50);
+        ctx.fillText('Press R to try again', W / 2, H / 2 + 72);
       }
     }
     if (state.lost) {
