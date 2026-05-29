@@ -1985,8 +1985,8 @@ function markBeaten(i) {
   localStorage.setItem("rufus_beaten", JSON.stringify(b));
 }
 function isBeaten(i) { return getBeaten()[i] === true; }
-// Levels 7-14 (index >= 6) are locked until King Clown (Level 6 = index 5) is beaten.
-function isLevelLocked(i) { return (typeof i === "number") && i >= 6 && !isBeaten(5); }
+// Play in order! A chapter is locked until you beat the chapter before it.
+function isLevelLocked(i) { return (typeof i === "number") && i >= 1 && !isBeaten(i - 1); }
 
 // Check if player already has the golden paw for a level
 function hasPaw(levelIndex) {
@@ -3837,7 +3837,7 @@ scene("levelSelect", (startPage) => {
       ]);
       if (locked) {
         entry.onClick(() => {
-          add([ text("Beat King Clown (Chapter 6) to unlock!", { size: 16 }), pos(width() / 2, height() - 60), anchor("center"), color(255, 120, 120), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(2.2), fixed(), z(60) ]);
+          add([ text("Beat Chapter " + i + " first to unlock!", { size: 16 }), pos(width() / 2, height() - 60), anchor("center"), color(255, 120, 120), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(2.2), fixed(), z(60) ]);
         });
       } else {
         entry.onClick(() => go("memoir", i));
@@ -3855,7 +3855,7 @@ scene("levelSelect", (startPage) => {
       const diffName = LEVEL_DIFFICULTY[i] || "Normal";
       add([ text(diffName, { size: 12 }), pos(width() / 2 + 175, y - 10), anchor("center"), color(...DIFFICULTY_COLOR[diffName]), fixed() ]);
 
-      const preview = locked ? "Beat King Clown (Chapter 6) to unlock this!" : level.memoir.substring(0, 48) + "...";
+      const preview = locked ? "Beat Chapter " + i + " first!" : level.memoir.substring(0, 48) + "...";
       add([
         text(preview, { size: 10, width: 480 }),
         pos(width() / 2, y + 12),
