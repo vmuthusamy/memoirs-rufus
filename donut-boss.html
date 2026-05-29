@@ -462,6 +462,12 @@
       c.gems[9] = true; // Level 10 is index 9 in ALL_LEVELS
       localStorage.setItem(_sp('rufus_collectibles'), JSON.stringify(c));
     } catch (e) {}
+    // Mark Level 10 beaten (so it counts in the menu's beaten tally)
+    try {
+      const b = JSON.parse(localStorage.getItem(_sp('rufus_beaten'))) || {};
+      b[9] = true;
+      localStorage.setItem(_sp('rufus_beaten'), JSON.stringify(b));
+    } catch (e) {}
     // YELLOW GEM reward: beat Mr. Donut without losing a single hit point
     state.perfectRun = (state.rufusHealth === state.maxHealth);
     if (state.perfectRun) {
