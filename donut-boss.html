@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Donut Doom — Mr. Donut Boss Fight</title>
+<style>
+  body {
+    margin: 0; background: #1a1a2e; color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 20px;
+  }
+  h1 { color: #ff85b6; margin: 0 0 8px; font-size: 22px; }
+  .sub { color: #aaa; margin-bottom: 14px; font-size: 13px; }
+  canvas {
+    background: linear-gradient(180deg, #2d1b4e 0%, #6b2d6b 70%, #d6336c 100%);
+    border: 4px solid #ff85b6; border-radius: 12px;
+    image-rendering: pixelated;
+    box-shadow: 0 8px 32px rgba(214, 51, 108, 0.4);
+  }
+  .controls { margin-top: 14px; font-size: 13px; color: #ccc; text-align: center; }
+  .controls kbd {
+    background: #333; padding: 3px 8px; border-radius: 4px;
+    border: 1px solid #555; font-family: ui-monospace, monospace;
+    font-size: 12px; color: #fff;
+  }
+  #status { font-size: 16px; margin-top: 10px; color: #ffd700; font-weight: 600; min-height: 24px; }
+</style>
+</head>
+<body>
+
+<h1>🍩 Donut Doom — Mr. Donut Boss Fight</h1>
+<div class="sub">Level 10</div>
+
+<canvas id="game" width="800" height="400"></canvas>
+
+<div id="status">Hits: 0 / 3</div>
+
+<div class="controls">
+  <kbd>Space</kbd> jump &nbsp;·&nbsp;
+  <kbd>X</kbd> shoot lollipop &nbsp;·&nbsp;
+  <kbd>R</kbd> restart &nbsp;·&nbsp;
+  <kbd>M</kbd> mute music
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const GROUND_Y = H - 60;
+  const status = document.getElementById('status');
+
+  // ---------- AUDIO (chiptune music + SFX, all generated from oscillators) ----------
+  const audio = {
+    ctx: null,
+    muted: localStorage.getItem('mr-donut-muted') === '1',
+    started: false,
+    bpm: 168,         // retro 8-bit boss tempo
+    step: 0,
+    nextNoteTime: 0,
+
+    init() {
+      if (this.ctx) return;
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return; }
+    },
+
+    start() {
+      if (this.started || this.muted) return;
+      this.init();
+      if (!this.ctx) return;
+      // Browsers keep audio suspended until a real user gesture. Only flip
+      // `started` and begin scheduling AFTER it actually resumes, otherwise
+      // we'd mark it started while silent and later keydowns would no-op.
+      const begin = () => {
+        if (this.started || this.muted) return;
+        this.started = true;
+        this.nextNoteTime = this.ctx.currentTime + 0.05;
+        this.step = 0;
+        this.scheduler();
+      };
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().then(begin).catch(() => {});
+      } else {
+        begin();
+      }
+    },
+
+    stop() { this.started = false; },
+
+    scheduler() {
+      if (!this.started || !this.ctx) return;
+      const lookahead = 0.1;
+      while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
+        this.playStep(this.step, this.nextNoteTime);
+        const stepDur = 60 / this.bpm / 4; // 16th notes
+        this.nextNoteTime += stepDur;
+        this.step = (this.step + 1) % 64; // 4-bar loop (16 steps × 4)
+      }
+      setTimeout(() => this.scheduler(), 25);
+    },
+
+    freq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); },
+
+    note(f, time, dur, type, vol) {
+      if (!this.ctx || this.muted) return;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type || 'square';
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0, time);
+      g.gain.linearRampToValueAtTime(vol || 0.15, time + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      osc.connect(g).connect(this.ctx.destination);
+      osc.start(time); osc.stop(time + dur + 0.02);
+    },
+
+    drum(time, type) {
+      if (!this.ctx || this.muted) return;
+      if (type === 'kick') {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.frequency.setValueAtTime(150, time);
+        o.frequency.exponentialRampToValueAtTime(40, time + 0.12);
+        g.gain.setValueAtTime(0.35, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+        o.connect(g).connect(this.ctx.destination);
+        o.start(time); o.stop(time + 0.16);
+      } else if (type === 'snare') {
+        const sr = this.ctx.sampleRate, len = sr * 0.1;
+        const buf = this.ctx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/len, 1.8);
+        const n = this.ctx.createBufferSource();
+        const g = this.ctx.createGain();
+        n.buffer = buf; g.gain.value = 0.12;
+        n.connect(g).connect(this.ctx.destination);
+        n.start(time);
+      } else if (type === 'hat') {
+        const sr = this.ctx.sampleRate, len = sr * 0.03;
+        const buf = this.ctx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1);
+        const n = this.ctx.createBufferSource();
+        const g = this.ctx.createGain();
+        n.buffer = buf; g.gain.value = 0.05;
+        n.connect(g).connect(this.ctx.destination);
+        n.start(time);
+      }
+    },
+
+    // RETRO 8-BIT BOSS THEME — NES-style with triangle bass walking
+    // and pulse-wave lead, deliberately distinct from any Mario theme.
+    // 4-bar loop: Am - Dm - F - E7 (climbing tension, candy-world boss).
+    playStep(step, time) {
+      const bar = Math.floor(step / 16);
+      const inBar = step % 16;
+      // [bassRoot, bassFifth, chordTones for lead arpeggio]
+      const chords = [
+        { root: 33, fifth: 40, notes: [57, 60, 64, 69] },  // Am:  A1/E2, A3 C4 E4 A4
+        { root: 38, fifth: 45, notes: [62, 65, 69, 74] },  // Dm:  D2/A2, D4 F4 A4 D5
+        { root: 29, fifth: 36, notes: [53, 57, 60, 65] },  // F:   F1/C2, F3 A3 C4 F4
+        { root: 28, fifth: 35, notes: [56, 59, 64, 68] },  // E7:  E1/B1, G#3 B3 E4 G#4 — V7 with sharp 3rd
+      ];
+      const c = chords[bar];
+
+      // Walking triangle bass — classic NES "oom-pah" feel.
+      // Root on the downbeat, fifth on the off-beat, octave-up flourish at the bar end.
+      if (inBar % 4 === 0) this.note(this.freq(c.root), time, 0.18, 'triangle', 0.28);
+      else if (inBar % 4 === 2) this.note(this.freq(c.fifth), time, 0.16, 'triangle', 0.24);
+      else if (inBar === 14) this.note(this.freq(c.root + 12), time, 0.1, 'triangle', 0.22);
+
+      // Lead pulse-wave melody — arpeggio with bouncy 8-bit phrasing
+      // Different melodic contour per bar so the loop feels composed, not random.
+      const leadPatterns = [
+        [0, 2, 1, 2, 0, 3, 2, 1, 0, 2, 1, 2, 3, 2, 1, 0], // Am: hero motif
+        [1, 0, 2, 1, 3, 2, 1, 0, 1, 2, 1, 3, 2, 1, 0, 2], // Dm: tension build
+        [2, 3, 1, 2, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1], // F:  lift / hope
+        [3, 2, 3, 1, 2, 0, 1, 2, 3, 2, 1, 0, 1, 2, 1, 0], // E7: turnaround
+      ];
+      const idx = leadPatterns[bar][inBar];
+      this.note(this.freq(c.notes[idx]), time, 0.09, 'square', 0.085);
+
+      // Second pulse-wave channel — harmony a third up, only on alternating bars
+      if ((bar === 1 || bar === 3) && inBar % 2 === 0) {
+        this.note(this.freq(c.notes[(idx + 1) % c.notes.length] + 5), time, 0.07, 'square', 0.04);
+      }
+
+      // Sparse drums — NES games used noise channel sparingly
+      if (inBar === 0 || inBar === 8) this.drum(time, 'kick');
+      if (inBar === 4 || inBar === 12) this.drum(time, 'snare');
+      // Hat only on the last bar to add a "build" feel before the loop restarts
+      if (bar === 3 && inBar % 2 === 0) this.drum(time, 'hat');
+    },
+
+    sfx(name) {
+      this.init();
+      if (!this.ctx || this.muted) return;
+      const t = this.ctx.currentTime;
+      if (name === 'laser') {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(1400, t + 0.12);
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.connect(g).connect(this.ctx.destination);
+        o.start(t); o.stop(t + 0.2);
+      } else if (name === 'hit') {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(700, t);
+        o.frequency.exponentialRampToValueAtTime(180, t + 0.2);
+        g.gain.setValueAtTime(0.25, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.connect(g).connect(this.ctx.destination);
+        o.start(t); o.stop(t + 0.3);
+      } else if (name === 'hurt') {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.value = 90;
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g).connect(this.ctx.destination);
+        o.start(t); o.stop(t + 0.16);
+      } else if (name === 'explode') {
+        const sr = this.ctx.sampleRate, len = sr * 0.7;
+        const buf = this.ctx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/len, 1.4);
+        const n = this.ctx.createBufferSource();
+        const ng = this.ctx.createGain();
+        n.buffer = buf; ng.gain.value = 0.25;
+        n.connect(ng).connect(this.ctx.destination);
+        n.start(t);
+
+        const o = this.ctx.createOscillator(), og = this.ctx.createGain();
+        o.frequency.setValueAtTime(80, t);
+        o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+        og.gain.setValueAtTime(0.35, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+        o.connect(og).connect(this.ctx.destination);
+        o.start(t); o.stop(t + 0.65);
+      } else if (name === 'win') {
+        // Triumphant arpeggio
+        [60, 64, 67, 72, 76, 79].forEach((m, i) => {
+          this.note(this.freq(m), t + i * 0.08, 0.18, 'square', 0.18);
+        });
+      }
+    },
+
+    toggleMute() {
+      this.muted = !this.muted;
+      localStorage.setItem('mr-donut-muted', this.muted ? '1' : '0');
+      if (this.muted) { this.stop(); } else { this.start(); }
+    }
+  };
+
+  // ---------- Game state ----------
+  const state = {
+    rufus: { x: 80, y: GROUND_Y - 40, vy: 0, w: 40, h: 40, onGround: true },
+    donut: { x: 600, y: GROUND_Y - 60, w: 56, h: 56, hits: 0, hurtTimer: 0, exploding: false, explodeTimer: 0 },
+    spikes: [],
+    lollipops: [],     // active laser beams
+    laserCooldown: 0,  // frames until next laser shot allowed
+    sprinkleBurst: [],
+    spikeTimer: 0,
+    spikeCount: 0,    // spikes spawned in this burst
+    restTimer: 0,     // frames remaining of "attack window"
+    hitThisRest: false, // only 1 hit allowed per attack window
+    won: false,
+    lost: false,
+    rufusHurt: 0,
+    rufusHealth: 15,
+    maxHealth: 15,
+    perfectRun: false,  // true if won without losing any health
+    bgScroll: 0,
+  };
+
+  const GRAVITY = 0.9;
+  const JUMP_V = -16;
+  const SPIKE_SPEED = -7;
+  const LOLLIPOP_SPEED = 14;
+  const KEYS = {};
+
+  document.addEventListener('keydown', e => {
+    KEYS[e.code] = true;
+    // Start music on first user interaction (browser autoplay rules)
+    audio.start();
+    if (e.code === 'Space') { e.preventDefault(); jump(); }
+    if (e.code === 'KeyX') shoot();
+    if (e.code === 'KeyR') reset();
+    if (e.code === 'KeyM') audio.toggleMute();
+  });
+  // Also start the music on a tap/click (in case the first interaction
+  // isn't a key press) — browsers need a gesture before audio can play.
+  document.addEventListener('pointerdown', () => audio.start());
+  document.addEventListener('keyup', e => { KEYS[e.code] = false; });
+
+  function jump() {
+    if (state.won || state.lost) return;
+    if (state.rufus.onGround) {
+      state.rufus.vy = JUMP_V;
+      state.rufus.onGround = false;
+    }
+  }
+
+  function shoot() {
+    if (state.won || state.lost) return;
+    // Lollipop laser is a precious one-shot per attack window
+    if (state.restTimer <= 0) return;       // can't shoot outside the break
+    if (state.hitThisRest) return;          // already used this break's shot
+    state.lollipops.push({
+      x: state.rufus.x + state.rufus.w,    // starts at Rufus's mouth
+      y: state.rufus.y + 18,
+      endX: W,                              // stretches all the way across
+      life: 14,                             // frames the beam stays visible
+      maxLife: 14,
+      hitDone: false,
+    });
+    state.hitThisRest = true;               // shot used; locks until next break
+    audio.sfx('laser');
+  }
+
+  function reset() {
+    state.rufus.y = GROUND_Y - 40; state.rufus.vy = 0; state.rufus.onGround = true;
+    state.donut.x = 600; state.donut.hits = 0; state.donut.exploding = false; state.donut.explodeTimer = 0;
+    state.donut.hurtTimer = 0;
+    state.spikes = []; state.lollipops = []; state.sprinkleBurst = [];
+    state.spikeTimer = 0; state.spikeCount = 0; state.restTimer = 0;
+    state.laserCooldown = 0; state.hitThisRest = false;
+    state.won = false; state.lost = false;
+    state.rufusHurt = 0; state.rufusHealth = 15;
+    state.perfectRun = false;
+    if (!audio.muted) audio.start();
+  }
+
+  // ---------- Update ----------
+  function update() {
+    if (state.lost) return;
+
+    // Rufus physics
+    state.rufus.vy += GRAVITY;
+    state.rufus.y += state.rufus.vy;
+    if (state.rufus.y >= GROUND_Y - state.rufus.h) {
+      state.rufus.y = GROUND_Y - state.rufus.h;
+      state.rufus.vy = 0;
+      state.rufus.onGround = true;
+    }
+
+    if (state.rufusHurt > 0) state.rufusHurt--;
+
+    state.bgScroll = (state.bgScroll + 2) % 80;
+
+    if (state.donut.exploding) {
+      state.donut.explodeTimer++;
+      state.sprinkleBurst.forEach(s => {
+        s.x += s.vx; s.y += s.vy; s.vy += 0.4; s.life--;
+      });
+      state.sprinkleBurst = state.sprinkleBurst.filter(s => s.life > 0);
+      if (state.donut.explodeTimer > 120) state.won = true;
+      return;
+    }
+
+    // Mr. Donut keeps backing away — like a GD chase boss.
+    // If Rufus gets too close, donut runs faster.
+    // During an attack window (rest), donut slows way down so player can hit him.
+    const inRest = state.restTimer > 0;
+    const dist = state.donut.x - state.rufus.x;
+    let donutSpeed = 1.2;
+    if (dist < 280) donutSpeed = 2.5;
+    if (dist < 180) donutSpeed = 4;
+    if (inRest) donutSpeed = 0.3; // basically stops during the rest
+    state.donut.x += donutSpeed;
+    // Wrap around so the chase keeps going
+    if (state.donut.x > W + 80) state.donut.x = W - 200;
+
+    if (state.donut.hurtTimer > 0) state.donut.hurtTimer--;
+
+    // Donut spits chocolate spikes — but takes a 3-second rest every 10 spikes
+    if (inRest) {
+      state.restTimer--;
+    } else {
+      state.spikeTimer++;
+      if (state.spikeTimer > 85) {   // bigger gap = spikes more spaced out in time
+        state.spikeTimer = 0;
+        state.spikes.push({
+          x: state.donut.x - 4,
+          y: state.donut.y + 28 + (Math.random() - 0.5) * 50,  // ±25 px Y spread
+          vx: SPIKE_SPEED,
+        });
+        state.spikeCount++;
+        if (state.spikeCount >= 10) {
+          state.spikeCount = 0;
+          state.restTimer = 180; // 3 seconds at 60fps
+          state.hitThisRest = false; // fresh chance to land 1 hit
+        }
+      }
+    }
+
+    // Move spikes
+    state.spikes.forEach(s => s.x += s.vx);
+    state.spikes = state.spikes.filter(s => s.x > -20);
+
+    // Laser cooldown
+    if (state.laserCooldown > 0) state.laserCooldown--;
+
+    // Laser beams tick down; check if donut is in the beam path on first frame
+    state.lollipops.forEach(l => { l.life--; });
+    state.lollipops.forEach(l => {
+      if (l.hitDone || state.donut.exploding) return;
+      const cy = state.donut.y + state.donut.h / 2;
+      // Beam strip — if donut is in line, it's a hit (shoot() already gated entry)
+      if (Math.abs(cy - l.y) < 32 && state.donut.x + state.donut.w > l.x) {
+        state.donut.hits++;
+        state.donut.hurtTimer = 12;
+        l.hitDone = true;
+        audio.sfx('hit');
+        if (state.donut.hits >= 3) explodeMrDonut();
+      }
+    });
+    state.lollipops = state.lollipops.filter(l => l.life > 0);
+
+    // Spike hits rufus
+    if (state.rufusHurt === 0) {
+      state.spikes.forEach((s, si) => {
+        const rx = state.rufus.x + state.rufus.w / 2;
+        const ry = state.rufus.y + state.rufus.h / 2;
+        if (Math.abs(s.x - rx) < 22 && Math.abs(s.y - ry) < 22) {
+          state.spikes.splice(si, 1);
+          state.rufusHealth--;
+          state.rufusHurt = 30;
+          audio.sfx('hurt');
+          if (state.rufusHealth <= 0) { state.lost = true; audio.stop(); }
+        }
+      });
+    }
+
+    // Status text
+    if (state.won) {
+      status.textContent = state.perfectRun
+        ? '💎 YELLOW GEM earned — flawless run! Press R to play again.'
+        : '🎉 You beat Mr. Donut! (no gem — take zero hits for the YELLOW GEM) Press R.';
+    } else if (state.lost) {
+      status.textContent = '💔 Rufus got too many spikes. Press R to try again.';
+    } else {
+      status.textContent = `Hits: ${state.donut.hits} / 3  ·  Rufus health: ${state.rufusHealth} ❤`;
+    }
+  }
+
+  function explodeMrDonut() {
+    state.donut.exploding = true;
+    state.donut.explodeTimer = 0;
+    // YELLOW GEM reward: beat Mr. Donut without losing a single hit point
+    state.perfectRun = (state.rufusHealth === state.maxHealth);
+    if (state.perfectRun) {
+      try { localStorage.setItem('rufus-yellow-gem', '1'); } catch (e) {}
+    }
+    audio.sfx('explode');
+    setTimeout(() => audio.sfx('win'), 600);
+    setTimeout(() => audio.stop(), 1800);
+    // After the victory celebration, send Rufus back to the game's home menu
+    setTimeout(() => { window.location.href = './index.html'; }, 4500);
+    const cx = state.donut.x + state.donut.w / 2;
+    const cy = state.donut.y + state.donut.h / 2;
+    const colors = ['#FFD700', '#4FC3F7', '#66BB6A', '#FF5252', '#FF85B6', '#FFFFFF'];
+    for (let i = 0; i < 60; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 3 + Math.random() * 6;
+      state.sprinkleBurst.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 80 + Math.random() * 40,
+      });
+    }
+  }
+
+  // ---------- Draw ----------
+  function drawGround() {
+    ctx.fillStyle = '#3d1a3d';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = '#5a2a5a';
+    for (let x = -state.bgScroll; x < W; x += 80) {
+      ctx.fillRect(x, GROUND_Y - 2, 40, 2);
+    }
+    ctx.fillStyle = '#ff85b6';
+    ctx.fillRect(0, GROUND_Y - 1, W, 1);
+  }
+
+  function drawRufus(x, y, hurt) {
+    if (hurt && Math.floor(hurt / 4) % 2 === 0) return; // flicker
+    // Pixel-art Rufus, simplified from game's drawFoxSprite
+    const s = 1.25; // scale factor for 40px box (32 * 1.25)
+    function r(rx, ry, rw, rh, c) {
+      ctx.fillStyle = c;
+      ctx.fillRect(x + rx * s, y + ry * s, rw * s, rh * s);
+    }
+    // Tail
+    r(0, 14, 4, 4, '#FFFFFF');
+    r(2, 14, 6, 4, '#D2691E');
+    // Body
+    r(8, 12, 16, 12, '#D2691E');
+    // Head
+    r(10, 4, 14, 12, '#D2691E');
+    // Ears
+    r(10, 0, 4, 6, '#D2691E');
+    r(20, 0, 4, 6, '#D2691E');
+    r(11, 1, 2, 4, '#A0522D');
+    r(21, 1, 2, 4, '#A0522D');
+    // Belly
+    r(12, 16, 10, 6, '#F4A460');
+    // Eyes
+    r(13, 7, 3, 3, '#000');
+    r(19, 7, 3, 3, '#000');
+    r(14, 7, 1, 1, '#FFF');
+    r(20, 7, 1, 1, '#FFF');
+    // Nose
+    r(16, 10, 2, 2, '#000');
+    // Grin
+    r(12, 13, 2, 2, '#FFF');
+    r(14, 12, 2, 2, '#FFF');
+    r(16, 13, 2, 2, '#FFF');
+    r(18, 12, 2, 2, '#FFF');
+    r(20, 13, 2, 2, '#FFF');
+    // Legs
+    r(10, 24, 4, 6, '#8B4513');
+    r(20, 24, 4, 6, '#8B4513');
+  }
+
+  function drawDonut(d) {
+    const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+    const flash = d.hurtTimer > 0 && Math.floor(d.hurtTimer / 3) % 2 === 0;
+    const pink = flash ? '#FFFFFF' : '#FF85B6';
+
+    // Pink ring
+    ctx.fillStyle = pink;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+    ctx.fill();
+    // Hole
+    ctx.fillStyle = '#2d1b4e';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sprinkles
+    const sprinkles = [
+      [-18, -12, '#FFD700'], [10, -16, '#66BB6A'], [18, -6, '#4FC3F7'],
+      [-22, 2, '#FF5252'], [20, 8, '#FFD700'], [-14, 14, '#4FC3F7'],
+      [12, 18, '#FF5252'], [-4, -20, '#66BB6A'], [4, 20, '#FFFFFF'],
+    ];
+    sprinkles.forEach(([sx, sy, c]) => {
+      ctx.fillStyle = c;
+      ctx.fillRect(cx + sx, cy + sy, 3, 2);
+    });
+
+    // Eyes (looking back at Rufus, so they're on the LEFT side of the donut)
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(cx - 16, cy - 6, 6, 6);
+    ctx.fillRect(cx - 6, cy - 6, 6, 6);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(cx - 14, cy - 4, 3, 4);
+    ctx.fillRect(cx - 4, cy - 4, 3, 4);
+    // Angry brows
+    ctx.fillStyle = '#5A1F33';
+    ctx.fillRect(cx - 18, cy - 10, 8, 2);
+    ctx.fillRect(cx - 8, cy - 10, 8, 2);
+
+    // Legs
+    ctx.fillStyle = '#FF85B6';
+    ctx.fillRect(cx - 10, cy + 22, 5, 8);
+    ctx.fillRect(cx + 5, cy + 22, 5, 8);
+    ctx.fillStyle = '#5A2D0A';
+    ctx.fillRect(cx - 12, cy + 28, 9, 4);
+    ctx.fillRect(cx + 3, cy + 28, 9, 4);
+  }
+
+  function drawSpike(s) {
+    ctx.fillStyle = '#3d2817';
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x + 18, s.y - 4);
+    ctx.lineTo(s.x + 18, s.y + 4);
+    ctx.closePath();
+    ctx.fill();
+    // shine
+    ctx.fillStyle = '#6b3d17';
+    ctx.fillRect(s.x + 8, s.y - 2, 6, 2);
+  }
+
+  function drawLollipop(l) {
+    // LONG LOLLIPOP LASER — instant beam from Rufus all the way across
+    ctx.save();
+    const alpha = l.life / l.maxLife;
+    const beamLen = l.endX - l.x;
+
+    // Outer glow halo
+    ctx.fillStyle = `rgba(255, 95, 162, ${0.25 * alpha})`;
+    ctx.fillRect(l.x, l.y - 14, beamLen, 28);
+
+    // Inner glow
+    ctx.fillStyle = `rgba(255, 192, 220, ${0.5 * alpha})`;
+    ctx.fillRect(l.x, l.y - 8, beamLen, 16);
+
+    // Candy-striped core beam — animated stripes move with l.life so the
+    // beam looks alive, like swirling lollipop candy.
+    const stripeW = 12;
+    const stripeOffset = (l.maxLife - l.life) * 4;
+    for (let x = l.x - stripeOffset; x < l.endX; x += stripeW) {
+      ctx.fillStyle = '#ff5fa2';
+      ctx.fillRect(Math.max(x, l.x), l.y - 5, Math.min(stripeW / 2, l.endX - x), 10);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.max(x + stripeW / 2, l.x), l.y - 5, Math.min(stripeW / 2, l.endX - x - stripeW / 2), 10);
+    }
+
+    // White hot center line
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.fillRect(l.x, l.y - 1, beamLen, 2);
+
+    // Lollipop head at the very tip (the right edge of the screen)
+    ctx.fillStyle = '#ff5fa2';
+    ctx.beginPath();
+    ctx.arc(l.endX - 8, l.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(l.endX - 8, l.y, 5, 0, Math.PI * 1.4);
+    ctx.stroke();
+    ctx.fillStyle = '#ffc4dd';
+    ctx.beginPath();
+    ctx.arc(l.endX - 10, l.y - 3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Muzzle flash at Rufus's mouth
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(l.x, l.y, 8 * alpha + 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawSprinkles() {
+    state.sprinkleBurst.forEach(s => {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x, s.y, 3, 5);
+    });
+  }
+
+  function draw() {
+    // Sky / bg
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.clearRect(0, 0, W, H);
+
+    // Background candy stripes (parallax)
+    for (let i = 0; i < 5; i++) {
+      const x = (i * 200 - state.bgScroll * 0.5) % W;
+      ctx.fillStyle = 'rgba(255,133,182,0.08)';
+      ctx.fillRect(x, 60, 60, GROUND_Y - 60);
+    }
+
+    drawGround();
+
+    state.spikes.forEach(drawSpike);
+    state.lollipops.forEach(drawLollipop);
+    drawRufus(state.rufus.x, state.rufus.y, state.rufusHurt);
+    if (!state.donut.exploding) drawDonut(state.donut);
+    drawSprinkles();
+
+    // Attack-window banner while Mr. Donut is resting
+    if (state.restTimer > 0 && !state.donut.exploding && !state.won && !state.lost) {
+      const flash = Math.floor(state.restTimer / 10) % 2 === 0;
+      ctx.textAlign = 'center';
+      if (state.hitThisRest) {
+        ctx.fillStyle = '#888';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('shot used. wait for the next break.', W / 2, 50);
+      } else {
+        ctx.fillStyle = flash ? '#ffd700' : '#fff';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText('⚡ FIRE ONE LASER ⚡', W / 2, 50);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`${(state.restTimer / 60).toFixed(1)}s left`, W / 2, 72);
+      }
+    }
+
+    if (state.won) {
+      if (state.perfectRun) {
+        // ===== YELLOW GEM CELEBRATION — earned by taking ZERO damage =====
+        ctx.fillStyle = 'rgba(20, 10, 40, 0.82)';
+        ctx.fillRect(0, 0, W, H);
+
+        const cx = W / 2;
+        const gemY = H / 2 - 40;
+
+        // Sparkles twinkling around the gem (animated with bgScroll)
+        for (let i = 0; i < 14; i++) {
+          const ang = (i / 14) * Math.PI * 2 + state.bgScroll * 0.04;
+          const rad = 70 + Math.sin(state.bgScroll * 0.1 + i) * 16;
+          const sx = cx + Math.cos(ang) * rad;
+          const sy = gemY + Math.sin(ang) * rad;
+          const tw = (Math.sin(state.bgScroll * 0.2 + i * 1.7) + 1) / 2;
+          ctx.fillStyle = `rgba(255, 255, 200, ${0.3 + tw * 0.7})`;
+          ctx.fillRect(sx - 2, sy - 2, 4, 4);
+        }
+
+        // Big yellow gem (diamond) with a gentle pulse
+        const pulse = 1 + Math.sin(state.bgScroll * 0.12) * 0.06;
+        const gs = 34 * pulse;
+        ctx.save();
+        ctx.translate(cx, gemY);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(-gs / 2, -gs / 2, gs, gs);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-gs / 2, -gs / 2, gs, gs);
+        // inner shine
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(-gs / 2 + 4, -gs / 2 + 4, gs / 3, gs / 3);
+        ctx.restore();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.fillText('GOOD JOB!', cx, gemY + 80);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('YOU GOT THE YELLOW GEM!', cx, gemY + 118);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('You beat Mr. Donut without taking a single hit!', cx, gemY + 150);
+        ctx.fillStyle = '#ffc4dd';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('Press R to play again', cx, gemY + 180);
+      } else {
+        // ===== Normal win (took at least one hit — no gem) =====
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#ff85b6';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('YOU BEAT MR. DONUT!', W / 2, H / 2 - 10);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('No gem this time — finish without a single hit to win the YELLOW GEM!', W / 2, H / 2 + 24);
+        ctx.fillStyle = '#ffc4dd';
+        ctx.fillText('Press R to try again', W / 2, H / 2 + 50);
+      }
+    }
+    if (state.lost) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#ff5252';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Game Over', W / 2, H / 2);
+      ctx.font = '18px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('Press R to try again', W / 2, H / 2 + 30);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+
+</body></html>

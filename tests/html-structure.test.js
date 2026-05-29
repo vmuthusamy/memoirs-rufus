@@ -1100,6 +1100,56 @@ describe("Red gem system", () => {
   });
 });
 
+describe("Yellow gem (Donut boss perfect-run reward)", () => {
+  test("has yellow gem draw + sprite", () => {
+    expect(htmlContent).toContain("function drawYellowGem()");
+    expect(htmlContent).toContain('loadSprite("yellowGem"');
+  });
+
+  test("has hasYellowGem reading the boss-fight localStorage key", () => {
+    expect(htmlContent).toContain("function hasYellowGem()");
+    expect(htmlContent).toContain("rufus-yellow-gem");
+  });
+
+  test("yellow gem icon + label show in level select", () => {
+    expect(htmlContent).toContain("level.yellowGem");
+    expect(htmlContent).toContain("YELLOW GEM");
+  });
+
+  test("red gem also has a label in level select", () => {
+    expect(htmlContent).toContain("RED GEM");
+  });
+});
+
+describe("8-bit menu music", () => {
+  test("defines the menuMusic engine", () => {
+    expect(htmlContent).toContain("const menuMusic");
+    expect(htmlContent).toContain("playStep");
+  });
+
+  test("remembers the mute choice in localStorage", () => {
+    expect(htmlContent).toContain("rufus_music_muted");
+  });
+
+  test("only marks playing after audio actually resumes (no silent-on bug)", () => {
+    expect(htmlContent).toMatch(/resume\(\)\.then\(begin\)/);
+  });
+
+  test("arms music on first gesture in the capture phase", () => {
+    expect(htmlContent).toMatch(/addEventListener\("pointerdown", go, true\)/);
+  });
+
+  test("starts music on menu scenes and stops it during gameplay", () => {
+    expect(htmlContent).toContain("menuMusic.start()");
+    expect(htmlContent).toContain("menuMusic.stop()");
+  });
+
+  test("title screen has a music on/off toggle", () => {
+    expect(htmlContent).toContain("Music: ON");
+    expect(htmlContent).toContain("toggleMute()");
+  });
+});
+
 describe("Coyote time (jump safety)", () => {
   test("has coyote timer to prevent stuck-on-edge bug", () => {
     expect(htmlContent).toContain("coyoteTimer");

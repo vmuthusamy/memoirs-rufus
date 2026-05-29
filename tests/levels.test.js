@@ -887,3 +887,62 @@ describe("Distinct level backgrounds", () => {
     });
   });
 });
+
+// ============================================
+// LEVEL 10: "Donut Doom" (boss arena — loaded standalone, not in ALL_LEVELS,
+// because its boss-arena shape doesn't follow the normal level constraints)
+// ============================================
+const LEVEL_10 = loadLevel("level10.js");
+
+describe("Level 10: Donut Doom", () => {
+  test("loads and is named Donut Doom", () => {
+    expect(LEVEL_10).toBeDefined();
+    expect(LEVEL_10.name).toBe("Donut Doom");
+  });
+
+  test("is flagged as a boss fight with a bossSetup", () => {
+    expect(LEVEL_10.isBossFight).toBe(true);
+    expect(typeof LEVEL_10.bossSetup).toBe("function");
+  });
+
+  test("offers the yellow gem (perfect-run reward)", () => {
+    expect(LEVEL_10.yellowGem).toBe(true);
+  });
+
+  test("redirects to the donut-boss page", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "..", "levels", "level10.js"),
+      "utf-8"
+    );
+    expect(src).toContain("donut-boss.html");
+  });
+  // Note: no unique-sky-color test here — Level 10 redirects to donut-boss.html
+  // immediately, so its in-game sky color is never rendered.
+});
+
+// ============================================
+// DONUT BOSS PAGE (standalone Level 10 fight)
+// ============================================
+describe("Donut boss page (donut-boss.html)", () => {
+  const bossHtml = fs.readFileSync(
+    path.join(__dirname, "..", "donut-boss.html"),
+    "utf-8"
+  );
+
+  test("awards the yellow gem only on a perfect (no-damage) run", () => {
+    expect(bossHtml).toContain("perfectRun");
+    expect(bossHtml).toContain("rufus-yellow-gem");
+  });
+
+  test("has the yellow gem celebration screen", () => {
+    expect(bossHtml).toContain("YOU GOT THE YELLOW GEM");
+  });
+
+  test("no longer labels itself a demo/prototype", () => {
+    expect(bossHtml).not.toMatch(/Demo|prototype/);
+  });
+
+  test("8-bit boss music only starts after audio resumes", () => {
+    expect(bossHtml).toMatch(/resume\(\)\.then\(begin\)/);
+  });
+});
