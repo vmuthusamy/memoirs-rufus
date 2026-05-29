@@ -1281,6 +1281,26 @@ describe("Secret custom hat", () => {
   });
 });
 
+describe("Rocket-launch finale (Level 13)", () => {
+  test("has a launch cutscene triggered by level.launchCutscene", () => {
+    expect(htmlContent).toContain("function playLaunchCutscene(");
+    expect(htmlContent).toContain("BLAST OFF!");
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("level.launchCutscene");
+  });
+
+  test("draws a rocket at the exit on launch levels", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toMatch(/if \(level\.launchCutscene\)/);
+  });
+
+  test("space theme support exists (low gravity + starry backdrop)", () => {
+    expect(htmlContent).toContain("const isSpace");
+    expect(htmlContent).toContain("level.spaceTheme");
+    expect(htmlContent).toContain("SPACE BACKDROP");
+  });
+});
+
 describe("Menu theme, PLAY button & Marthina secret-level shortcut", () => {
   test("has theme colors + storage and recolors title and whole background", () => {
     expect(htmlContent).toContain("THEME_COLORS");
