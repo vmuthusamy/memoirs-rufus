@@ -1281,6 +1281,15 @@ describe("Secret custom hat", () => {
   });
 });
 
+describe("Subscribe button", () => {
+  test("main menu has a Subscribe button linking to the YouTube channel", () => {
+    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
+    expect(titleScene).toContain("Subscribe to Arvind the Creator!");
+    expect(titleScene).toContain("youtube.com/@Arvindthecreator");
+    expect(titleScene).toContain('window.open(');
+  });
+});
+
 describe("Per-level music themes", () => {
   test("level-music engine defines all the themes", () => {
     ["outsideStep", "gymStep", "libraryStep", "circusStep", "candyStep", "volcanoStep", "moonStep"].forEach((fn) => {

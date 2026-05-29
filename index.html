@@ -3058,6 +3058,31 @@ scene("title", () => {
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
 
+  // --- SUBSCRIBE button — opens Arvind the Creator's YouTube channel ---
+  const subBtn = add([
+    rect(280, 34),
+    pos(width() / 2, 585),
+    anchor("center"),
+    color(230, 30, 30),
+    outline(2, rgb(255, 255, 255)),
+    fixed(),
+    area(),
+    z(5),
+    { t: 0 },
+  ]);
+  subBtn.onUpdate(function () { this.t += dt(); this.opacity = Math.sin(this.t * 3) * 0.15 + 0.85; });
+  add([
+    text("Subscribe to Arvind the Creator!", { size: 13 }),
+    pos(width() / 2, 585),
+    anchor("center"),
+    color(255, 255, 255),
+    fixed(),
+    z(6),
+  ]);
+  subBtn.onClick(() => {
+    window.open("https://www.youtube.com/@Arvindthecreator", "_blank");
+  });
+
   // (No more tap-anywhere area — you start with the PLAY button above, so the
   // dancing characters stay as hidden secrets you have to click on purpose.)
 
