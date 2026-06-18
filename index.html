@@ -761,6 +761,147 @@ const tailSpinDuration = 0.4;
 // All levels in order
 const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14];
 
+// ============================================
+// LEVEL CREATOR ROBOT — generates a playable level from a typed prompt.
+// It runs instantly inside the game (no internet, no waiting = fast!).
+// Rules that keep EVERY generated level beatable:
+//   - normal gravity (so jumps are always the same reachable distance)
+//   - the ground is always solid the whole way, so you can always run to
+//     the exit even if you skip the platforms.
+// Music: say "level N music" in your prompt to borrow that level's music.
+// ============================================
+let CUSTOM_LEVEL = null;
+
+function generateLevel(promptText) {
+  const p = (promptText || "").toLowerCase();
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  // ---- MUSIC: "level N music" borrows that level's song ----
+  let music = "outside";
+  const mm = p.match(/level\s*(\d+)\s*music/);
+  if (mm) {
+    const li = parseInt(mm[1], 10) - 1;
+    if (ALL_LEVELS[li] && ALL_LEVELS[li].music) music = ALL_LEVELS[li].music;
+  } else if (/candy|sweet|lollipop|sugar/.test(p)) music = "candy";
+  else if (/volcano|lava|fire|hot/.test(p)) music = "volcano";
+  else if (/space|moon|star|galaxy/.test(p)) music = "moon";
+  else if (/gym|school|wasp|bee/.test(p)) music = "gym";
+  else if (/library|book|quiet/.test(p)) music = "library";
+  else if (/circus|clown|carnival|fair/.test(p)) music = "circus";
+
+  // ---- DIFFICULTY ----
+  let diff = "normal";
+  if (/insane|crazy|impossible|nightmare/.test(p)) diff = "insane";
+  else if (/hard|tough|difficult|deadly/.test(p)) diff = "hard";
+  else if (/easy|simple|baby|chill/.test(p)) diff = "easy";
+
+  const cfg = {
+    easy:   { width: 2600, lives: 8, enemyEvery: 900, gap: 320 },
+    normal: { width: 3600, lives: 6, enemyEvery: 650, gap: 300 },
+    hard:   { width: 4600, lives: 4, enemyEvery: 480, gap: 290 },
+    insane: { width: 5600, lives: 3, enemyEvery: 380, gap: 280 },
+  }[diff];
+
+  // ---- LOOK (sky + ground colors) ----
+  let skyColor = [135, 206, 235], groundColor = [60, 160, 50], lavaTheme = false;
+  if (/volcano|lava|fire|hot/.test(p) || music === "volcano") { skyColor = [60, 22, 30]; groundColor = [70, 35, 20]; lavaTheme = true; }
+  else if (/space|moon|star|galaxy/.test(p) || music === "moon") { skyColor = [12, 10, 35]; groundColor = [70, 70, 90]; }
+  else if (/candy|sweet|lollipop|sugar/.test(p) || music === "candy") { skyColor = [255, 182, 210]; groundColor = [200, 100, 140]; }
+  else if (/night|dark|spooky/.test(p)) { skyColor = [20, 20, 60]; groundColor = [40, 60, 40]; }
+  else if (/sunset|orange|evening/.test(p)) { skyColor = [255, 150, 100]; groundColor = [120, 90, 60]; }
+
+  // ---- ENEMY TYPES the player asked for ----
+  const wantWasp = /wasp|bee|gym|school/.test(p);
+  const wantArmor = /armor|helmet|tough|knight/.test(p);
+  const wantClown = /clown|circus|carnival/.test(p);
+
+  // ---- BUILD THE LEVEL ----
+  const W = cfg.width;
+  const platforms = [], treats = [], enemies = [], crates = [], bounceCrates = [];
+
+  // Floating platforms with treats on top (optional rewards — ground is still
+  // solid underneath so they're never required).
+  // Heights stay in the reachable zone — Rufus jumps about 130px, and the
+  // ground is around y=560, so platforms live between y=400 (higher) and
+  // y=480 (low) so you can always hop up onto them from the ground.
+  let x = 350;
+  while (x < W - 350) {
+    const py = pick([400, 420, 440, 460, 480]);
+    const pw = pick([120, 140, 160, 180]);
+    platforms.push({ x, y: py, width: pw, height: 30 });
+    treats.push({ x: x + pw / 2, y: py - 40 });
+    // A wasp hovering over some platforms
+    if (wantWasp && Math.random() < 0.5) {
+      enemies.push({ type: Math.random() < 0.5 ? "wasp_patrol" : "wasp_dive", x: x + pw / 2, y: py - 110, patrol: pick([60, 90, 120]) });
+    }
+    x += cfg.gap;
+  }
+
+  // Ground treats sprinkled across the whole level
+  for (let gx = 200; gx < W - 200; gx += 260) treats.push({ x: gx, y: 530 });
+
+  // Ground enemies spaced by difficulty
+  for (let ex = 600; ex < W - 400; ex += cfg.enemyEvery) {
+    const r = Math.random();
+    let type = "walker";
+    if (wantClown && r < 0.25) type = "clown";
+    else if (wantArmor && r < 0.5) type = "armored";
+    enemies.push({ type, x: ex, y: 535, patrol: pick([70, 90, 110]) });
+  }
+
+  // Crates and a couple of bounce crates for fun
+  for (let cx = 450; cx < W - 400; cx += 700) crates.push({ x: cx, y: 535 });
+  for (let bx = 800; bx < W - 500; bx += 1500) bounceCrates.push({ x: bx, y: 560 });
+
+  // A reward cluster right before the exit
+  const ex2 = W - 150;
+  treats.push({ x: ex2 - 100, y: 530 }, { x: ex2 - 70, y: 530 }, { x: ex2 - 40, y: 530 });
+
+  return {
+    name: "Your Custom Level",
+    music,
+    memoir: "Dear Diary, the Level Robot built me a brand new place to explore! Let's see what's out here...",
+    skyColor, groundColor, lavaTheme,
+    width: W,
+    startLives: cfg.lives,
+    playerStart: { x: 100, y: 0 },
+    exit: { x: ex2, y: 300 },
+    checkpoints: [ { x: Math.round(W / 3), y: 560 }, { x: Math.round(W * 2 / 3), y: 560 } ],
+    platforms, treats, enemies, crates, bounceCrates,
+  };
+}
+
+// Saved custom levels (stored per game file, so each save file has its own).
+function getSavedLevels() {
+  try { return JSON.parse(localStorage.getItem("rufus_saved_levels") || "[]"); }
+  catch (e) { return []; }
+}
+function saveCustomLevel(name, level) {
+  const list = getSavedLevels();
+  list.push({ name: String(name).slice(0, 30), level: level, ts: Date.now() });
+  while (list.length > 30) list.shift(); // keep the 30 newest
+  localStorage.setItem("rufus_saved_levels", JSON.stringify(list));
+}
+function deleteSavedLevel(index) {
+  const list = getSavedLevels();
+  if (index >= 0 && index < list.length) { list.splice(index, 1); localStorage.setItem("rufus_saved_levels", JSON.stringify(list)); }
+}
+
+// ---- Bad-word ban for the Level Creator ----
+// Writing a bad word in your idea, or naming a level a bad word, bans you from
+// making levels for 24 hours. (Reuses the same word list as the custom hats.)
+function getCreatorBanUntil() {
+  const v = parseInt(localStorage.getItem("rufus_creator_ban_until") || "0", 10);
+  return isNaN(v) ? 0 : v;
+}
+function isCreatorBanned() { return getCreatorBanUntil() > Date.now(); }
+function banCreator() { localStorage.setItem("rufus_creator_ban_until", String(Date.now() + 24 * 60 * 60 * 1000)); }
+function unbanCreator() { localStorage.setItem("rufus_creator_ban_until", "0"); }
+function banHoursLeft() {
+  const ms = getCreatorBanUntil() - Date.now();
+  return ms > 0 ? Math.max(1, Math.ceil(ms / (60 * 60 * 1000))) : 0;
+}
+
 // Difficulty rating shown on each chapter card (by level index 0-13)
 const LEVEL_DIFFICULTY = [
   "Easy", "Easy", "Normal", "Easy", "Hard", "Normal", "Easy",
@@ -2568,6 +2709,171 @@ scene("gameFiles", () => {
 });
 
 // ============================================
+// MY SAVED LEVELS — see and replay the levels you saved!
+// ============================================
+scene("savedLevels", () => {
+  menuMusic.start();
+  add([ rect(width(), height()), pos(0, 0), color(22, 18, 42), fixed() ]);
+  add([ text("📂 My Saved Levels", { size: 34 }), pos(width() / 2, 44), anchor("center"), color(170, 200, 255), fixed() ]);
+
+  const PER_PAGE = 5;
+  let page = 0;
+
+  function refresh() {
+    get("savedRow").forEach((o) => destroy(o));
+    // newest first
+    const list = getSavedLevels().slice().reverse();
+    const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+    if (page >= pages) page = pages - 1;
+
+    if (list.length === 0) {
+      add([ text("No saved levels yet!", { size: 22 }), pos(width() / 2, 220), anchor("center"), color(255, 220, 150), fixed(), "savedRow" ]);
+      add([ text("Make one in the Level Creator, then tap\n\"Save Level\" while you test it.", { size: 16, width: 520, align: "center" }), pos(width() / 2, 270), anchor("center"), color(200, 195, 225), fixed(), "savedRow" ]);
+      return;
+    }
+
+    add([ text(`You have ${list.length} saved level${list.length === 1 ? "" : "s"}`, { size: 14 }), pos(width() / 2, 84), anchor("center"), color(200, 195, 225), fixed(), "savedRow" ]);
+
+    const startI = page * PER_PAGE;
+    const shown = list.slice(startI, startI + PER_PAGE);
+    shown.forEach((entry, i) => {
+      const realIndex = getSavedLevels().length - 1 - (startI + i); // index in the real (unreversed) array
+      const y = 130 + i * 80;
+      add([ rect(620, 66), pos(width() / 2, y), anchor("center"), color(45, 38, 70), outline(2, rgb(110, 100, 150)), fixed(), "savedRow" ]);
+      add([ text(entry.name || "(no name)", { size: 22 }), pos(width() / 2 - 285, y), anchor("left"), color(255, 255, 255), fixed(), "savedRow" ]);
+      // PLAY
+      const play = add([ rect(110, 46), pos(width() / 2 + 120, y), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), "savedRow" ]);
+      add([ text("PLAY", { size: 18 }), pos(width() / 2 + 120, y), anchor("center"), color(255, 255, 255), fixed(), "savedRow" ]);
+      play.onClick(() => { CUSTOM_LEVEL = entry.level; go("game", "custom"); });
+      // DELETE
+      const del = add([ rect(100, 46), pos(width() / 2 + 245, y), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), "savedRow" ]);
+      add([ text("DELETE", { size: 14 }), pos(width() / 2 + 245, y), anchor("center"), color(255, 255, 255), fixed(), "savedRow" ]);
+      del.onClick(() => { deleteSavedLevel(realIndex); refresh(); });
+    });
+
+    // Pager
+    if (pages > 1) {
+      add([ text(`Page ${page + 1} / ${pages}`, { size: 16 }), pos(width() / 2, 540), anchor("center"), color(220, 220, 240), fixed(), "savedRow" ]);
+      if (page > 0) {
+        const prev = add([ rect(110, 40), pos(width() / 2 - 150, 540), anchor("center"), color(70, 60, 110), outline(2, rgb(170, 160, 220)), area(), fixed(), "savedRow" ]);
+        add([ text("< Prev", { size: 16 }), pos(width() / 2 - 150, 540), anchor("center"), color(255, 255, 255), fixed(), "savedRow" ]);
+        prev.onClick(() => { page--; refresh(); });
+      }
+      if (page < pages - 1) {
+        const next = add([ rect(110, 40), pos(width() / 2 + 150, 540), anchor("center"), color(70, 60, 110), outline(2, rgb(170, 160, 220)), area(), fixed(), "savedRow" ]);
+        add([ text("Next >", { size: 16 }), pos(width() / 2 + 150, 540), anchor("center"), color(255, 255, 255), fixed(), "savedRow" ]);
+        next.onClick(() => { page++; refresh(); });
+      }
+    }
+  }
+
+  // Back
+  const back = add([ rect(120, 40), pos(70, height() - 32), anchor("center"), color(80, 60, 120), outline(2, rgb(180, 160, 255)), area(), fixed() ]);
+  add([ text("< Back", { size: 16 }), pos(70, height() - 32), anchor("center"), color(230, 220, 255), fixed() ]);
+  back.onClick(() => go("levelCreator"));
+  onKeyPress("escape", () => go("levelCreator"));
+
+  refresh();
+});
+
+// ============================================
+// LEVEL CREATOR ROBOT — type an idea, get a level instantly!
+// ============================================
+scene("levelCreator", () => {
+  menuMusic.start();
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+
+  // BANNED? If you used a bad word, you can't make levels for 24 hours.
+  if (isCreatorBanned()) {
+    add([ rect(width(), height()), pos(0, 0), color(40, 15, 20), fixed() ]);
+    add([ text("🚫 No Levels For You!", { size: 36 }), pos(width() / 2, 150), anchor("center"), color(255, 120, 120), fixed() ]);
+    add([ text("You used a bad word, so the Level Creator is\nlocked for 24 hours. Be kind and try again later!", { size: 18, width: 560, align: "center" }), pos(width() / 2, 240), anchor("center"), color(255, 220, 220), fixed() ]);
+    add([ text("Time left: about " + banHoursLeft() + " hour" + (banHoursLeft() === 1 ? "" : "s"), { size: 22 }), pos(width() / 2, 330), anchor("center"), color(255, 200, 120), fixed() ]);
+    const b = add([ rect(160, 48), pos(width() / 2, 430), anchor("center"), color(80, 60, 120), outline(3, rgb(180, 160, 255)), area(), fixed() ]);
+    add([ text("Main Menu", { size: 18 }), pos(width() / 2, 430), anchor("center"), color(255, 255, 255), fixed() ]);
+    b.onClick(() => go("title"));
+    onKeyPress("escape", () => go("title"));
+    // SECRET: press U to UN-ban yourself (hidden, for the creator to test with).
+    onKeyPress("u", () => { unbanCreator(); go("levelCreator"); });
+    return;
+  }
+
+  add([ rect(width(), height()), pos(0, 0), color(22, 18, 42), fixed() ]);
+  add([ text("🤖 Level Creator Robot", { size: 34 }), pos(width() / 2, 44), anchor("center"), color(170, 200, 255), fixed() ]);
+  add([ text("Tell the robot what level you want — it builds it instantly!", { size: 14 }), pos(width() / 2, 84), anchor("center"), color(200, 195, 225), fixed() ]);
+  add([ text("Tip: say \"level 5 music\" to use the music from any level (1-14).", { size: 13 }), pos(width() / 2, 108), anchor("center"), color(150, 200, 150), fixed() ]);
+
+  // The current idea the robot will build from
+  let idea = "";
+  add([ text("Your idea:", { size: 16 }), pos(width() / 2, 150), anchor("center"), color(255, 220, 120), fixed() ]);
+  add([ rect(620, 50), pos(width() / 2, 186), anchor("center"), color(15, 12, 28), outline(2, rgb(120, 110, 160)), fixed() ]);
+  const ideaLabel = add([ text("(tap an example or type your own)", { size: 16, width: 600, align: "center" }), pos(width() / 2, 186), anchor("center"), color(180, 180, 200), fixed() ]);
+  function setIdea(t) { idea = t.slice(0, 10000); ideaLabel.text = idea || "(tap an example or type your own)"; ideaLabel.color = idea ? rgb(255, 255, 255) : rgb(180, 180, 200); }
+
+  // Quick example buttons — tap one to fill the idea (great on iPad!)
+  const examples = [
+    "easy outside level",
+    "hard lava level with wasps, level 11 music",
+    "candy chaos with clowns, level 9 music",
+    "insane space level, level 14 music",
+  ];
+  examples.forEach((ex, i) => {
+    const ey = 248 + i * 48;
+    const b = add([ rect(620, 40), pos(width() / 2, ey), anchor("center"), color(45, 38, 70), outline(2, rgb(110, 100, 150)), area(), fixed() ]);
+    add([ text(ex, { size: 15 }), pos(width() / 2, ey), anchor("center"), color(220, 225, 255), fixed() ]);
+    b.onClick(() => setIdea(ex));
+  });
+
+  // Type your own
+  const typeBtn = add([ rect(300, 46), pos(width() / 2, 452), anchor("center"), color(60, 120, 200), outline(3, rgb(150, 200, 255)), area(), fixed() ]);
+  add([ text("✏️ Type my own idea", { size: 18 }), pos(width() / 2, 452), anchor("center"), color(255, 255, 255), fixed() ]);
+  // Desktop: type inline. Touch: pop a real text box (keyboard appears).
+  let typingOn = false;
+  typeBtn.onClick(() => {
+    if (isTouch) {
+      const raw = window.prompt("Tell the robot your level idea:", idea);
+      if (raw !== null) setIdea(raw);
+    } else {
+      typingOn = true;
+      setIdea("");
+      ideaLabel.text = "_";
+    }
+  });
+  if (!isTouch) {
+    onCharInput((ch) => { if (typingOn && idea.length < 10000 && /[a-zA-Z0-9 ,]/.test(ch)) { idea += ch; ideaLabel.text = idea + "_"; ideaLabel.color = rgb(255, 255, 255); } });
+    onKeyPress("backspace", () => { if (typingOn) { idea = idea.slice(0, -1); ideaLabel.text = idea + "_"; } });
+  }
+
+  // GENERATE!
+  const gen = add([ rect(300, 60), pos(width() / 2, 524), anchor("center"), color(50, 170, 70), outline(3, rgb(120, 255, 150)), area(), fixed(), { t: 0 } ]);
+  gen.onUpdate(function() { this.t += dt(); this.scale = vec2(1 + Math.sin(this.t * 3) * 0.03); });
+  add([ text("🤖 GENERATE!", { size: 26 }), pos(width() / 2, 524), anchor("center"), color(255, 255, 255), fixed() ]);
+  function generate() {
+    // Bad word in your idea? You're banned from making levels for 24 hours.
+    if (!isCleanHatText(idea)) {
+      banCreator();
+      go("levelCreator"); // reloads into the "banned" screen
+      return;
+    }
+    CUSTOM_LEVEL = generateLevel(idea);
+    go("game", "custom");
+  }
+  gen.onClick(() => generate());
+  onKeyPress("enter", () => generate());
+
+  // My Saved Levels
+  const saved = add([ rect(220, 40), pos(width() - 130, height() - 32), anchor("center"), color(60, 120, 200), outline(2, rgb(150, 200, 255)), area(), fixed() ]);
+  add([ text("📂 My Saved Levels", { size: 15 }), pos(width() - 130, height() - 32), anchor("center"), color(255, 255, 255), fixed() ]);
+  saved.onClick(() => go("savedLevels"));
+
+  // Back
+  const back = add([ rect(120, 40), pos(70, height() - 32), anchor("center"), color(80, 60, 120), outline(2, rgb(180, 160, 255)), area(), fixed() ]);
+  add([ text("< Back", { size: 16 }), pos(70, height() - 32), anchor("center"), color(230, 220, 255), fixed() ]);
+  back.onClick(() => go("title"));
+  onKeyPress("escape", () => go("title"));
+});
+
+// ============================================
 // TITLE SCREEN
 // ============================================
 scene("title", () => {
@@ -3192,10 +3498,12 @@ scene("title", () => {
   // Detect touch device
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
-  // PLAY button (the only way to start — keeps the menu secrets from being
-  // triggered by accident when someone just wants to play)
+  // Main-screen buttons: PLAY (start the game) and MENU (opens a popup with
+  // Play, Level Creator, and User Level Search).
+  // (PLAY being a button keeps the menu secrets from triggering by accident.)
+  const BTN_Y = 478;
   const playButton = add([
-    rect(220, 52), pos(width() / 2, 478), anchor("center"),
+    rect(210, 56), pos(280, BTN_Y), anchor("center"),
     color(50, 170, 70), outline(3, rgb(120, 255, 150)), area(), fixed(), z(7),
     { flashTimer: 0 },
   ]);
@@ -3204,10 +3512,55 @@ scene("title", () => {
     this.scale = vec2(1 + Math.sin(this.flashTimer * 3) * 0.03);
   });
   add([
-    text("PLAY", { size: 26 }), pos(width() / 2, 478), anchor("center"),
+    text("PLAY", { size: 26 }), pos(280, BTN_Y), anchor("center"),
     color(255, 255, 255), fixed(), z(8),
   ]);
   playButton.onClick(() => { if (!dialogOpen) go("levelSelect"); });
+
+  const menuButton = add([
+    rect(210, 56), pos(520, BTN_Y), anchor("center"),
+    color(90, 70, 180), outline(3, rgb(170, 150, 255)), area(), fixed(), z(7),
+  ]);
+  add([
+    text("MENU", { size: 26 }), pos(520, BTN_Y), anchor("center"),
+    color(255, 255, 255), fixed(), z(8),
+  ]);
+
+  // "Coming soon" message for the two unfinished options
+  function comingSoon(msg) {
+    add([ rect(440, 120), pos(width() / 2, height() / 2), anchor("center"), color(30, 25, 55), outline(3, rgb(150, 140, 200)), opacity(1), lifespan(1.6, { fade: 0.4 }), fixed(), z(340), "soonMsg" ]);
+    add([ text(msg, { size: 20, width: 400, align: "center" }), pos(width() / 2, height() / 2), anchor("center"), color(255, 230, 150), opacity(1), lifespan(1.6, { fade: 0.4 }), fixed(), z(341), "soonMsg" ]);
+  }
+
+  // The MENU popup — a little panel listing the three choices.
+  function closeMenuPopup() { get("menuPopup").forEach((o) => destroy(o)); dialogOpen = false; }
+  function openMenuPopup() {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    // Dim background — tap it to close (enabled one frame later so the very
+    // click that opened the popup doesn't instantly close it again).
+    const dim = add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.6), area(), fixed(), z(320), "menuPopup" ]);
+    wait(0.05, () => { if (dim.exists()) dim.onClick(() => closeMenuPopup()); });
+    add([ rect(420, 320), pos(width() / 2, height() / 2), anchor("center"), color(35, 28, 60), outline(4, rgb(170, 150, 255)), fixed(), z(321), "menuPopup" ]);
+    add([ text("Menu", { size: 30 }), pos(width() / 2, height() / 2 - 120), anchor("center"), color(255, 220, 120), fixed(), z(322), "menuPopup" ]);
+    // Close (X) button in the corner of the panel
+    const closeB = add([ rect(34, 34), pos(width() / 2 + 190, height() / 2 - 140), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), z(323), "menuPopup" ]);
+    add([ text("X", { size: 20 }), pos(width() / 2 + 190, height() / 2 - 140), anchor("center"), color(255, 255, 255), fixed(), z(324), "menuPopup" ]);
+    closeB.onClick(() => closeMenuPopup());
+
+    const items = [
+      { label: "Play", col: [50, 170, 70], oc: [120, 255, 150], act: () => { closeMenuPopup(); go("levelSelect"); } },
+      { label: "Level Creator", col: [90, 70, 180], oc: [170, 150, 255], act: () => { closeMenuPopup(); go("levelCreator"); } },
+      { label: "User Level Search", col: [180, 90, 60], oc: [255, 170, 130], act: () => { closeMenuPopup(); comingSoon("User Level Search\ncoming soon! 🔍"); } },
+    ];
+    items.forEach((it, i) => {
+      const by = height() / 2 - 60 + i * 70;
+      const b = add([ rect(340, 54), pos(width() / 2, by), anchor("center"), color(...it.col), outline(3, rgb(...it.oc)), area(), fixed(), z(322), "menuPopup" ]);
+      add([ text(it.label, { size: 22 }), pos(width() / 2, by), anchor("center"), color(255, 255, 255), fixed(), z(323), "menuPopup" ]);
+      b.onClick(() => it.act());
+    });
+  }
+  menuButton.onClick(() => openMenuPopup());
 
   // Controls help
   add([
@@ -4158,9 +4511,10 @@ scene("memoir", (levelIndex) => {
 // MAIN GAME
 // ============================================
 scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
+  const isCustom = (levelIndex === "custom");
   menuMusic.stop();
   const isSecret = (levelIndex === "secret");
-  const level = isSecret ? SECRET_LEVEL : ALL_LEVELS[levelIndex];
+  const level = isSecret ? SECRET_LEVEL : isCustom ? CUSTOM_LEVEL : ALL_LEVELS[levelIndex];
   // Fire-hero level: you play as Fiery and Space spits fire instead of a tail spin!
   const isFireHero = !isSecret && !!level.fireHero;
   // Which character you chose in the main menu (Rufus or Renard). Fiery levels
@@ -6801,8 +7155,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     deathsThisRun++;
 
     if (lives <= 0) {
-      // Check if this score makes the leaderboard! (not for secret level)
-      if (!isSecret && isHighScore(levelIndex, score)) {
+      // Check if this score makes the leaderboard! (not for secret/custom levels)
+      if (!isSecret && !isCustom && isHighScore(levelIndex, score)) {
         go("nameEntry", { score, levelIndex, nextScene: "gameOver" });
       } else {
         go("gameOver", { score, levelIndex });
@@ -6841,6 +7195,15 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   let exitReached = false;
   rufus.onCollide("exit", () => {
     if (exitReached) return;
+
+    // Custom (robot-made) levels: no gems or progress saving — just a quick
+    // "you beat your level!" celebration, then back to the creator.
+    if (isCustom) {
+      exitReached = true;
+      go("customComplete", { score });
+      return;
+    }
+
     // Award gem if player didn't die (not for secret level)
     const earnedGem = (deathsThisRun === 0 && !isSecret);
     if (earnedGem) awardGem(levelIndex);
@@ -7555,7 +7918,7 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   ]);
 
   const levelText = add([
-    text(isSecret ? "SECRET LEVEL" : `Ch.${levelIndex + 1}: ${level.name}`, { size: 16 }),
+    text(isSecret ? "SECRET LEVEL" : isCustom ? "🤖 Robot Level" : `Ch.${levelIndex + 1}: ${level.name}`, { size: 16 }),
     pos(width() - 20, 20),
     anchor("topright"),
     color(255, 200, 100),
@@ -7563,6 +7926,50 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     fixed(),
     z(100),
   ]);
+
+  // While TESTING a robot-made level, give an easy way back to the AI creator.
+  if (isCustom) {
+    const backToAI = add([
+      rect(168, 34), pos(width() - 20, 48), anchor("topright"),
+      color(90, 70, 180), outline(2, rgb(170, 150, 255)), area(), fixed(), z(101),
+    ]);
+    add([
+      text("← Back to Robot", { size: 14 }), pos(width() - 104, 65), anchor("center"),
+      color(255, 255, 255), fixed(), z(102),
+    ]);
+    backToAI.onClick(() => go("levelCreator"));
+    onKeyPress("escape", () => go("levelCreator"));
+
+    // Save this level — asks you to name it (the text box pops up the keyboard
+    // on iPad too).
+    function saveThisLevel() {
+      const raw = window.prompt("Name your level to save it:", "");
+      if (raw === null) return;            // cancelled
+      // Bad word in the name? Ban from making levels for 24 hours.
+      if (!isCleanHatText(raw)) {
+        banCreator();
+        add([ rect(320, 56), pos(width() / 2, 70), anchor("center"), color(150, 40, 50), outline(3, rgb(255, 120, 120)), opacity(1), lifespan(2.4, { fade: 0.5 }), fixed(), z(150) ]);
+        add([ text("🚫 Bad word! No levels for 24h.", { size: 14, width: 300, align: "center" }), pos(width() / 2, 70), anchor("center"), color(255, 255, 255), opacity(1), lifespan(2.4, { fade: 0.5 }), fixed(), z(151) ]);
+        return;
+      }
+      const name = raw.replace(/[^a-zA-Z0-9 !?'-]/g, "").trim().slice(0, 30);
+      if (!name) return;                   // empty name — don't save
+      const toSave = Object.assign({}, level, { name: name });
+      saveCustomLevel(name, toSave);
+      // Little "Saved!" toast
+      add([ rect(260, 50), pos(width() / 2, 70), anchor("center"), color(40, 130, 60), outline(3, rgb(120, 255, 150)), opacity(1), lifespan(1.8, { fade: 0.5 }), fixed(), z(150) ]);
+      add([ text("💾 Saved \"" + name + "\"!", { size: 16, width: 240, align: "center" }), pos(width() / 2, 70), anchor("center"), color(255, 255, 255), opacity(1), lifespan(1.8, { fade: 0.5 }), fixed(), z(151) ]);
+    }
+    const saveBtn = add([
+      rect(168, 34), pos(width() - 20, 86), anchor("topright"),
+      color(60, 120, 200), outline(2, rgb(150, 200, 255)), area(), fixed(), z(101),
+    ]);
+    add([
+      text("💾 Save Level", { size: 14 }), pos(width() - 104, 103), anchor("center"),
+      color(255, 255, 255), fixed(), z(102),
+    ]);
+    saveBtn.onClick(() => saveThisLevel());
+  }
 
   // Jetpack bar (only when unlocked, hides in no-jetpack zones)
   if (jetpackUnlocked) {
@@ -8069,13 +8476,48 @@ scene("gameOver", ({ score, levelIndex }) => {
   ]);
 
   // Full screen tap target
+  const isCustomGO = (levelIndex === "custom");
   const retryBtn = add([
     rect(width(), height()), pos(0, 0), opacity(0), fixed(), area(), z(-1),
   ]);
-  retryBtn.onClick(() => go("memoir", levelIndex));
+  // Custom levels replay straight away (there's no memoir page for them).
+  retryBtn.onClick(() => isCustomGO ? go("game", "custom") : go("memoir", levelIndex));
 
-  onKeyPress("enter", () => go("memoir", levelIndex));
-  onKeyPress("escape", () => go("levelSelect"));
+  onKeyPress("enter", () => isCustomGO ? go("game", "custom") : go("memoir", levelIndex));
+  onKeyPress("escape", () => go(isCustomGO ? "title" : "levelSelect"));
+});
+
+// ============================================
+// CUSTOM LEVEL COMPLETE — you beat a robot-made level!
+// ============================================
+scene("customComplete", ({ score }) => {
+  levelMusic.stop();
+  const isTouchCC = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  add([ rect(width(), height()), pos(0, 0), color(25, 20, 55), fixed() ]);
+  // Confetti
+  for (let i = 0; i < 40; i++) {
+    add([ rect(6, 6), pos(rand(0, width()), rand(0, height())), color(rand(100, 255), rand(100, 255), rand(100, 255)), opacity(0.8), rotate(rand(0, 360)), fixed() ]);
+  }
+  add([ text("🎉 You beat it! 🎉", { size: 44 }), pos(width() / 2, 150), anchor("center"), color(255, 230, 120), fixed() ]);
+  add([ text("You finished your custom level!", { size: 22 }), pos(width() / 2, 220), anchor("center"), color(255, 255, 255), fixed() ]);
+  add([ text(`Treats collected: ${score}`, { size: 24 }), pos(width() / 2, 270), anchor("center"), color(255, 200, 100), fixed() ]);
+
+  // Make Another — generate a fresh level from the same idea
+  const again = add([ rect(260, 56), pos(width() / 2, 360), anchor("center"), color(90, 70, 180), outline(3, rgb(170, 150, 255)), area(), fixed() ]);
+  add([ text("Make Another 🤖", { size: 22 }), pos(width() / 2, 360), anchor("center"), color(255, 255, 255), fixed() ]);
+  again.onClick(() => go("levelCreator"));
+
+  // Play Again — replay the exact same level
+  const replay = add([ rect(260, 56), pos(width() / 2, 430), anchor("center"), color(50, 170, 70), outline(3, rgb(120, 255, 150)), area(), fixed() ]);
+  add([ text("Play Again", { size: 22 }), pos(width() / 2, 430), anchor("center"), color(255, 255, 255), fixed() ]);
+  replay.onClick(() => go("game", "custom"));
+
+  // Main Menu
+  const home = add([ rect(260, 56), pos(width() / 2, 500), anchor("center"), color(70, 60, 110), outline(3, rgb(170, 160, 220)), area(), fixed() ]);
+  add([ text("Main Menu", { size: 22 }), pos(width() / 2, 500), anchor("center"), color(255, 255, 255), fixed() ]);
+  home.onClick(() => go("title"));
+
+  add([ text(isTouchCC ? "Tap a button!" : "Click a button!", { size: 14 }), pos(width() / 2, 560), anchor("center"), color(180, 180, 210), fixed() ]);
 });
 
 // ============================================

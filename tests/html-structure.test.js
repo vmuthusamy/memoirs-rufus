@@ -691,7 +691,7 @@ describe("Secret level", () => {
   });
 
   test("secret level skips leaderboard on death", () => {
-    expect(htmlContent).toContain("!isSecret && isHighScore");
+    expect(htmlContent).toContain("!isSecret && !isCustom && isHighScore");
   });
 
   test("secret level routes to secretComplete on exit", () => {
@@ -704,6 +704,68 @@ describe("Secret level", () => {
 
   test("has nameEntry scene", () => {
     expect(htmlContent).toContain('scene("nameEntry"');
+  });
+
+  // ---- Level Creator robot ----
+  test("has a generateLevel function", () => {
+    expect(htmlContent).toContain("function generateLevel(");
+  });
+
+  test("generateLevel reads 'level N music' from the prompt", () => {
+    expect(htmlContent).toMatch(/level\\s\*\(\\d\+\)\\s\*music/);
+  });
+
+  test("has a levelCreator scene", () => {
+    expect(htmlContent).toContain('scene("levelCreator"');
+  });
+
+  test("has a customComplete scene", () => {
+    expect(htmlContent).toContain('scene("customComplete"');
+  });
+
+  test("game scene supports a custom level index", () => {
+    expect(htmlContent).toContain('isCustom = (levelIndex === "custom")');
+    expect(htmlContent).toContain("isCustom ? CUSTOM_LEVEL");
+  });
+
+  test("custom levels do not award gems or save progress", () => {
+    expect(htmlContent).toContain('go("customComplete"');
+  });
+
+  test("testing a custom level has a way back to the creator", () => {
+    expect(htmlContent).toContain("Back to Robot");
+    expect(htmlContent).toContain('onKeyPress("escape", () => go("levelCreator"))');
+  });
+
+  test("can save a custom level with a name", () => {
+    expect(htmlContent).toContain("function saveCustomLevel(");
+    expect(htmlContent).toContain("Save Level");
+    expect(htmlContent).toContain("Name your level to save it");
+  });
+
+  test("has a saved levels screen you can replay from", () => {
+    expect(htmlContent).toContain('scene("savedLevels"');
+    expect(htmlContent).toContain("function getSavedLevels(");
+    expect(htmlContent).toContain("function deleteSavedLevel(");
+    expect(htmlContent).toContain("My Saved Levels");
+    expect(htmlContent).toContain('go("savedLevels")');
+  });
+
+  test("bad words ban you from the level creator for 24 hours", () => {
+    expect(htmlContent).toContain("function banCreator(");
+    expect(htmlContent).toContain("function isCreatorBanned(");
+    expect(htmlContent).toContain("24 * 60 * 60 * 1000");
+    // the creator scene checks the ban before letting you in
+    expect(htmlContent).toContain("if (isCreatorBanned())");
+    // generating and saving both run the bad-word check
+    expect(htmlContent).toContain("if (!isCleanHatText(idea))");
+    expect(htmlContent).toContain("if (!isCleanHatText(raw))");
+  });
+
+  test("main menu has PLAY and MENU buttons plus a menu popup", () => {
+    expect(htmlContent).toContain("openMenuPopup");
+    expect(htmlContent).toContain('go("levelCreator")');
+    expect(htmlContent).toContain("User Level Search");
   });
 
   test("has leaderboard scene", () => {
