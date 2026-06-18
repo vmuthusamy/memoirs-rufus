@@ -2486,6 +2486,7 @@ scene("leaderboard", () => {
 // GAME FILES — pick / create / delete up to 3 save files
 // ============================================
 scene("gameFiles", () => {
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   add([ rect(width(), height()), pos(0, 0), color(25, 20, 45), fixed() ]);
   add([ text("Game Files", { size: 40 }), pos(width() / 2, 50), anchor("center"), color(255, 220, 120), fixed() ]);
   add([ text("Pick a file to play, make a new one, or delete one.", { size: 14 }), pos(width() / 2, 92), anchor("center"), color(200, 190, 220), fixed() ]);
@@ -2520,7 +2521,24 @@ scene("gameFiles", () => {
         add([ text("— Empty —", { size: 20 }), pos(width() / 2 - 255, y + 4), anchor("left"), color(150, 140, 170), fixed(), "fileRow" ]);
         const mk = add([ rect(150, 44), pos(width() / 2 + 175, y), anchor("center"), color(60, 120, 200), outline(2, rgb(150, 200, 255)), area(), fixed(), "fileRow" ]);
         add([ text("NEW FILE", { size: 16 }), pos(width() / 2 + 175, y), anchor("center"), color(255, 255, 255), fixed(), "fileRow" ]);
-        mk.onClick(() => { naming = n; typed = ""; refresh(); });
+        mk.onClick(() => {
+          if (isTouch) {
+            // On iPad/tablets the canvas can't catch typing, so use a real
+            // text box — this makes the on-screen keyboard pop up.
+            const raw = window.prompt("Name your game file:", "");
+            if (raw !== null) {
+              const clean = raw.replace(/[^a-zA-Z0-9 ]/g, "").trim().slice(0, 12);
+              if (clean) {
+                SLOTS.setName(n, clean);
+                SLOTS.setActive(n);
+                go("title");
+                return;
+              }
+            }
+            return;
+          }
+          naming = n; typed = ""; refresh();
+        });
       }
     }
   }
@@ -3362,22 +3380,29 @@ scene("title", () => {
 
   // First time playing (or first time on the new update): name your game file!
   if (!(SLOTS.getName(1) || SLOTS.getName(2) || SLOTS.getName(3))) {
-    dialogOpen = true;
-    let fnaming = true, fname = "";
-    add([ rect(width(), height()), pos(0, 0), color(20, 15, 45), opacity(0.97), area(), fixed(), z(300), "firstName" ]);
-    add([ text("Welcome to Adventures of Rufus!", { size: 26 }), pos(width() / 2, height() / 2 - 90), anchor("center"), color(255, 200, 100), fixed(), z(301), "firstName" ]);
-    add([ text("Name your game file, then press ENTER:", { size: 16 }), pos(width() / 2, height() / 2 - 44), anchor("center"), color(255, 255, 255), fixed(), z(301), "firstName" ]);
-    add([ rect(360, 46), pos(width() / 2, height() / 2 + 4), anchor("center"), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(301), "firstName" ]);
-    const fl = add([ text("_", { size: 24 }), pos(width() / 2, height() / 2 + 4), anchor("center"), color(255, 230, 150), fixed(), z(302), "firstName" ]);
-    onCharInput((ch) => { if (fnaming && fname.length < 12 && /[a-zA-Z0-9 ]/.test(ch)) { fname += ch; fl.text = fname + "_"; } });
-    onKeyPress("backspace", () => { if (fnaming) { fname = fname.slice(0, -1); fl.text = fname + "_"; } });
-    onKeyPress("enter", () => {
-      if (fnaming && fname.trim()) {
-        SLOTS.setName(1, fname.trim()); SLOTS.setActive(1);
-        fnaming = false; dialogOpen = false;
-        get("firstName").forEach((o) => destroy(o));
-      }
-    });
+    if (isTouch) {
+      // iPad/tablet: a real text box pops the on-screen keyboard up.
+      const raw = window.prompt("Welcome to Adventures of Rufus!\nName your game file:", "");
+      const clean = (raw || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().slice(0, 12);
+      SLOTS.setName(1, clean || "Player"); SLOTS.setActive(1);
+    } else {
+      dialogOpen = true;
+      let fnaming = true, fname = "";
+      add([ rect(width(), height()), pos(0, 0), color(20, 15, 45), opacity(0.97), area(), fixed(), z(300), "firstName" ]);
+      add([ text("Welcome to Adventures of Rufus!", { size: 26 }), pos(width() / 2, height() / 2 - 90), anchor("center"), color(255, 200, 100), fixed(), z(301), "firstName" ]);
+      add([ text("Name your game file, then press ENTER:", { size: 16 }), pos(width() / 2, height() / 2 - 44), anchor("center"), color(255, 255, 255), fixed(), z(301), "firstName" ]);
+      add([ rect(360, 46), pos(width() / 2, height() / 2 + 4), anchor("center"), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(301), "firstName" ]);
+      const fl = add([ text("_", { size: 24 }), pos(width() / 2, height() / 2 + 4), anchor("center"), color(255, 230, 150), fixed(), z(302), "firstName" ]);
+      onCharInput((ch) => { if (fnaming && fname.length < 12 && /[a-zA-Z0-9 ]/.test(ch)) { fname += ch; fl.text = fname + "_"; } });
+      onKeyPress("backspace", () => { if (fnaming) { fname = fname.slice(0, -1); fl.text = fname + "_"; } });
+      onKeyPress("enter", () => {
+        if (fnaming && fname.trim()) {
+          SLOTS.setName(1, fname.trim()); SLOTS.setActive(1);
+          fnaming = false; dialogOpen = false;
+          get("firstName").forEach((o) => destroy(o));
+        }
+      });
+    }
   }
 });
 

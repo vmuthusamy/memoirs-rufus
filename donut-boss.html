@@ -24,6 +24,18 @@
     font-size: 12px; color: #fff;
   }
   #status { font-size: 16px; margin-top: 10px; color: #ffd700; font-weight: 600; min-height: 24px; }
+  /* Touch controls — hidden by default, shown only on touch screens (iPad/phones) */
+  #touchControls { display: none; gap: 24px; margin-top: 16px; }
+  #touchControls.show { display: flex; }
+  .touchBtn {
+    width: 130px; height: 90px; border-radius: 18px; border: none;
+    font-size: 22px; font-weight: 800; color: #fff; cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.35); user-select: none; -webkit-user-select: none;
+    touch-action: none;
+  }
+  .touchBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  #jumpBtn  { background: #38b000; }
+  #shootBtn { background: #ff4d6d; }
 </style>
 </head>
 <body>
@@ -34,6 +46,11 @@
 <canvas id="game" width="800" height="400"></canvas>
 
 <div id="status">Hits: 0 / 3</div>
+
+<div id="touchControls">
+  <button id="jumpBtn" class="touchBtn">⬆ JUMP</button>
+  <button id="shootBtn" class="touchBtn">🍭 SHOOT</button>
+</div>
 
 <div class="controls">
   <kbd>Space</kbd> jump &nbsp;·&nbsp;
@@ -296,6 +313,28 @@
   // isn't a key press) — browsers need a gesture before audio can play.
   document.addEventListener('pointerdown', () => audio.start());
   document.addEventListener('keyup', e => { KEYS[e.code] = false; });
+
+  // ---- Touch controls (iPad / phones) ----
+  // No physical keyboard on those, so tap the screen to jump and use a
+  // big SHOOT button to fire the lollipop laser.
+  const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouch) {
+    document.getElementById('touchControls').classList.add('show');
+    // Tapping the play area jumps (but not when the game's already over —
+    // then a tap restarts so you can try again).
+    canvas.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      audio.start();
+      if (state.won || state.lost) { reset(); } else { jump(); }
+    });
+    const jumpBtn = document.getElementById('jumpBtn');
+    const shootBtn = document.getElementById('shootBtn');
+    const press = (el, fn) => el.addEventListener('pointerdown', e => {
+      e.preventDefault(); audio.start(); fn();
+    });
+    press(jumpBtn, () => { if (state.won || state.lost) reset(); else jump(); });
+    press(shootBtn, shoot);
+  }
 
   function jump() {
     if (state.won || state.lost) return;
