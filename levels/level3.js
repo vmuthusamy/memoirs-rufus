@@ -103,7 +103,7 @@ const LEVEL_3 = {
   crates: [
     { x: 500, y: 535 },
     { x: 1000, y: 535 },
-    { x: 1550, y: 535 },
+    { x: 1490, y: 535 },   // nudged off the jump pad at x:1550 (it was sitting on top of it)
     { x: 2100, y: 535 },
     { x: 2750, y: 535 },
     { x: 3250, y: 535 },
@@ -113,14 +113,14 @@ const LEVEL_3 = {
   ],
 
   bounceCrates: [
-    { x: 700, y: 560 },    // Open gap between platforms at x:550 and x:800
-    { x: 1550, y: 560 },   // Gap between platforms at x:1400 and x:1650
+    { x: 730, y: 560 },    // Open gap between platforms at x:550 and x:800
+    { x: 1580, y: 560 },   // Gap between platforms at x:1400 and x:1650
     { x: 1950, y: 560 },   // Clear area
-    { x: 2500, y: 560 },   // Clear of platform at x:2650
-    { x: 3450, y: 560 },   // Gap between platforms at x:3350 and x:3600
+    { x: 2580, y: 560 },   // Clear of platform at x:2650
+    { x: 3500, y: 560 },   // Gap between platforms at x:3350 and x:3600
     { x: 3750, y: 560 },   // Clear area
-    { x: 4350, y: 560 },   // Clear of platform at x:4450
-    { x: 5250, y: 560 },   // Past last platform, near exit
+    { x: 4360, y: 560 },   // Clear of platform at x:4450
+    { x: 4920, y: 560 },   // Past last platform, near exit
   ],
 
   enemies: [

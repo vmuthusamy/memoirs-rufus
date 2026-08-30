@@ -7,7 +7,7 @@ const LEVEL_6 = {
   name: "King Clown",
 
   // Carnival 8-bit music (playful, no beat drop) — shared with Level 5
-  music: "circus",
+  music: "bossrush",
 
   memoir: "Dear Diary, I made it to the center ring of the circus tent... and there HE is. The KING CLOWN. He's HUGE, he's got a JETPACK, and he's wearing a golden crown! He's laughing at me and flying around shooting fire from his jetpack! The only way to beat him is to dodge when he dives at me, then JUMP ON HIS HEAD when he crashes! But he keeps getting faster and summoning his little clown minions! This is the ultimate showdown... it's me vs the King Clown! LET'S GO!",
 

@@ -7,7 +7,7 @@ const LEVEL_9 = {
   name: "Candy Chaos",
 
   // Candy 8-bit music with a beat drop — shared with Levels 7 & 8
-  music: "candy",
+  music: "runngun",
 
   memoir: "Dear Diary, the Candy Kingdom just got CRAZY! There are chocolate spikes on the ceiling AND the floor! I need to put on my jetpack and fly right through the middle without touching them! Then a big lollipop field to fly over! Next time... something BIG is waiting for me!",
 
@@ -84,6 +84,11 @@ const LEVEL_9 = {
 
     // After tunnel ground treats
     { x: 2000, y: 530 }, { x: 2200, y: 530 },
+
+    // Treats parked right above the two jump pads, so bouncing is worth it.
+    // (This level has no platforms, so without these the pads did nothing.)
+    { x: 2300, y: 300 },
+    { x: 3800, y: 300 },
 
     // Lollipop section — fly up to grab!
     { x: 2500, y: 170 }, { x: 2800, y: 120 },

@@ -8,7 +8,7 @@ const LEVEL_2 = {
   name: "The Neighborhood",
 
   // Sunny outdoor 8-bit music with a beat drop — shared with Level 1
-  music: "outside",
+  music: "overworld",
 
   memoir: "Dear Diary, I ventured past the fence today. The neighborhood squirrels have HELMETS now! And they're EVERYWHERE - on the ground, on platforms, even guarding the treats! I learned that if I jump on them first, their helmets pop off. Then my tail spin finishes the job. This is going to be tough!",
 
@@ -104,12 +104,12 @@ const LEVEL_2 = {
 
   // Bounce crates to help get back up after falling
   bounceCrates: [
-    { x: 700, y: 560 },    // After first set of platforms
+    { x: 710, y: 560 },    // After first set of platforms
     { x: 1450, y: 560 },   // Middle of gauntlet
-    { x: 2100, y: 560 },   // Base of staircase
-    { x: 2950, y: 560 },   // After high/low road choice
-    { x: 3450, y: 560 },   // Final gauntlet
-    { x: 4500, y: 560 },   // Near the exit
+    { x: 1970, y: 560 },   // Base of staircase
+    { x: 3040, y: 560 },   // After high/low road choice
+    { x: 3480, y: 560 },   // Final gauntlet
+    { x: 4320, y: 560 },   // Near the exit
   ],
 
   // Checkpoints (flag posts - respawn here on death)

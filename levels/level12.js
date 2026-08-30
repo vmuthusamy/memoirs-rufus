@@ -16,7 +16,7 @@ const LEVEL_12 = {
   lavaTheme: true,
 
   // Play the 8-bit volcano music with the two beat drops! 🌋
-  music: "volcano",
+  music: "underground",
 
   memoir: "Dear Diary, the floor is LAVA! For real this time! I have to RUN and JUMP across the bubbling lava pits and hop on the floating volcano rocks. One slip and it's HOT HOT HOT! Tail spin the bad guys and DASH to the end!",
 

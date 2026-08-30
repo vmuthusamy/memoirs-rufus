@@ -14,6 +14,9 @@
 const LEVEL_10 = {
   name: "Donut Doom",
 
+  // Mechanical, relentless 8-bit boss music (this level used to be silent!)
+  music: "fortress",
+
   memoir: "Dear Diary, the Candy Kingdom is in ruins. The chaos has a face: MR. DONUT. Pink. Sprinkled. ANGRY. He spits chocolate spikes and won't stop running away! Good thing I brought my lollipop laser. There will be ONE chance per break to hit him. Three hits and he EXPLODES into sprinkles. And if I never get hit ONCE, the YELLOW GEM is mine. Here we go. LET'S GET 'EM, RUFUS!",
 
   // Pink sugar-rush sky

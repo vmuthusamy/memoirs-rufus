@@ -8,6 +8,15 @@
 const SECRET_LEVEL = {
   name: "Rufus's Treat Party",
 
+  // TODO (Arvind): this level still has NO music of its own — it's the only
+  // chapter left without one. Arvind is going to design how it should sound,
+  // then we'll add the recipe to `levelMusic.nesThemes` in index.html and set
+  // `music: "<name>"` right here.
+  //
+  // TODO (Arvind): add variation that uses ALL the friends and their powers —
+  // Marthina's double jump + glide, Renard's dash, Fiery's fire tail — instead
+  // of everything being solvable by Rufus alone.
+
   memoir: "Dear Diary, I found something magical today — golden paw prints scattered across all my adventures! When I collected the last one, a secret path appeared... It leads to the most amazing place: a giant party meadow where ALL my friends are waiting! Marthina brought lasagna, Renard is pretending he doesn't care (but he totally does), and Fiery is lighting the way! Time for the ULTIMATE adventure together!",
 
   // Magical twilight party sky ��� purple to gold gradient feel

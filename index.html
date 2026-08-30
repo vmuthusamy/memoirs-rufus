@@ -31,6 +31,7 @@
 <script src="levels/level13.js"></script>
 <script src="levels/level14.js"></script>
 <script src="levels/level15.js"></script>
+<script src="levels/level16.js"></script>
 
 <!-- Load Kaplay game engine -->
 <script src="https://unpkg.com/kaplay@3001/dist/kaplay.js"></script>
@@ -126,7 +127,7 @@ const menuMusic = {
     const begin = () => {
       if (this.playing || this.muted) return;
       this.playing = true;
-      this.step = 0;
+      this.pickTheme();   // random opening tune each time you land on the menu
       this.nextNoteTime = this.ctx.currentTime + 0.06;
       this.scheduler();
     };
@@ -191,6 +192,9 @@ const menuMusic = {
     if (!this.playing || !this.ctx) return;
     const lookahead = 0.1;
     while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
+      // Been on this tune for 2 minutes? Swap at the START of a loop so the
+      // change lands on a musical boundary instead of chopping a bar in half.
+      if (this.step === 0 && this.ctx.currentTime >= this.themeSwapAt) this.pickTheme();
       this.playStep(this.step, this.nextNoteTime);
       this.nextNoteTime += 60 / this.bpm / 4; // 16th notes
       this.step = (this.step + 1) % 64;        // 4-bar loop
@@ -198,35 +202,111 @@ const menuMusic = {
     this.timer = setTimeout(() => this.scheduler(), 25);
   },
 
-  // Happy, adventurous 8-bit loop: C - G - Am - F (classic feel-good progression)
+  // ============================================================
+  // FOUR OPENING TUNES — the title screen picks one at random and swaps to a
+  // different one every 2 minutes, so the menu never gets boring.
+  // All original 8-bit music: ordinary chords + our own melodies, generated
+  // live by maths. Nothing is copied from any real game.
+  // ============================================================
+  menuThemes: [
+    {
+      name: "Adventure",           // the original menu tune
+      bpm: 132,
+      chords: [
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 31, notes: [59, 62, 67, 71] }, // G
+        { root: 33, notes: [57, 60, 64, 69] }, // Am
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+      ],
+      lead: [
+        [3, 2, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3, 2, 1, 2, 3],
+        [2, 3, 2, 1, 2, 2, 1, 0, 1, 2, 3, 2, 1, 2, 1, 0],
+        [0, 1, 2, 3, 2, 1, 2, 3, 1, 2, 3, 2, 0, 1, 2, 1],
+        [3, 2, 1, 0, 1, 2, 3, 2, 3, 2, 1, 0, 2, 1, 0, 1],
+      ],
+    },
+    {
+      name: "Hero March",          // marching and brave
+      bpm: 142,
+      chords: [
+        { root: 40, notes: [64, 67, 71, 76] }, // Em
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 38, notes: [62, 66, 69, 74] }, // D
+        { root: 31, notes: [59, 62, 67, 71] }, // G
+      ],
+      lead: [
+        [3, -1, 3, 2, 3, -1, 2, 1, 2, -1, 2, 3, 2, 1, 0, -1],
+        [0, 1, 2, 3, -1, 2, 3, -1, 1, 2, 3, 2, -1, 1, 2, -1],
+        [2, 2, 3, -1, 1, 1, 2, -1, 0, 0, 1, 2, 3, -1, 2, -1],
+        [3, 2, 1, 0, -1, 1, 2, 3, -1, 2, 1, 2, 3, -1, 2, -1],
+      ],
+    },
+    {
+      name: "Sunny Hop",           // light and skippy
+      bpm: 150,
+      chords: [
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+        { root: 34, notes: [58, 62, 65, 70] },
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+      ],
+      lead: [
+        [0, -1, 2, -1, 3, -1, 2, -1, 1, -1, 2, 3, -1, 2, -1, 1],
+        [3, 2, -1, 3, 2, -1, 1, 0, -1, 1, 2, -1, 3, 2, -1, 1],
+        [1, 2, 3, -1, 2, 1, 0, -1, 2, 3, 2, 1, -1, 0, 1, -1],
+        [2, -1, 1, 2, -1, 3, 2, -1, 0, 1, -1, 2, 3, -1, 2, -1],
+      ],
+    },
+    {
+      name: "Star Parade",         // proud and sparkly
+      bpm: 138,
+      chords: [
+        { root: 33, notes: [57, 60, 64, 69] }, // Am
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 31, notes: [59, 62, 67, 71] }, // G
+      ],
+      lead: [
+        [0, 1, 2, 3, 2, 3, 2, 1, 0, 1, 2, 3, 1, 2, 3, 2],
+        [3, 2, 3, 1, 2, 0, 1, 2, 3, 1, 2, 3, 2, 1, 0, 1],
+        [2, 3, 1, 2, 0, 1, 2, 3, 2, 0, 3, 1, 2, 3, 1, 2],
+        [1, 0, 2, 1, 3, 2, 1, 0, 2, 3, 1, 2, 0, 1, 2, 3],
+      ],
+    },
+  ],
+  themeIdx: 0,
+  themeSwapAt: 0,   // audio-clock time when we should change tune
+
+  // Choose a fresh opening tune (never the same one twice in a row)
+  pickTheme() {
+    const n = this.menuThemes.length;
+    let i = Math.floor(Math.random() * n);
+    if (n > 1 && i === this.themeIdx) i = (i + 1) % n;
+    this.themeIdx = i;
+    this.bpm = this.menuThemes[i].bpm;
+    this.step = 0;
+    if (this.ctx) this.themeSwapAt = this.ctx.currentTime + 120; // 2 minutes
+  },
+
   playStep(step, time) {
+    const t = this.menuThemes[this.themeIdx] || this.menuThemes[0];
     const bar = Math.floor(step / 16);
     const inBar = step % 16;
-    const chords = [
-      { root: 36, notes: [60, 64, 67, 72] }, // C:  C2,  C4 E4 G4 C5
-      { root: 31, notes: [59, 62, 67, 71] }, // G:  G1,  B3 D4 G4 B4
-      { root: 33, notes: [57, 60, 64, 69] }, // Am: A1,  A3 C4 E4 A4
-      { root: 29, notes: [60, 65, 69, 72] }, // F:  F1,  C4 F4 A4 C5
-    ];
-    const c = chords[bar];
+    const c = t.chords[bar % t.chords.length];
 
     // Triangle bass — bouncy "oom-pah"
     if (inBar % 4 === 0) this.note(this.freq(c.root), time, 0.16, "triangle", 0.26);
     else if (inBar % 4 === 2) this.note(this.freq(c.root + 7), time, 0.14, "triangle", 0.2);
 
-    // Square-wave lead melody — different bouncy contour per bar
-    const leadPatterns = [
-      [3, 2, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3, 2, 1, 2, 3],
-      [2, 3, 2, 1, 2, 2, 1, 0, 1, 2, 3, 2, 1, 2, 1, 0],
-      [0, 1, 2, 3, 2, 1, 2, 3, 1, 2, 3, 2, 0, 1, 2, 1],
-      [3, 2, 1, 0, 1, 2, 3, 2, 3, 2, 1, 0, 2, 1, 0, 1],
-    ];
-    const idx = leadPatterns[bar][inBar];
-    this.note(this.freq(c.notes[idx]), time, 0.1, "square", 0.085);
+    // Square-wave lead melody — a different contour per bar
+    const idx = t.lead[bar % t.lead.length][inBar];
+    if (idx >= 0) {
+      this.note(this.freq(c.notes[idx]), time, 0.1, "square", 0.085);
 
-    // Sparkly harmony on the off-beats (a third up)
-    if (inBar % 4 === 1 || inBar % 4 === 3) {
-      this.note(this.freq(c.notes[(idx + 1) % 4] + 12), time, 0.06, "square", 0.03);
+      // Sparkly harmony on the off-beats (a third up)
+      if (inBar % 4 === 1 || inBar % 4 === 3) {
+        this.note(this.freq(c.notes[(idx + 1) % 4] + 12), time, 0.06, "square", 0.03);
+      }
     }
 
     // Drums — steady but light
@@ -277,8 +357,13 @@ const levelMusic = {
   start(theme) {
     if (this.playing || this.isMuted()) return;
     this.theme = theme || "volcano";
-    const bpmByTheme = { moon: 134, volcano: 116, adventure: 132, candy: 142, circus: 122, outside: 130, gym: 138, library: 96 };
-    this.bpm = bpmByTheme[this.theme] || 124;
+    const bpmByTheme = { moon: 134, volcano: 116, adventure: 132, candy: 142, circus: 122, outside: 130, gym: 138, library: 96, party: 140, dubstep: 140 };
+    // NES-style themes carry their own speed in their recipe
+    const nes = this.nesThemes[this.theme];
+    this.bpm = nes ? nes.bpm : (bpmByTheme[this.theme] || 124);
+    // Shuffle which melody phrase the tune starts on, so a level never sounds
+    // exactly the same twice.
+    this.variant = Math.floor(Math.random() * 4);
     this.init();
     if (!this.ctx) return;
     const begin = () => {
@@ -337,6 +422,18 @@ const levelMusic = {
       g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
       o.connect(g).connect(this.ctx.destination);
       o.start(time); o.stop(time + 0.16);
+    } else if (type === "snare") {
+      // The NES made its snare on the NOISE channel — a short burst of static.
+      const sr = this.ctx.sampleRate, len = sr * 0.1;
+      const buf = this.ctx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.7);
+      const n = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = "highpass"; hp.frequency.value = 1400;
+      n.buffer = buf; g.gain.value = 0.13;
+      n.connect(hp).connect(g).connect(this.ctx.destination);
+      n.start(time);
     }
   },
 
@@ -385,6 +482,32 @@ const levelMusic = {
     lfo.start(time); lfo.stop(time + dur + 0.02);
   },
 
+  // WOBBLE BASS — the classic dubstep "wub wub". A fat sawtooth run through a
+  // lowpass filter whose cutoff is wiggled by an LFO (rateHz = how fast it wobbles).
+  wobble(time, dur, midi, rateHz) {
+    if (!this.ctx) return;
+    const f = this.freq(midi);
+    // Two detuned oscillators = thick bass
+    const o1 = this.ctx.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = f;
+    const o2 = this.ctx.createOscillator(); o2.type = "square";   o2.frequency.value = f * 1.006;
+    // Lowpass filter with resonance — this is what makes it "talk"
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 500; lp.Q.value = 11;
+    // LFO wiggles the filter cutoff = the WOBBLE
+    const lfo = this.ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = rateHz || 6;
+    const lfoG = this.ctx.createGain(); lfoG.gain.value = 650;
+    lfo.connect(lfoG).connect(lp.frequency);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.linearRampToValueAtTime(0.2, time + 0.02);
+    g.gain.setValueAtTime(0.2, time + Math.max(0.05, dur - 0.05));
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    o1.connect(lp); o2.connect(lp); lp.connect(g).connect(this.ctx.destination);
+    o1.start(time); o1.stop(time + dur + 0.02);
+    o2.start(time); o2.stop(time + dur + 0.02);
+    lfo.start(time); lfo.stop(time + dur + 0.02);
+  },
+
   // Rising "riser" tone that builds tension right before the drop
   riser(time, dur, startMidi, endMidi) {
     if (!this.ctx) return;
@@ -399,8 +522,224 @@ const levelMusic = {
     o.start(time); o.stop(time + dur + 0.02);
   },
 
+  // ============================================================
+  // 8-BIT THEME ENGINE — the SOUND of classic Nintendo-era games.
+  // ------------------------------------------------------------
+  // ALL OF THIS MUSIC IS ORIGINAL. Nothing here is copied from any real game.
+  // What we borrow is the *technique* — the four-channel chiptune sound, the
+  // tempo and the energy of 80s platformers and run-and-gun shooters. That's a
+  // style, like drawing in pixel art; the actual tunes below are our own, made
+  // out of ordinary chords that no one owns. No samples, no transcriptions:
+  // every note is generated live by maths in this file.
+  //
+  // The real NES could only make FOUR sounds at once, so every tune below is
+  // built the same way those old games were:
+  //    PULSE 1  -> the tune you hum        (square wave lead)
+  //    PULSE 2  -> a harmony under the tune (Contra's famous "twin" leads)
+  //    TRIANGLE -> the bouncy bassline
+  //    NOISE    -> the drums (kick + snare)
+  //
+  // A theme is just a little recipe. Want to remix one? Change the numbers!
+  //    chords : the 4 chords it walks through. root = the bass note,
+  //             notes = the 4 notes the melody is allowed to use.
+  //    bass   : 16 slots (one bar). The number is how far above the root to
+  //             play (0 = root, 7 = fifth, 12 = one octave up). -1 = silence.
+  //    lead   : melody phrases. Each number picks one of the chord's 4 notes.
+  //             -1 = a rest. It rotates every playthrough for variety.
+  //    kick / snare : which of the 16 slots get a drum hit.
+  // ============================================================
+  nesThemes: {
+    // Sunny overworld — bouncy, major key, happy walking bass
+    overworld: {
+      bpm: 148, leadOct: 0, harmony: true, openUpAt: 2, hats: 4,
+      chords: [
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 33, notes: [57, 60, 64, 69] }, // Am
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+        { root: 31, notes: [59, 62, 67, 71] }, // G
+      ],
+      bass:  [0, -1, 7, -1, 12, -1, 7, -1, 0, -1, 7, -1, 12, -1, 7, -1],
+      lead: [
+        [3, -1, 2, 3, -1, 1, 2, -1, 0, 1, 2, 3, -1, 2, -1, 1],
+        [2, 3, -1, 2, 1, -1, 0, 1, 2, -1, 3, 2, 1, -1, 2, -1],
+        [0, 1, 2, 3, 2, 1, 0, -1, 1, 2, 3, -1, 2, 3, -1, 2],
+        [3, 2, 3, -1, 1, 2, -1, 3, 2, 1, 0, 1, -1, 2, 3, -1],
+      ],
+      kick: [0, 8], snare: [4, 12],
+    },
+
+    // Run-and-gun action — fast, heroic, twin square leads
+    runngun: {
+      bpm: 160, leadOct: 0, harmony: true, openUpAt: 2, hats: 2,
+      chords: [
+        { root: 40, notes: [64, 67, 71, 76] }, // Em
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 43, notes: [62, 67, 71, 74] }, // G
+        { root: 38, notes: [62, 66, 69, 74] }, // D
+      ],
+      bass:  [0, 0, -1, 0, 12, -1, 0, -1, 0, 0, -1, 0, 7, -1, 12, -1],
+      lead: [
+        [3, 2, 3, 2, 1, 2, 3, -1, 2, 3, 2, 1, 0, 1, 2, 3],
+        [0, 1, 2, 3, 2, 1, 2, 3, 1, 2, 3, 2, 3, -1, 2, 1],
+        [3, -1, 3, 2, 3, -1, 2, 1, 2, -1, 2, 3, 2, 1, 0, 1],
+        [2, 3, 2, 1, 0, 1, 2, 3, 3, 2, 1, 2, 3, 2, 1, 0],
+      ],
+      kick: [0, 3, 8, 11], snare: [4, 12],
+    },
+
+    // Underground — sparse, low, creepy, lots of space
+    underground: {
+      bpm: 130, leadOct: -12, harmony: false, openUpAt: 8, hats: 0,
+      leadLen: 0.16, bassLen: 0.2,
+      chords: [
+        { root: 36, notes: [60, 63, 67, 70] }, // Cm
+        { root: 34, notes: [58, 61, 65, 68] },
+        { root: 32, notes: [56, 59, 63, 66] },
+        { root: 31, notes: [55, 58, 62, 65] },
+      ],
+      bass:  [0, -1, -1, -1, 12, -1, -1, -1, 0, -1, -1, -1, 12, -1, -1, -1],
+      lead: [
+        [0, -1, 0, -1, -1, -1, 1, -1, 2, -1, -1, -1, 1, -1, -1, -1],
+        [2, -1, 1, -1, 0, -1, -1, -1, 1, -1, -1, -1, 0, -1, -1, -1],
+        [0, -1, -1, 1, -1, 2, -1, -1, 3, -1, 2, -1, -1, 1, -1, -1],
+        [3, -1, 2, -1, 1, -1, 0, -1, -1, -1, 1, -1, 2, -1, -1, -1],
+      ],
+      kick: [0, 8], snare: [],
+    },
+
+    // Castle — ominous, marching, minor and heavy
+    castle: {
+      bpm: 140, leadOct: 0, harmony: true, harmonyDrop: 3, openUpAt: 4, hats: 4,
+      chords: [
+        { root: 33, notes: [57, 60, 63, 68] }, // Am-ish, dark
+        { root: 32, notes: [56, 59, 63, 67] },
+        { root: 31, notes: [55, 58, 62, 67] },
+        { root: 30, notes: [54, 58, 61, 66] },
+      ],
+      bass:  [0, -1, 0, -1, 7, -1, 0, -1, 0, -1, 0, -1, 10, -1, 7, -1],
+      lead: [
+        [0, 1, 2, 3, -1, 2, 1, 0, 1, 2, 3, -1, 2, 1, 0, -1],
+        [3, 2, 1, 0, -1, 1, 2, 3, 2, 1, 0, -1, 1, 2, 3, -1],
+        [0, -1, 1, -1, 2, -1, 3, -1, 2, -1, 1, -1, 0, -1, 1, -1],
+        [2, 3, 2, 1, 2, 3, 2, 1, 0, 1, 0, 1, 2, 1, 2, -1],
+      ],
+      kick: [0, 4, 8, 12], snare: [8],
+    },
+
+    // Jungle — syncopated, energetic, jumpy bass
+    jungle: {
+      bpm: 150, leadOct: 0, harmony: true, openUpAt: 2, hats: 2,
+      chords: [
+        { root: 38, notes: [62, 65, 69, 74] }, // Dm
+        { root: 36, notes: [60, 64, 67, 72] }, // C
+        { root: 34, notes: [58, 62, 65, 70] },
+        { root: 33, notes: [57, 60, 64, 69] }, // Am
+      ],
+      bass:  [0, -1, 0, 7, -1, 0, -1, 12, 0, -1, 0, 7, -1, 12, -1, 7],
+      lead: [
+        [2, 3, -1, 2, 1, -1, 2, 3, -1, 1, 2, -1, 3, 2, -1, 1],
+        [0, -1, 2, 1, -1, 3, 2, -1, 1, 2, -1, 0, 1, -1, 2, 3],
+        [3, 2, 1, -1, 2, 3, -1, 1, 0, -1, 2, 3, -1, 2, 1, -1],
+        [1, 2, 3, 2, -1, 1, 0, -1, 2, 3, 2, -1, 1, 2, 3, -1],
+      ],
+      kick: [0, 6, 8, 14], snare: [4, 12],
+    },
+
+    // Fortress — mechanical, marching, relentless
+    fortress: {
+      bpm: 144, leadOct: 0, harmony: true, harmonyDrop: 7, openUpAt: 2, hats: 2,
+      chords: [
+        { root: 40, notes: [64, 67, 71, 74] }, // Em
+        { root: 40, notes: [64, 68, 71, 75] },
+        { root: 38, notes: [62, 65, 69, 72] },
+        { root: 35, notes: [59, 62, 66, 71] },
+      ],
+      bass:  [0, 0, 0, 0, 7, 7, 0, 0, 0, 0, 0, 0, 12, 12, 7, 7],
+      lead: [
+        [3, -1, 2, -1, 3, -1, 1, -1, 2, -1, 3, -1, 2, -1, 0, -1],
+        [0, 1, 2, 3, -1, -1, 2, 1, 0, 1, 2, 3, -1, -1, 2, 1],
+        [2, 2, 3, 3, 2, 2, 1, 1, 0, 0, 1, 1, 2, 2, 3, -1],
+        [3, 2, -1, 3, 2, -1, 1, 0, 1, 2, -1, 3, 2, -1, 1, -1],
+      ],
+      kick: [0, 4, 8, 12], snare: [4, 12],
+    },
+
+    // Boss showdown — urgent, dramatic, keeps climbing
+    bossrush: {
+      bpm: 152, leadOct: 0, harmony: true, harmonyDrop: 3, openUpAt: 1, hats: 2,
+      chords: [
+        { root: 33, notes: [57, 60, 64, 69] }, // Am
+        { root: 29, notes: [60, 65, 69, 72] }, // F
+        { root: 31, notes: [59, 62, 67, 71] }, // G
+        { root: 28, notes: [56, 59, 64, 68] }, // E
+      ],
+      bass:  [0, 0, -1, 0, 0, -1, 7, -1, 0, 0, -1, 0, 10, -1, 7, -1],
+      lead: [
+        [3, 3, 2, 3, -1, 2, 1, 2, 3, -1, 2, 3, 1, 2, -1, 0],
+        [0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2],
+        [3, -1, 2, 3, -1, 1, 2, -1, 3, 2, 3, -1, 2, 1, 0, -1],
+        [2, 3, 3, 2, 1, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, -1],
+      ],
+      kick: [0, 2, 8, 10], snare: [4, 12],
+    },
+
+    // Shimmering starlight — heroic space theme
+    starlight: {
+      bpm: 138, leadOct: 12, harmony: true, openUpAt: 4, hats: 4,
+      leadLen: 0.09,
+      chords: [
+        { root: 36, notes: [60, 64, 67, 71] }, // Cmaj7
+        { root: 33, notes: [57, 60, 64, 67] },
+        { root: 34, notes: [58, 62, 65, 69] },
+        { root: 31, notes: [59, 62, 66, 69] },
+      ],
+      bass:  [0, -1, -1, 7, -1, -1, 12, -1, 0, -1, -1, 7, -1, 12, -1, -1],
+      lead: [
+        [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3],
+        [3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0],
+        [0, 2, 1, 3, 2, 0, 1, 2, 3, 1, 2, 0, 1, 3, 2, 1],
+        [2, 3, 1, 2, 0, 1, 3, 2, 1, 2, 0, 3, 2, 1, 3, 2],
+      ],
+      kick: [0, 8], snare: [4, 12],
+    },
+  },
+
+  // Play one 16th-note slot of an NES-style theme
+  nesStep(step, time, cfg) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const chord = cfg.chords[bar % cfg.chords.length];
+    // Rotate which melody phrase we're on, based on this playthrough's variant
+    const phrase = cfg.lead[(bar + (this.variant || 0)) % cfg.lead.length];
+    const big = bar >= (cfg.openUpAt === undefined ? 4 : cfg.openUpAt);
+
+    // TRIANGLE — the bassline
+    const b = cfg.bass[inBar];
+    if (b >= 0) {
+      this.note(this.freq(chord.root + b), time, cfg.bassLen || 0.13, "triangle", big ? 0.3 : 0.2);
+    }
+
+    // PULSE 1 — the melody (plus PULSE 2 harmony once the tune opens up)
+    const li = phrase[inBar];
+    if (li >= 0) {
+      const midi = chord.notes[li % chord.notes.length] + (cfg.leadOct || 0);
+      const vol = cfg.leadVol || 0.09;
+      this.note(this.freq(midi), time, cfg.leadLen || 0.11, "square", big ? vol : vol * 0.7);
+      if (cfg.harmony && big) {
+        this.note(this.freq(midi - (cfg.harmonyDrop || 5)), time, cfg.leadLen || 0.11, "square", vol * 0.45);
+      }
+    }
+
+    // NOISE — the drums
+    if (cfg.kick.indexOf(inBar) >= 0) this.drum(time, "kick");
+    if (big && cfg.snare.indexOf(inBar) >= 0) this.drum(time, "snare");
+    if (big && cfg.hats && inBar % cfg.hats === 0) this.hat(time, 0.03);
+  },
+
   // Pick the right tune for the current theme
   playStep(step, time) {
+    // NES-style themes all share one engine, driven by their recipe above
+    const nes = this.nesThemes[this.theme];
+    if (nes) return this.nesStep(step, time, nes);
     if (this.theme === "moon") return this.moonStep(step, time);
     if (this.theme === "adventure") return this.adventureStep(step, time);
     if (this.theme === "candy") return this.candyStep(step, time);
@@ -408,6 +747,8 @@ const levelMusic = {
     if (this.theme === "outside") return this.outsideStep(step, time);
     if (this.theme === "gym") return this.gymStep(step, time);
     if (this.theme === "library") return this.libraryStep(step, time);
+    if (this.theme === "party") return this.partyStep(step, time);
+    if (this.theme === "dubstep") return this.dubstepStep(step, time);
     return this.volcanoStep(step, time);
   },
 
@@ -601,6 +942,80 @@ const levelMusic = {
     }
   },
 
+  // PARTY THEME — happy, bouncy, celebration dance tune for FELIX's musical level!
+  // Bright major key with a joyful drop and hand-clap backbeat. (16-bar loop)
+  // Bars 0-3 = build-up, bars 4-15 = the party drop. Progression: C - F - G - C.
+  partyStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const dropped = bar >= 4;
+    const chords = [
+      { root: 48, notes: [72, 76, 79, 84] }, // C
+      { root: 41, notes: [65, 69, 72, 77] }, // F
+      { root: 43, notes: [67, 71, 74, 79] }, // G
+      { root: 48, notes: [72, 76, 79, 84] }, // C (home!)
+    ];
+    const c = chords[bar % 4];
+
+    if (!dropped) {
+      // Cheerful build-up — twinkly little melody getting excited for the party
+      if (inBar === 0) this.note(this.freq(c.root - 12), time, 0.7, "triangle", 0.18);
+      const bl = [
+        [0, -1, 1, -1, 2, -1, 3, 2, 1, -1, 2, -1, 3, 2, 1, -1],
+        [3, -1, 2, -1, 1, -1, 0, 1, 2, -1, 1, -1, 0, 1, 2, -1],
+        [0, 1, 2, 3, -1, 2, -1, 1, 0, 1, 2, 3, -1, 2, 3, -1],
+        [2, -1, 1, 0, 1, 2, 3, -1, 2, 1, 0, 1, 2, 3, 2, -1],
+      ];
+      const idx = bl[bar % 4][inBar];
+      if (idx >= 0) this.note(this.freq(c.notes[idx]), time, 0.15, "square", 0.07);
+      // hats + kick rushing into the drop
+      if (bar === 3 && inBar >= 8) this.hat(time, 0.03 + (inBar - 8) * 0.008);
+      if (bar === 3 && inBar >= 12) this.drum(time, "kick");
+    } else {
+      // THE PARTY DROP — full happy dance beat with clappy backbeat
+      if (inBar % 2 === 0) this.note(this.freq(c.root - 12), time, 0.12, "triangle", 0.3);
+      if (inBar % 4 === 2) this.note(this.freq(c.root), time, 0.1, "triangle", 0.17);
+      const dl = [
+        [0, 2, 1, 2, 3, 2, 1, 2, 0, 2, 3, 2, 1, 2, 3, 2],
+        [3, 2, 3, 1, 2, 1, 0, 1, 2, 3, 2, 1, 2, 3, 2, 1],
+        [0, 1, 2, 3, 2, 1, 0, 2, 3, 2, 1, 0, 1, 2, 3, 2],
+        [2, 3, 2, 1, 0, 1, 2, 3, 0, 2, 3, 2, 1, 2, 3, 0],
+      ];
+      const idx = dl[bar % 4][inBar];
+      this.note(this.freq(c.notes[idx]), time, 0.085, "square", 0.08);
+      if (inBar % 2 === 0) this.note(this.freq(c.notes[idx] + 4), time, 0.05, "square", 0.03); // bright major harmony
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (inBar % 4 === 2) this.hat(time, 0.06); // clap-ish backbeat
+      if (inBar % 2 === 1) this.hat(time, 0.035);
+      if (bar === 4 && inBar === 0) this.rumble(time, 0.24); // party popper on the drop!
+    }
+  },
+
+  // DUBSTEP THEME — a wobbly dubstep BEAT with NO lead melody, so the PIANO KEYS
+  // the player jumps on become the melody on top! Half-time kick + snare, off-beat
+  // hats, and the signature wobble bass that changes speed like it's talking.
+  dubstepStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    // Dark, moody bass roots per bar (low): E - E - G - D
+    const roots = [28, 28, 31, 26];
+    const root = roots[bar % 4];
+    // Half-time drums: KICK on beat 1, big SNARE on beat 3
+    if (inBar === 0) this.drum(time, "kick");
+    if (inBar === 8) this.rumble(time, 0.18);        // snare-ish smack
+    // Off-beat hats for the groove
+    if (inBar % 4 === 2) this.hat(time, 0.045);
+    if (inBar % 8 === 6) this.hat(time, 0.03);
+    // WOBBLE BASS — a fresh wobble every beat (4 steps); the speed changes each
+    // time so it sounds like the bass is "talking" (wub-wub-WUB).
+    if (inBar % 4 === 0) {
+      const rates = [4, 8, 6, 12, 5, 16, 8, 6];
+      const rate = rates[(bar * 4 + inBar / 4) % rates.length];
+      const stepDur = 60 / this.bpm / 4;
+      this.wobble(time, stepDur * 4, root, rate);    // lasts one whole beat
+    }
+    // Little hat build every 4th bar to keep it exciting
+    if (bar % 4 === 3 && inBar >= 12) this.hat(time, 0.03 + (inBar - 12) * 0.01);
+  },
+
   // CIRCUS THEME — playful, mischievous minor with an oom-pah bounce (Am - E - Dm - E).
   circusStep(step, time) {
     const bar = Math.floor(step / 16), inBar = step % 16;
@@ -760,7 +1175,7 @@ const jumpForce = 650;
 const tailSpinDuration = 0.4;
 
 // All levels in order
-const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15];
+const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15, LEVEL_16];
 
 // ============================================
 // LEVEL CREATOR ROBOT — generates a playable level from a typed prompt.
@@ -852,7 +1267,33 @@ function generateLevel(promptText) {
 
   // Crates and a couple of bounce crates for fun
   for (let cx = 450; cx < W - 400; cx += 700) crates.push({ x: cx, y: 535 });
-  for (let bx = 800; bx < W - 500; bx += 1500) bounceCrates.push({ x: bx, y: 560 });
+
+  // BOUNCE PADS. These used to be dropped every 1500px without looking at
+  // anything, so they often landed right under a platform (Rufus bonks his head)
+  // or somewhere with nothing to reach (pointless). Now each pad:
+  //   1. slides along until it has CLEAR SKY above it, and
+  //   2. gets its own high bonus platform just up-and-right, which is the only
+  //      thing in the level you can't reach with an ordinary jump.
+  // That gives every pad an obvious purpose.
+  for (let bx = 800; bx < W - 500; bx += 1500) {
+    let px = bx;
+    for (let tries = 0; tries < 14; tries++) {
+      const underLedge = platforms.some((p) => px + 28 > p.x && px - 28 < p.x + p.width);
+      const onCrate = crates.some((c) => Math.abs(c.x - px) < 32);
+      if (!underLedge && !onCrate) break;
+      px += 40;
+    }
+    if (px > W - 400) continue;      // ran out of room, skip this pad
+    bounceCrates.push({ x: px, y: 560 });
+
+    // The reward you can ONLY get by using the pad (ground jump is ~130px,
+    // a pad launch is ~260px). Offset to the right so it isn't a ceiling.
+    const hx = px + 60;
+    if (hx + 140 < W - 150) {
+      platforms.push({ x: hx, y: 290, width: 140, height: 30 });
+      treats.push({ x: hx + 70, y: 250 });
+    }
+  }
 
   // A reward cluster right before the exit
   const ex2 = W - 150;
@@ -888,6 +1329,31 @@ function deleteSavedLevel(index) {
   if (index >= 0 && index < list.length) { list.splice(index, 1); localStorage.setItem("rufus_saved_levels", JSON.stringify(list)); }
 }
 
+// ---- LOCAL MODE (home computer only) ----
+// The Level Creator is a HOME-ONLY tool. It shows up when you open the game on
+// your own machine — straight from the file (file://) or from a local server
+// like localhost — and stays hidden on the public rufusfamily.com site.
+//
+// Why: the creator is the part that will grow into a real level-generating AI.
+// Keeping it off the public site means visitors can never trigger that work
+// (and the bills that come with it); it stays a tool for Arvind at home.
+function isLocalMode() {
+  try {
+    if (location.protocol === "file:") return true;   // opened by double-click
+    const h = location.hostname;
+    return (
+      h === "" ||
+      h === "localhost" ||
+      h === "127.0.0.1" ||
+      h === "::1" ||
+      h === "[::1]" ||
+      h.endsWith(".local")                            // e.g. macbook.local
+    );
+  } catch (e) {
+    return false; // if we can't tell, assume public and hide it
+  }
+}
+
 // ---- Bad-word ban for the Level Creator ----
 // Writing a bad word in your idea, or naming a level a bad word, bans you from
 // making levels for 24 hours. (Reuses the same word list as the custom hats.)
@@ -906,7 +1372,7 @@ function banHoursLeft() {
 // Difficulty rating shown on each chapter card (by level index 0-14)
 const LEVEL_DIFFICULTY = [
   "Easy", "Easy", "Normal", "Easy", "Hard", "Normal", "Easy",
-  "Normal", "Normal", "Insane", "Hard", "Normal", "Hard", "Hard", "Hard",
+  "Normal", "Normal", "Insane", "Hard", "Normal", "Hard", "Hard", "Hard", "Normal",
 ];
 const DIFFICULTY_COLOR = {
   Easy: [70, 200, 90], Normal: [255, 200, 80], Hard: [230, 60, 60], Insane: [180, 80, 255],
@@ -1470,6 +1936,113 @@ function drawRenard() {
   ctx.fillRect(0, 12, 3, 4);
 
   return c;
+}
+
+// --- DRAW FELIX (Rufus's DAD — colorful patchwork fox! Mismatched red + green
+//     ears, bright orange belly, one white fluffy arm + one green striped arm,
+//     green striped legs with red feet. He's the musical dad of the family.) ---
+function drawFelix() {
+  const c = document.createElement("canvas");
+  c.width = 34;
+  c.height = 34;
+  const ctx = c.getContext("2d");
+
+  const fur = "#B5732E"; // warm rusty-brown fur
+
+  // Body
+  ctx.fillStyle = fur;
+  ctx.fillRect(8, 12, 18, 13);
+
+  // Head
+  ctx.fillRect(9, 3, 16, 13);
+
+  // Pointy ears
+  ctx.fillRect(8, 0, 5, 7);   // left ear
+  ctx.fillRect(21, 0, 5, 7);  // right ear
+  // MISMATCHED inner ears — RED on the left, GREEN on the right (like the real Felix!)
+  ctx.fillStyle = "#E23B2E"; // red
+  ctx.fillRect(9, 1, 3, 5);
+  ctx.fillStyle = "#8BC34A"; // green
+  ctx.fillRect(22, 1, 3, 5);
+
+  // White muzzle / face patch
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(12, 8, 10, 8);
+  ctx.fillRect(14, 6, 6, 4);
+
+  // Kind eyes
+  ctx.fillStyle = "#000";
+  ctx.fillRect(13, 6, 3, 3);
+  ctx.fillRect(19, 6, 3, 3);
+  ctx.fillStyle = "#FFF";
+  ctx.fillRect(14, 6, 1, 1);
+  ctx.fillRect(20, 6, 1, 1);
+
+  // Big black nose (Felix has a big round nose)
+  ctx.fillStyle = "#111";
+  ctx.fillRect(16, 11, 3, 3);
+
+  // Friendly smile
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(14, 14, 2, 1);
+  ctx.fillRect(16, 15, 3, 1);
+  ctx.fillRect(19, 14, 1, 1);
+
+  // Bright ORANGE belly patch
+  ctx.fillStyle = "#F5872B";
+  ctx.fillRect(13, 15, 9, 9);
+
+  // Arms — MISMATCHED! left is white & fluffy, right is green striped
+  ctx.fillStyle = "#FFF8F0"; // white fluffy arm (left)
+  ctx.fillRect(4, 14, 5, 9);
+  ctx.fillStyle = "#8BC34A"; // green arm (right)
+  ctx.fillRect(25, 14, 5, 9);
+  ctx.fillStyle = "#5FA030"; // green arm stripes
+  ctx.fillRect(25, 16, 5, 1);
+  ctx.fillRect(25, 19, 5, 1);
+
+  // Legs — green striped with RED feet
+  ctx.fillStyle = "#8BC34A";
+  ctx.fillRect(11, 25, 5, 7);
+  ctx.fillRect(19, 25, 5, 7);
+  ctx.fillStyle = "#5FA030"; // leg stripes
+  ctx.fillRect(11, 27, 5, 1);
+  ctx.fillRect(19, 27, 5, 1);
+  ctx.fillStyle = "#E23B2E"; // red feet
+  ctx.fillRect(11, 30, 5, 2);
+  ctx.fillRect(19, 30, 5, 2);
+
+  // Bushy tail (brown with white tip)
+  ctx.fillStyle = fur;
+  ctx.fillRect(2, 13, 6, 6);
+  ctx.fillStyle = "#FFF8F0";
+  ctx.fillRect(0, 12, 4, 5);
+
+  return c;
+}
+
+// --- HSL -> RGB helper (used for rainbow piano keys). h,s,l are 0..1, returns [r,g,b] 0..255 ---
+function hslToRgb(h, s, l) {
+  h = ((h % 1) + 1) % 1;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 // --- DRAW FIERY (baby T-Rex, red/orange, big head, tiny arms) ---
@@ -2072,6 +2645,7 @@ loadSprite("checkpoint_active", drawCheckpointFlag(true).toDataURL());
 loadSprite("wasp", drawWasp().toDataURL());
 loadSprite("marthina", drawMarthina().toDataURL());
 loadSprite("renard", drawRenard().toDataURL());
+loadSprite("felix", drawFelix().toDataURL());
 loadSprite("fiery", drawFirey().toDataURL());
 loadSprite("rufus_sleep", drawFoxSleeping().toDataURL());
 loadSprite("flag", drawFlag().toDataURL());
@@ -2280,6 +2854,17 @@ function getTheme() {
 }
 function setTheme(t) { if (THEME_COLORS[t]) localStorage.setItem("rufus_theme", t); }
 function getThemeColor() { return THEME_COLORS[getTheme()]; }
+// A BRIGHTENED version of the theme color, used for the big title on the menu.
+// The plain theme color is dark on a dark background (dark red on near-black
+// made "Adventures of Rufus" almost invisible), so we mix it toward white.
+function getTitleColor() {
+  const c = getThemeColor();
+  return [
+    Math.min(255, Math.round(c[0] * 0.55 + 115)),
+    Math.min(255, Math.round(c[1] * 0.55 + 115)),
+    Math.min(255, Math.round(c[2] * 0.55 + 115)),
+  ];
+}
 // A dark tint of the theme color for the menu background (default = dark night sky).
 // Kept dark so white text, stars, and the characters/hats stay easy to see.
 function getThemeBg() {
@@ -2838,6 +3423,23 @@ scene("levelCreator", () => {
   menuMusic.start();
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
+  // HOME-ONLY TOOL. The button is hidden on the public site, but this is the
+  // real lock — even an old bookmark or a leftover "Make another!" button can't
+  // start the level-building robot for someone on rufusfamily.com.
+  if (!isLocalMode()) {
+    add([ rect(width(), height()), pos(0, 0), color(22, 18, 42), fixed() ]);
+    add([ text("🤖 Level Creator", { size: 34 }), pos(width() / 2, 190), anchor("center"), color(170, 200, 255), fixed() ]);
+    add([
+      text("The Level Creator only works on the home computer,\nnot on the website. Everything else still works!", { size: 18, width: 560, align: "center" }),
+      pos(width() / 2, 280), anchor("center"), color(210, 205, 235), fixed(),
+    ]);
+    const home = add([ rect(180, 48), pos(width() / 2, 380), anchor("center"), color(80, 60, 120), outline(3, rgb(180, 160, 255)), area(), fixed() ]);
+    add([ text("Main Menu", { size: 18 }), pos(width() / 2, 380), anchor("center"), color(255, 255, 255), fixed() ]);
+    home.onClick(() => go("title"));
+    onKeyPress("escape", () => go("title"));
+    return;
+  }
+
   // BANNED? If you used a bad word, you can't make levels for 24 hours.
   if (isCreatorBanned()) {
     add([ rect(width(), height()), pos(0, 0), color(40, 15, 20), fixed() ]);
@@ -3008,13 +3610,43 @@ scene("title", () => {
     }
   });
 
-  // Title with glow effect (also the SECRET hat button — click it!)
-  const titleText = add([
-    text("Adventures of Rufus", { size: 50 }),
-    pos(width() / 2, 80),
+  // ===== ARCADE MARQUEE — the lit-up sign at the top of a cabinet =====
+  // The title used to be theme-colored text straight on the dark sky, so on a
+  // dark theme it basically vanished. Now it sits on its own lit panel with a
+  // bright border, a drop shadow and a brightened colour, so it always reads.
+  // The panel spans x 130..670, which keeps it clear of the Game Files button
+  // on the left and the Theme / Beaten column on the right.
+  const marqueeBorder = add([
+    rect(548, 104), pos(width() / 2, 56), anchor("center"),
+    color(...getThemeColor()), opacity(0.9), fixed(), z(1),
+  ]);
+  add([
+    rect(540, 96), pos(width() / 2, 56), anchor("center"),
+    color(14, 10, 26), opacity(0.92), fixed(), z(1),
+  ]);
+  // Little corner rivets, like a real cabinet marquee
+  [[142, 20], [658, 20], [142, 92], [658, 92]].forEach((rv) => {
+    add([ rect(5, 5), pos(rv[0], rv[1]), anchor("center"), color(255, 220, 150), opacity(0.55), fixed(), z(2) ]);
+  });
+
+  // Drop shadow behind the title so it pops off the panel
+  const titleShadow = add([
+    text("Adventures of Rufus", { size: 40 }),
+    pos(width() / 2 + 3, 44 + 3),
     anchor("center"),
-    color(...getThemeColor()),
-    outline(3, rgb(150, 80, 0)),
+    color(0, 0, 0),
+    opacity(0.75),
+    fixed(),
+    z(2),
+  ]);
+
+  // Title (also the SECRET hat button — click it!)
+  const titleText = add([
+    text("Adventures of Rufus", { size: 40 }),
+    pos(width() / 2, 44),
+    anchor("center"),
+    color(...getTitleColor()),
+    outline(4, rgb(25, 12, 40)),
     area(),
     fixed(),
     z(3),
@@ -3022,16 +3654,21 @@ scene("title", () => {
   ]);
   titleText.onUpdate(function() {
     this.t += dt();
-    this.scale = vec2(1 + Math.sin(this.t * 1.5) * 0.03);
+    const s = 1 + Math.sin(this.t * 1.5) * 0.02;
+    this.scale = vec2(s);
+    titleShadow.scale = vec2(s);
+    // Marquee border gently pulses like a neon sign
+    marqueeBorder.opacity = 0.72 + Math.sin(this.t * 2) * 0.18;
   });
 
   // Subtitle
   add([
-    text("Memoirs of a Fox", { size: 22 }),
-    pos(width() / 2, 130),
+    text("Memoirs of a Fox", { size: 17 }),
+    pos(width() / 2, 84),
     anchor("center"),
     color(255, 220, 150),
     fixed(),
+    z(3),
   ]);
 
   // === ALL CHARACTERS DANCING! ===
@@ -3379,11 +4016,11 @@ scene("title", () => {
 
   // ===== THEME PICKER — top-right button to recolor the menu =====
   const themeBtn = add([
-    rect(120, 30), pos(width() - 70, 30), anchor("center"),
+    rect(112, 28), pos(width() - 66, 30), anchor("center"),
     color(60, 60, 80), opacity(0.85), outline(1, rgb(200, 200, 230)),
     area(), fixed(), z(5),
   ]);
-  add([ text("Theme", { size: 13 }), pos(width() - 70, 30), anchor("center"), color(230, 230, 255), fixed(), z(6) ]);
+  add([ text("Theme", { size: 13 }), pos(width() - 66, 30), anchor("center"), color(230, 230, 255), fixed(), z(6) ]);
 
   function openThemeDialog() {
     if (dialogOpen) return;
@@ -3403,7 +4040,9 @@ scene("title", () => {
       add([ text(k, { size: 12 }), pos(x, y), anchor("center"), color(k === "yellow" || k === "silver" || k === "gold" ? 30 : 255, k === "yellow" || k === "silver" || k === "gold" ? 30 : 255, k === "yellow" || k === "silver" || k === "gold" ? 30 : 255), fixed(), z(203), "charDialog" ]);
       box.onClick(() => {
         setTheme(k);
-        titleText.color = rgb(...getThemeColor());
+        // Use the BRIGHTENED colour so the title stays readable on every theme
+        titleText.color = rgb(...getTitleColor());
+        marqueeBorder.color = rgb(...getThemeColor());
         titleBg.color = rgb(...getThemeBg());
         closeCharDialog();
       });
@@ -3556,7 +4195,19 @@ scene("title", () => {
   // Main-screen buttons: PLAY (start the game) and MENU (opens a popup with
   // Play, Level Creator, and User Level Search).
   // (PLAY being a button keeps the menu secrets from triggering by accident.)
-  const BTN_Y = 478;
+  // ===== ARCADE CONTROL DECK =====
+  // Everything you can press lives on one panel at the bottom, like the control
+  // deck of an arcade cabinet, instead of floating loose over the artwork.
+  add([
+    rect(width(), 152), pos(0, 448),
+    color(10, 7, 20), opacity(0.72), fixed(), z(4),
+  ]);
+  add([
+    rect(width(), 3), pos(0, 448),
+    color(...getThemeColor()), opacity(0.85), fixed(), z(5),
+  ]);
+
+  const BTN_Y = 486;
   const playButton = add([
     rect(210, 56), pos(280, BTN_Y), anchor("center"),
     color(50, 170, 70), outline(3, rgb(120, 255, 150)), area(), fixed(), z(7),
@@ -3596,20 +4247,28 @@ scene("title", () => {
     // click that opened the popup doesn't instantly close it again).
     const dim = add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.6), area(), fixed(), z(320), "menuPopup" ]);
     wait(0.05, () => { if (dim.exists()) dim.onClick(() => closeMenuPopup()); });
-    add([ rect(420, 320), pos(width() / 2, height() / 2), anchor("center"), color(35, 28, 60), outline(4, rgb(170, 150, 255)), fixed(), z(321), "menuPopup" ]);
-    add([ text("Menu", { size: 30 }), pos(width() / 2, height() / 2 - 120), anchor("center"), color(255, 220, 120), fixed(), z(322), "menuPopup" ]);
-    // Close (X) button in the corner of the panel
-    const closeB = add([ rect(34, 34), pos(width() / 2 + 190, height() / 2 - 140), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), z(323), "menuPopup" ]);
-    add([ text("X", { size: 20 }), pos(width() / 2 + 190, height() / 2 - 140), anchor("center"), color(255, 255, 255), fixed(), z(324), "menuPopup" ]);
-    closeB.onClick(() => closeMenuPopup());
-
     const items = [
       { label: "Play", col: [50, 170, 70], oc: [120, 255, 150], act: () => { closeMenuPopup(); go("levelSelect"); } },
-      { label: "Level Creator", col: [90, 70, 180], oc: [170, 150, 255], act: () => { closeMenuPopup(); go("levelCreator"); } },
-      { label: "User Level Search", col: [180, 90, 60], oc: [255, 170, 130], act: () => { closeMenuPopup(); comingSoon("User Level Search\ncoming soon! 🔍"); } },
     ];
+    // The Level Creator is a home-only tool — hidden on the public website.
+    if (isLocalMode()) {
+      items.push({ label: "Level Creator", col: [90, 70, 180], oc: [170, 150, 255], act: () => { closeMenuPopup(); go("levelCreator"); } });
+    }
+    items.push({ label: "User Level Search", col: [180, 90, 60], oc: [255, 170, 130], act: () => { closeMenuPopup(); comingSoon("User Level Search\ncoming soon! 🔍"); } });
+
+    // Panel grows/shrinks to fit however many buttons we're showing, so there's
+    // never a big empty gap where the Level Creator used to be.
+    const panelH = 60 + items.length * 70 + 26;
+    const top = height() / 2 - panelH / 2;
+    add([ rect(420, panelH), pos(width() / 2, height() / 2), anchor("center"), color(35, 28, 60), outline(4, rgb(170, 150, 255)), fixed(), z(321), "menuPopup" ]);
+    add([ text("Menu", { size: 30 }), pos(width() / 2, top + 34), anchor("center"), color(255, 220, 120), fixed(), z(322), "menuPopup" ]);
+    // Close (X) button in the corner of the panel
+    const closeB = add([ rect(34, 34), pos(width() / 2 + 190, top + 20), anchor("center"), color(170, 50, 60), outline(2, rgb(255, 130, 140)), area(), fixed(), z(323), "menuPopup" ]);
+    add([ text("X", { size: 20 }), pos(width() / 2 + 190, top + 20), anchor("center"), color(255, 255, 255), fixed(), z(324), "menuPopup" ]);
+    closeB.onClick(() => closeMenuPopup());
+
     items.forEach((it, i) => {
-      const by = height() / 2 - 60 + i * 70;
+      const by = top + 60 + 35 + i * 70;
       const b = add([ rect(340, 54), pos(width() / 2, by), anchor("center"), color(...it.col), outline(3, rgb(...it.oc)), area(), fixed(), z(322), "menuPopup" ]);
       add([ text(it.label, { size: 22 }), pos(width() / 2, by), anchor("center"), color(255, 255, 255), fixed(), z(323), "menuPopup" ]);
       b.onClick(() => it.act());
@@ -3617,101 +4276,62 @@ scene("title", () => {
   }
   menuButton.onClick(() => openMenuPopup());
 
-  // Controls help
+  // Controls help — moved BELOW the PLAY/MENU buttons. It used to sit at y=510,
+  // which put it underneath them, so the hint was hidden.
   add([
     text(isTouch ? "On-screen buttons appear during gameplay" : "Arrow Keys: Move & Jump | Space: Tail Spin!", { size: 12 }),
-    pos(width() / 2, 510),
+    pos(width() / 2, 524),
     anchor("center"),
-    color(150, 150, 150),
-    fixed(),
-  ]);
-
-  // About Rufus button (left side)
-  const aboutBtn = add([
-    rect(200, 34),
-    pos(width() / 2 - 110, 548),
-    anchor("center"),
-    color(255, 165, 0),
-    opacity(0.2),
-    outline(1, rgb(255, 165, 0)),
-    fixed(),
-    area(),
-  ]);
-  aboutBtn.onClick(() => go("about"));
-  add([
-    text(isTouch ? "About Rufus" : "A: About Rufus", { size: 12 }),
-    pos(width() / 2 - 110, 548),
-    anchor("center"),
-    color(255, 165, 0),
-    fixed(),
-  ]);
-
-  // High Scores button (right side)
-  const scoresBtn = add([
-    rect(200, 34),
-    pos(width() / 2 + 110, 548),
-    anchor("center"),
-    color(255, 215, 0),
-    opacity(0.2),
-    outline(1, rgb(255, 215, 0)),
-    fixed(),
-    area(),
-  ]);
-  scoresBtn.onClick(() => go("leaderboard"));
-  add([
-    text(isTouch ? "High Scores" : "H: High Scores", { size: 12 }),
-    pos(width() / 2 + 110, 548),
-    anchor("center"),
-    color(255, 215, 0),
-    fixed(),
-  ]);
-
-  // Music on/off button (bottom-right corner, below the play tap area so
-  // clicking it doesn't also trigger "tap to play")
-  const musicBtn = add([
-    rect(110, 30),
-    pos(width() - 65, 585),
-    anchor("center"),
-    color(80, 60, 120),
-    opacity(0.85),
-    outline(1, rgb(180, 160, 255)),
-    fixed(),
-    area(),
-    z(5),
-  ]);
-  const musicLabel = add([
-    text(menuMusic.muted ? "Music: OFF" : "Music: ON", { size: 12 }),
-    pos(width() - 65, 585),
-    anchor("center"),
-    color(220, 210, 255),
+    color(185, 178, 210),
     fixed(),
     z(6),
   ]);
-  musicBtn.onClick(() => {
+
+  // --- Three matching arcade buttons in one tidy row ---
+  // (They used to be different sizes scattered at different heights.)
+  const DECK_Y = 556;
+  function deckButton(cx, label, col, act) {
+    const b = add([
+      rect(200, 30), pos(cx, DECK_Y), anchor("center"),
+      color(Math.round(col[0] * 0.3), Math.round(col[1] * 0.3), Math.round(col[2] * 0.3)),
+      opacity(0.95), outline(2, rgb(col[0], col[1], col[2])),
+      area(), fixed(), z(6),
+    ]);
+    const t = add([
+      text(label, { size: 12 }), pos(cx, DECK_Y), anchor("center"),
+      color(col[0], col[1], col[2]), fixed(), z(7),
+    ]);
+    b.onClick(act);
+    return t;
+  }
+
+  deckButton(150, isTouch ? "About Rufus" : "A: About Rufus", [255, 165, 0], () => go("about"));
+  deckButton(400, isTouch ? "High Scores" : "H: High Scores", [255, 215, 0], () => go("leaderboard"));
+  const musicLabel = deckButton(650, menuMusic.muted ? "Music: OFF" : "Music: ON", [190, 165, 255], () => {
     const muted = menuMusic.toggleMute();
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
 
   // --- SUBSCRIBE button — opens Arvind the Creator's YouTube channel ---
   const subBtn = add([
-    rect(280, 34),
-    pos(width() / 2, 585),
+    rect(300, 26),
+    pos(width() / 2, 586),
     anchor("center"),
     color(230, 30, 30),
     outline(2, rgb(255, 255, 255)),
     fixed(),
     area(),
-    z(5),
+    z(6),
     { t: 0 },
   ]);
   subBtn.onUpdate(function () { this.t += dt(); this.opacity = Math.sin(this.t * 3) * 0.15 + 0.85; });
   add([
-    text("Subscribe to Arvind the Creator!", { size: 13 }),
-    pos(width() / 2, 585),
+    text("Subscribe to Arvind the Creator!", { size: 12 }),
+    pos(width() / 2, 586),
     anchor("center"),
     color(255, 255, 255),
     fixed(),
-    z(6),
+    z(7),
   ]);
   subBtn.onClick(() => {
     window.open("https://www.youtube.com/@Arvindthecreator", "_blank");
@@ -3737,14 +4357,16 @@ scene("title", () => {
   });
 
   // --- GAME FILES button (top-left, under the gem tracker) ---
+  // Narrower and further left so it never sits under the title marquee
+  // (it used to overlap the "Ad" of "Adventures").
   const filesBtn = add([
-    rect(130, 28), pos(75, 80), anchor("center"),
+    rect(112, 26), pos(64, 80), anchor("center"),
     color(70, 60, 110), opacity(0.9), outline(1, rgb(180, 160, 255)),
     area(), fixed(), z(6),
   ]);
   const curName = SLOTS.getName(SLOTS.active());
-  add([ text("Game Files", { size: 13 }), pos(75, 80), anchor("center"), color(230, 220, 255), fixed(), z(7) ]);
-  if (curName) add([ text(curName, { size: 10 }), pos(75, 98), anchor("center"), color(180, 200, 255), fixed(), z(7) ]);
+  add([ text("Game Files", { size: 12 }), pos(64, 80), anchor("center"), color(230, 220, 255), fixed(), z(7) ]);
+  if (curName) add([ text(curName, { size: 10 }), pos(64, 97), anchor("center"), color(180, 200, 255), fixed(), z(7) ]);
   filesBtn.onClick(() => { if (!dialogOpen) go("gameFiles"); });
 
   // --- BEATEN-BY-DIFFICULTY tally (top-right, under the Theme button) ---
@@ -3756,6 +4378,13 @@ scene("title", () => {
   tiers.forEach((t, i) => {
     add([ text(`${t}: ${gotBy[t]}/${totBy[t]}`, { size: 11 }), pos(width() - 120, 78 + i * 16), anchor("left"), color(...DIFFICULTY_COLOR[t]), fixed(), z(6) ]);
   });
+
+  // --- CRT SCANLINES — thin dark stripes across the whole screen, like an old
+  // arcade monitor. They're just decoration (no area(), so they never swallow a
+  // click) and they sit under the popups so dialogs stay crisp. ---
+  for (let sy = 0; sy < height(); sy += 4) {
+    add([ rect(width(), 1), pos(0, sy), color(0, 0, 0), opacity(0.07), fixed(), z(100) ]);
+  }
 
   // (No more tap-anywhere area — you start with the PLAY button above, so the
   // dancing characters stay as hidden secrets you have to click on purpose.)
@@ -4263,6 +4892,18 @@ scene("levelSelect", (startPage) => {
       ]);
     }
 
+    // 🔓 UNLOCK ALL button (works on touch too — no keyboard U key needed!)
+    const unlockBtn = add([
+      rect(150, 34), pos(width() - 90, 34), anchor("center"),
+      color(35, 90, 50), outline(2, rgb(90, 210, 120)), area(), fixed(), z(50),
+    ]);
+    add([ text("🔓 Unlock All", { size: 14 }), pos(width() - 90, 34), anchor("center"), color(190, 255, 205), fixed(), z(51) ]);
+    unlockBtn.onClick(() => {
+      for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
+      add([ text("All levels unlocked! 🎉", { size: 18 }), pos(width() / 2, height() - 40), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1.4), fixed(), z(220) ]);
+      wait(0.35, () => go("levelSelect", currentPage)); // redraw so tiles show as unlocked
+    });
+
     // Levels for this page
     const startIdx = book.start;
     const endIdx = Math.min(book.end, ALL_LEVELS.length);
@@ -4611,7 +5252,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const playerSpawn = spawnPos || level.playerStart;
 
   // Set gravity (space levels are floaty!)
-  setGravity(level.spaceTheme ? 900 : 1600);
+  const levelGravity = level.spaceTheme ? 900 : 1600;
+  setGravity(levelGravity);
 
   // Level theme flags
   const isGym = level.name === "The School Gym";
@@ -4621,6 +5263,8 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // Volcano look: fire-hero levels, or any level that opts in with lavaTheme:true
   const isVolcano = !!level.fireHero || !!level.lavaTheme;
   const isSpace = !!level.spaceTheme;
+  // Piano level: platforms are piano keys that play a note when Rufus lands!
+  const isPiano = !!level.pianoTheme;
 
   // Background sky
   add([
@@ -5008,7 +5652,40 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   // --- PLATFORMS ---
   const isLibrary = level.name === "The Library";
   level.platforms.forEach((p, idx) => {
-    if (isGym) {
+    if (isPiano) {
+      // PIANO KEY! Each platform is a piano key. Landing on it plays a note.
+      // Each key can carry a specific note of a SONG (p.pianoNote). If a key has
+      // no note set, we fall back to a C-major pentatonic note based on height
+      // (lower key = lower note) so it still sounds nice.
+      const scale = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84];
+      const yTop = 240, yBot = 500;
+      let t = (yBot - p.y) / (yBot - yTop);
+      t = Math.max(0, Math.min(1, t));
+      const noteIdx = Math.round(t * (scale.length - 1));
+      const midi = p.pianoNote != null ? p.pianoNote : scale[noteIdx];
+      // Rainbow color based on the actual NOTE, so the same song-note is always
+      // the same color (red = low ... violet = high).
+      const loMidi = 55, hiMidi = 84;
+      let ct = (midi - loMidi) / (hiMidi - loMidi);
+      ct = Math.max(0, Math.min(1, ct));
+      const noteColor = hslToRgb(0.72 - ct * 0.72, 0.85, 0.55);
+
+      // The white key body (the solid platform you stand on)
+      add([
+        rect(p.width, p.height),
+        pos(p.x, p.y),
+        color(248, 248, 252),
+        outline(3, rgb(40, 40, 60)),
+        area(), body({ isStatic: true }),
+        "platform", "pianoKey",
+        { midi: midi, litT: 0, noteColor: noteColor, baseX: p.x },
+      ]);
+      // Colored LED strip along the top edge showing which note this key is
+      add([ rect(p.width - 6, 5), pos(p.x + 3, p.y - 5), color(...noteColor), z(1), "keyLED", { keyX: p.x } ]);
+      // A little dark groove near the front like a real key
+      add([ rect(p.width - 10, 3), pos(p.x + 5, p.y + p.height - 6), color(210, 210, 220), z(1) ]);
+
+    } else if (isGym) {
       // Gym equipment! Each platform looks like a different piece of gym gear
       const gymType = idx % 5; // Cycle through equipment types
 
@@ -5977,8 +6654,33 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     });
   }
 
-  // --- EXIT: a flag, or a ROCKET SHIP (rocketExit / launch levels) ---
-  if (level.rocketExit) {
+  // --- EXIT: FELIX (dad!), a flag, or a ROCKET SHIP ---
+  if (level.felixExit) {
+    // The exit IS FELIX — Rufus's dad, on his music stage! Reach him to win.
+    const ex = level.exit.x, ey = level.exit.y;
+    // A little colorful stage
+    add([ rect(120, 16), pos(ex, ey), anchor("bot"), color(150, 60, 170), outline(3, rgb(90, 30, 110)), z(1) ]);
+    add([ rect(120, 6), pos(ex, ey - 16), anchor("bot"), color(210, 120, 230), z(2) ]);
+    // Two speakers on the stage
+    add([ rect(20, 34), pos(ex - 48, ey - 16), anchor("bot"), color(40, 40, 50), outline(2, rgb(20, 20, 25)), z(2) ]);
+    add([ rect(20, 34), pos(ex + 48, ey - 16), anchor("bot"), color(40, 40, 50), outline(2, rgb(20, 20, 25)), z(2) ]);
+    add([ circle(6), pos(ex - 48, ey - 34), color(90, 90, 100), z(3) ]);
+    add([ circle(6), pos(ex + 48, ey - 34), color(90, 90, 100), z(3) ]);
+    // FELIX himself, bobbing to the beat!
+    const felix = add([ sprite("felix"), pos(ex, ey - 16), anchor("bot"), scale(2.4), z(3) ]);
+    felix.onUpdate(function () { this.pos.y = (ey - 16) + Math.sin(time() * 4) * 4; });
+    // Floating music notes above the stage
+    for (let i = 0; i < 4; i++) {
+      const nx = ex - 45 + i * 30;
+      const noteEnt = add([ text("🎵", { size: 22 }), pos(nx, ey - 90), anchor("center"), z(3), { ph: i * 1.5 } ]);
+      noteEnt.onUpdate(function () {
+        this.pos.y = (ey - 90) + Math.sin(time() * 2 + this.ph) * 10;
+        this.pos.x = nx + Math.cos(time() * 1.5 + this.ph) * 8;
+      });
+    }
+    // Invisible collision box = the exit (reaching Felix wins!)
+    add([ rect(120, 120), pos(ex, ey), anchor("bot"), area(), opacity(0), z(1), "exit" ]);
+  } else if (level.rocketExit) {
     // The exit IS a rocket ship — Rufus's escape! (no flag)
     const ex = level.exit.x, ey = level.exit.y;
     // fins
@@ -6900,6 +7602,49 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
   });
 
+  // --- PIANO KEYS: play a note + light up the key when Rufus lands on it! ---
+  // Fade each lit key back to white over time.
+  onUpdate("pianoKey", (key) => {
+    if (key.litT > 0) {
+      key.litT = Math.max(0, key.litT - dt() * 2.2);
+      const k = key.litT; // 1 = fully lit, 0 = white
+      const nc = key.noteColor;
+      key.color = rgb(
+        Math.round(248 + (nc[0] - 248) * k),
+        Math.round(248 + (nc[1] - 248) * k),
+        Math.round(248 + (nc[2] - 248) * k)
+      );
+    }
+  });
+
+  rufus.onCollide("pianoKey", (key) => {
+    // Only when landing on TOP of the key (Rufus's center is above the key top)
+    if (rufus.pos.y > key.pos.y) return;
+    if (key.litT > 0.5) return; // just played — don't double-trigger
+    key.litT = 1;
+    // Play the key's note. This is the ONLY music in a piano level — there's no
+    // background track, so jumping the keys IS the song. Wake the audio if needed.
+    levelMusic.init();
+    if (levelMusic.ctx) {
+      if (levelMusic.ctx.state === "suspended") levelMusic.ctx.resume();
+      const now = levelMusic.ctx.currentTime;
+      levelMusic.note(levelMusic.freq(key.midi), now, 0.55, "triangle", 0.26);
+      levelMusic.note(levelMusic.freq(key.midi + 12), now, 0.30, "square", 0.05);
+    }
+    // Sparkle pop in the key's color
+    for (let i = 0; i < 5; i++) {
+      add([
+        rect(3, 3),
+        pos(key.pos.x + rand(4, key.width - 4), key.pos.y - 4),
+        color(...key.noteColor),
+        opacity(0.9),
+        lifespan(0.4),
+        move(rand(250, 300), rand(50, 100)),
+        z(9),
+      ]);
+    }
+  });
+
   // --- COLLECT TREATS ---
   rufus.onCollide("treat", (treat) => {
     if (!treat.collected) {
@@ -7072,9 +7817,86 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   });
 
   // --- BOUNCE CRATES launch Rufus super high! ---
-  rufus.onCollide("bounceCrate", () => {
-    // Super jump! Higher than normal to reach platforms
-    rufus.jump(jumpForce * 1.4);
+  // SMART JUMP PADS. Three things used to go wrong here:
+  //   1. Just brushing the SIDE of a pad launched Rufus (felt random).
+  //   2. If a platform hung right above a pad, he shot up, bonked his head on
+  //      the underside, fell back on the pad, bounced again... forever. That's
+  //      the "stuck under the jumping area" glitch.
+  //   3. Nothing stopped a pad firing twice in the same instant (judder).
+  // Now a pad only fires when he LANDS ON TOP, it waits a moment before it can
+  // fire again, and if something is hanging overhead it gently steers him out
+  // to the open side so he clears the ledge instead of getting trapped.
+  const BOUNCE_POWER = jumpForce * 1.4;
+  const BOUNCE_REACH = (BOUNCE_POWER * BOUNCE_POWER) / (2 * levelGravity);
+  const BOUNCE_STEER_SPEED = 240; // sideways nudge while he flies up
+  const RUFUS_HALF_W = 28;        // half of Rufus's collision box
+  const PAD_H = 32;               // bounce crate sprite is 32x32, anchored bottom
+  let bouncePadCooldown = 0;
+  let bounceSteerDir = 0;         // -1 = steer left, +1 = steer right, 0 = none
+  let bounceSteerTime = 0;        // seconds of auto-steer left to apply
+
+  // Is a platform hanging directly above this pad, inside the bounce arc?
+  // Returns the LOWEST one (the one he'd hit first), or null if the way is clear.
+  function ceilingOverPad(padX, padTop) {
+    const apex = padTop - BOUNCE_REACH;
+    let lowest = null;
+    get("platform").forEach((p) => {
+      const left = p.pos.x;
+      const right = p.pos.x + p.width;
+      const underside = p.pos.y + p.height;
+      const inColumn = padX + RUFUS_HALF_W > left && padX - RUFUS_HALF_W < right;
+      const inArc = underside > apex && underside < padTop - 12;
+      if (inColumn && inArc && (!lowest || underside > lowest.underside)) {
+        lowest = { left: left, right: right, underside: underside };
+      }
+    });
+    return lowest;
+  }
+
+  onUpdate(() => {
+    if (bouncePadCooldown > 0) bouncePadCooldown -= dt();
+    if (bounceSteerTime > 0) {
+      bounceSteerTime -= dt();
+      // Only auto-steer while he's still in the air, and never fight the
+      // player — if they're holding a direction, they're in charge.
+      if (!rufus.isGrounded() && !isKeyDown("left") && !isKeyDown("right")) {
+        rufus.move(bounceSteerDir * BOUNCE_STEER_SPEED, 0);
+      }
+    }
+  });
+
+  rufus.onCollide("bounceCrate", (pad) => {
+    const padTop = pad.pos.y - PAD_H;
+    // Only launch if he actually landed ON TOP (not brushing the side).
+    if (rufus.pos.y + 20 > padTop) return;
+    if (bouncePadCooldown > 0) return;
+    bouncePadCooldown = 0.25;
+
+    const ceiling = ceilingOverPad(pad.pos.x, padTop);
+    let power = BOUNCE_POWER;
+    bounceSteerDir = 0;
+    bounceSteerTime = 0;
+
+    if (ceiling) {
+      // How far sideways does he need to travel to get out from under it?
+      const clearLeft = pad.pos.x - ceiling.left + RUFUS_HALF_W;
+      const clearRight = ceiling.right - pad.pos.x + RUFUS_HALF_W;
+      const goRight = clearRight <= clearLeft;
+      const needed = goRight ? clearRight : clearLeft;
+      const riseTime = BOUNCE_POWER / levelGravity; // time spent going up
+      if (needed <= BOUNCE_STEER_SPEED * riseTime) {
+        // He can slip out from under the ledge on the way up — steer him there.
+        bounceSteerDir = goRight ? 1 : -1;
+        bounceSteerTime = Math.min(riseTime, needed / BOUNCE_STEER_SPEED + 0.05);
+      } else {
+        // The ledge is too wide to escape. Shorten the hop so he stops
+        // smacking his head on it over and over.
+        const room = Math.max(0, padTop - ceiling.underside - 10);
+        power = Math.min(BOUNCE_POWER, Math.sqrt(2 * levelGravity * room));
+      }
+    }
+
+    rufus.jump(power);
 
     // Spring effect - green particles burst
     for (let i = 0; i < 8; i++) {
@@ -8694,10 +9516,11 @@ scene("secretComplete", ({ score }) => {
 
   // All four friends bouncing together!
   const characters = [
-    { sprite: "rufus", x: width() / 2 - 120, phase: 0 },
-    { sprite: "marthina", x: width() / 2 - 40, phase: 1 },
-    { sprite: "renard", x: width() / 2 + 40, phase: 2 },
-    { sprite: "fiery", x: width() / 2 + 120, phase: 3 },
+    { sprite: "rufus", x: width() / 2 - 160, phase: 0 },
+    { sprite: "marthina", x: width() / 2 - 80, phase: 1 },
+    { sprite: "renard", x: width() / 2, phase: 2 },
+    { sprite: "felix", x: width() / 2 + 80, phase: 3 },
+    { sprite: "fiery", x: width() / 2 + 160, phase: 4 },
   ];
 
   characters.forEach((ch) => {
@@ -8914,5 +9737,12 @@ scene("jetpackUnlock", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
 go("title");
 
 </script>
+
+<!-- Cloudflare Web Analytics — counts real players (no cookies, privacy-friendly).
+     Works even though rufusfamily.com is DNS-only, because it measures from the browser.
+     The token below is PUBLIC by design (it ships in the page). See the dashboard:
+     Cloudflare → Analytics & Logs → Web Analytics → rufusfamily.com -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "372c756f957649e3a12c7e427666551a"}'></script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>

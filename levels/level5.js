@@ -160,13 +160,13 @@ const LEVEL_5 = {
 
   bounceCrates: [
     { x: 750, y: 560 },
-    { x: 1450, y: 560 },
-    { x: 2100, y: 560 },
+    { x: 1480, y: 560 },
+    { x: 2280, y: 560 },
     { x: 2700, y: 560 },
     { x: 3800, y: 560 },
     { x: 4700, y: 560 },
     { x: 5500, y: 560 },
-    { x: 6000, y: 560 },
+    { x: 5970, y: 560 },
   ],
 
   // No wasps or dive-wasps in this level — they made it too hard!

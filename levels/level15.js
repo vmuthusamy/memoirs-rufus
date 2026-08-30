@@ -13,7 +13,7 @@ const LEVEL_15 = {
 
   // Moon look (space backdrop + moon rocks) and floaty low gravity + moon music
   spaceTheme: true,
-  music: "moon",
+  music: "jungle",
 
   // No jetpack — there's no internet on the moon! (just like Level 14)
   noJetpack: true,
@@ -84,7 +84,7 @@ const LEVEL_15 = {
   ],
 
   bounceCrates: [
-    { x: 1950, y: 560 },  // bounce up to the red gem ledge
+    { x: 2010, y: 560 },  // bounce up to the red gem ledge
     { x: 3550, y: 560 },
   ],
 

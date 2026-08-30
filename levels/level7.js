@@ -7,7 +7,7 @@ const LEVEL_7 = {
   name: "Jetpack Training",
 
   // Candy 8-bit music with a beat drop — shared with Levels 8 & 9
-  music: "candy",
+  music: "starlight",
 
   memoir: "Dear Diary, I took the King Clown's JETPACK! I strapped it to my back! Hold W to blast upward and arrow keys to steer! But the fuel runs out so I have to land to refuel! There are lollipops and chocolate spikes everywhere... time to fly over them!",
 

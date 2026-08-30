@@ -13,7 +13,7 @@ const LEVEL_13 = {
 
   // Volcano look (jagged lava rocks + erupting volcano) and volcano music
   lavaTheme: true,
-  music: "volcano",
+  music: "castle",
 
   // Reaching the exit plays the ROCKET LAUNCH cutscene -> into space!
   launchCutscene: true,

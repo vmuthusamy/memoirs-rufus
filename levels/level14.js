@@ -78,7 +78,7 @@ const LEVEL_14 = {
 
   bounceCrates: [
     { x: 1000, y: 560 },
-    { x: 2500, y: 560 },
+    { x: 2540, y: 560 },
   ],
 
   // Space bugs & little aliens to bonk

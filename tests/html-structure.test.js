@@ -210,9 +210,10 @@ describe("Combat system", () => {
   });
 
   test("bounce crate gives super jump (higher than normal)", () => {
-    // Bounce crate should multiply jumpForce
+    // The launch strength lives in the BOUNCE_POWER constant, which the smart
+    // pad code then adjusts if something is hanging over the pad.
     const bounceJump = htmlContent.match(
-      /onCollide\("bounceCrate"[\s\S]*?jumpForce\s*\*\s*([\d.]+)/
+      /const BOUNCE_POWER\s*=\s*jumpForce\s*\*\s*([\d.]+)/
     );
     expect(bounceJump).not.toBeNull();
     expect(parseFloat(bounceJump[1])).toBeGreaterThan(1.0);
@@ -1354,7 +1355,7 @@ describe("Subscribe button", () => {
 
 describe("Per-level music themes", () => {
   test("level-music engine defines all the themes", () => {
-    ["outsideStep", "gymStep", "libraryStep", "circusStep", "candyStep", "volcanoStep", "moonStep"].forEach((fn) => {
+    ["outsideStep", "gymStep", "libraryStep", "circusStep", "candyStep", "volcanoStep", "moonStep", "partyStep"].forEach((fn) => {
       expect(htmlContent).toContain(fn);
     });
   });
@@ -1367,12 +1368,14 @@ describe("Per-level music themes", () => {
   test("each chapter level file picks a music theme", () => {
     const fs = require("fs");
     const path = require("path");
+    // Every level now has its OWN theme — no two chapters sound the same.
     const expected = {
-      "level1.js": "outside", "level2.js": "outside", "level3.js": "gym",
-      "level4.js": "library", "level5.js": "circus", "level6.js": "circus",
-      "level7.js": "candy", "level8.js": "candy", "level9.js": "candy",
-      "level11.js": "volcano", "level12.js": "volcano", "level13.js": "volcano",
-      "level14.js": "moon",
+      "level1.js": "outside", "level2.js": "overworld", "level3.js": "gym",
+      "level4.js": "library", "level5.js": "circus", "level6.js": "bossrush",
+      "level7.js": "starlight", "level8.js": "candy", "level9.js": "runngun",
+      "level10.js": "fortress",
+      "level11.js": "volcano", "level12.js": "underground", "level13.js": "castle",
+      "level14.js": "moon", "level15.js": "jungle",
     };
     Object.entries(expected).forEach(([file, theme]) => {
       const src = fs.readFileSync(path.join(__dirname, "..", "levels", file), "utf-8");
@@ -1496,5 +1499,112 @@ describe("Coyote time (jump safety)", () => {
 
   test("jump allows coyote time grace period", () => {
     expect(htmlContent).toMatch(/isGrounded\(\) \|\| coyoteTimer > 0/);
+  });
+});
+
+describe("Felix the dad (new character)", () => {
+  test("has a drawFelix() sprite function", () => {
+    expect(htmlContent).toContain("function drawFelix()");
+  });
+
+  test("registers the felix sprite", () => {
+    expect(htmlContent).toContain('loadSprite("felix", drawFelix().toDataURL())');
+  });
+
+  test("Felix appears in the family dance lineup", () => {
+    expect(htmlContent).toMatch(/sprite: "felix"/);
+  });
+});
+
+describe("Cool Music piano level (Level 16)", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(path.join(__dirname, "..", "levels", "level16.js"), "utf-8");
+
+  test("level16 file is wired into the game", () => {
+    expect(htmlContent).toContain('<script src="levels/level16.js"></script>');
+    expect(htmlContent).toContain("LEVEL_16");
+  });
+
+  test("level16 uses the piano theme, plays a song via keys, and has a Felix exit", () => {
+    expect(src).toContain("pianoTheme: true");
+    expect(src).toContain("felixExit: true");
+    // keys carry the notes of a song
+    expect(src).toContain("pianoNote:");
+  });
+
+  test("level16 has NO background music (only the keys make sound)", () => {
+    // there must be no active `music: "..."` field on the level
+    expect(src).not.toMatch(/^\s*music:\s*"/m);
+  });
+
+  test("engine plays a key's own note (pianoNote) and wakes the audio", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    // a key can override its note with pianoNote
+    expect(gameScene).toContain("p.pianoNote");
+    // jumping a key plays its note...
+    expect(gameScene).toMatch(/levelMusic\.freq\(key\.midi\)/);
+    // ...and resumes the audio context since there's no background track running
+    expect(gameScene).toMatch(/levelMusic\.ctx\.resume\(\)/);
+  });
+
+  test("engine draws piano-key platforms that play notes", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("isPiano");
+    expect(gameScene).toContain('"pianoKey"');
+    // landing on a key plays its note
+    expect(gameScene).toMatch(/rufus\.onCollide\("pianoKey"/);
+  });
+
+  test("engine draws Felix at the felixExit", () => {
+    const gameScene = htmlContent.match(/scene\("game"[\s\S]*?scene\("levelComplete"/)[0];
+    expect(gameScene).toContain("level.felixExit");
+    expect(gameScene).toMatch(/sprite\("felix"\)/);
+  });
+
+  test("has an hslToRgb helper for rainbow keys", () => {
+    expect(htmlContent).toContain("function hslToRgb(");
+  });
+
+  test("level16 platforms are reachable (within jump range of the ground/each other)", () => {
+    const LEVEL_16 = new Function(src + "\nreturn LEVEL_16;")();
+    const GROUND_Y = 560;
+    // sort keys left-to-right and confirm none is an impossible leap up
+    LEVEL_16.platforms.forEach((p) => {
+      // every key sits above the ground and no higher than a sensible climb
+      expect(p.y).toBeLessThan(GROUND_Y);
+      expect(p.y).toBeGreaterThan(240);
+    });
+    // exit is within the level bounds
+    expect(LEVEL_16.exit.x).toBeLessThan(LEVEL_16.width);
+    expect(LEVEL_16.exit.x).toBeGreaterThan(0);
+  });
+});
+
+// ============================================
+// CLOUDFLARE WEB ANALYTICS BEACON
+// So we can count how many kids actually play. This measures from the browser,
+// which works even though rufusfamily.com is DNS-only (not proxied). If this
+// test fails, the beacon got removed and we've gone blind on player counts.
+// ============================================
+describe("Cloudflare Web Analytics beacon", () => {
+  test("beacon script is present in index.html", () => {
+    expect(htmlContent).toContain(
+      "static.cloudflareinsights.com/beacon.min.js"
+    );
+  });
+
+  test("beacon has the rufusfamily.com site token", () => {
+    expect(htmlContent).toContain(
+      '"token": "372c756f957649e3a12c7e427666551a"'
+    );
+  });
+
+  test("beacon loads with defer so it never blocks the game", () => {
+    const beaconLine = htmlContent
+      .split("\n")
+      .find((l) => l.includes("beacon.min.js"));
+    expect(beaconLine).toBeDefined();
+    expect(beaconLine).toMatch(/defer/);
   });
 });

@@ -101,11 +101,15 @@ const LEVEL_1 = {
 
   // ---- BOUNCE CRATES ----
   // Green crates that launch Rufus high! Great for getting back to platforms.
+  // IMPORTANT: keep these in the GAPS between platforms, never directly under
+  // one. A pad tucked under a ledge just bonks Rufus's head on the underside —
+  // it looks like a trap instead of a launcher. In the open, it shoots him
+  // ~260px up so he can land on the platforms above.
   bounceCrates: [
-    { x: 500, y: 560 },    // Near first platforms - helps get back up
-    { x: 1150, y: 560 },   // Near the high ledge area
-    { x: 1850, y: 560 },   // Middle of level
-    { x: 2550, y: 560 },   // Near final stretch
+    { x: 610, y: 560 },    // Gap after the first ledge - launches up to the stepping stones
+    { x: 1150, y: 560 },   // Open gap below the high ledge - launches up to the treats
+    { x: 1960, y: 560 },   // Gap between the mid platforms - gets you back up
+    { x: 2460, y: 560 },   // Open run-up to the final stretch
   ],
 
   // ---- ENEMIES ----
