@@ -217,6 +217,204 @@ describe("Opening menu music", () => {
 });
 
 // ============================================================================
+// 4b. THE SECRET LEVEL SONG (designed by Arvind)
+// ----------------------------------------------------------------------------
+// His spec, word for word: "dubstep with a few drills at the start, then normal
+// speed with no drills, then a drop with a few drills, then it goes faster and
+// faster."
+//
+// These tests RUN the real secretStep() with stand-in instruments that just
+// record what got played, so they check the song actually behaves that way
+// rather than just checking the code contains certain words.
+// ============================================================================
+describe("The secret level song", () => {
+  // Pull the real function out of index.html and make it runnable
+  function loadSong() {
+    const start = html.indexOf("  secretStep(step, time) {");
+    expect(start).toBeGreaterThan(-1);
+    const end = html.indexOf("\n  },", start) + 4;
+    const src = html
+      .slice(start, end)
+      .replace("secretStep(step, time) {", "function secretStep(step, time) {")
+      .replace(/\},\s*$/, "}");
+
+    const played = [];
+    const drills = [];
+    const player = {
+      bpm: 140,
+      freq: (m) => m,
+      note: () => played.push("note"),
+      drum: (t, type) => played.push(type),
+      hat: () => played.push("hat"),
+      rumble: () => played.push("rumble"),
+      wobble: () => played.push("wobble"),
+      // record how FAST each drill is: gap between its notes = spread / count.
+      // A smaller gap means a tighter, faster "brrrt".
+      drill: (t, midi, count, spread) => {
+        played.push("drill");
+        drills.push({ count: count, spread: spread, gap: spread / count });
+      },
+      played: played,
+      drills: drills,
+    };
+    player.secretStep = new Function("return " + src)();
+    return player;
+  }
+
+  // Play the whole 16-bar loop and count what happens in each section
+  function runSong() {
+    const player = loadSong();
+    const sections = { intro: [0, 3], normal: [4, 7], drop: [8, 11], rush: [12, 15] };
+    const counts = {};
+    Object.keys(sections).forEach((k) => { counts[k] = {}; });
+    const bpmPerBar = [];
+
+    for (let step = 0; step < 256; step++) {
+      const bar = Math.floor(step / 16);
+      const name = Object.keys(sections).find(
+        (n) => bar >= sections[n][0] && bar <= sections[n][1]
+      );
+      player.played.length = 0;
+      player.secretStep(step, 0);
+      player.played.forEach((e) => {
+        counts[name][e] = (counts[name][e] || 0) + 1;
+      });
+      if (step % 16 === 0) bpmPerBar.push(Math.round(player.bpm));
+    }
+    return { counts, bpmPerBar, player };
+  }
+
+  const song = runSong();
+  const c = song.counts;
+
+  test("the secret level actually has a theme now", () => {
+    const src = fs.readFileSync(path.join(LEVELS_DIR, "secret.js"), "utf8");
+    expect(src).toMatch(/^\s*music:\s*"secret"/m);
+    expect(html).toMatch(/if \(this\.theme === "secret"\) return this\.secretStep\(step, time\);/);
+  });
+
+  test("PART 1 — it starts as dubstep with A FEW drills", () => {
+    expect(c.intro.drill).toBeGreaterThan(0);
+    expect(c.intro.drill).toBeLessThan(c.drop.drill); // "a few", not loads
+    expect(c.intro.wobble).toBeGreaterThan(0);        // wobble bass = dubstep
+  });
+
+  test("PART 2 — normal speed with NO drills at all", () => {
+    expect(c.normal.drill).toBeUndefined();
+    expect(c.normal.kick).toBeGreaterThan(0);         // but there's still a beat
+    expect(c.normal.note).toBeGreaterThan(0);         // ...and a melody
+  });
+
+  test("PART 3 — the DROP, and it has drills", () => {
+    expect(c.drop.drill).toBeGreaterThan(0);
+    // The drop must be BIGGER than the quiet intro
+    expect(c.drop.kick + c.drop.wobble).toBeGreaterThan(c.intro.kick + c.intro.wobble);
+  });
+
+  test("PART 4 — the ending has the most drills of all", () => {
+    expect(c.rush.drill).toBeGreaterThanOrEqual(c.drop.drill);
+  });
+
+  test("PART 4 — it really does get FASTER AND FASTER", () => {
+    const endSpeeds = song.bpmPerBar.slice(12);
+    endSpeeds.forEach((v, i) => {
+      if (i > 0) expect(v).toBeGreaterThan(endSpeeds[i - 1]);
+    });
+    expect(endSpeeds[endSpeeds.length - 1]).toBeGreaterThan(song.bpmPerBar[0]);
+  });
+
+  test("the first three parts stay at a steady speed", () => {
+    const steady = song.bpmPerBar.slice(0, 12);
+    steady.forEach((v) => expect(v).toBe(steady[0]));
+  });
+
+  test("it goes back to normal speed when the song loops round", () => {
+    const p = loadSong();
+    p.bpm = 999;          // pretend it ended fast
+    p.secretStep(0, 0);   // start of the loop again
+    expect(p.bpm).toBe(140);
+  });
+
+  test("it never runs off to a silly tempo", () => {
+    song.bpmPerBar.forEach((v) => {
+      expect(v).toBeGreaterThanOrEqual(100);
+      expect(v).toBeLessThanOrEqual(240);
+    });
+  });
+
+  // ---- THE TURNAROUND (Arvind: "when the music repeats make a drill for it
+  // to repeat") — a big drill roll spins the song back to the beginning. ----
+  describe("the turnaround drill that loops the song", () => {
+    function playFinalSteps() {
+      const p = loadSong();
+      // run the whole loop so the tempo ramp is in the right place
+      for (let step = 0; step < 252; step++) p.secretStep(step, 0);
+      const perStep = [];
+      for (let step = 252; step < 256; step++) {
+        p.played.length = 0;
+        p.drills.length = 0;
+        p.secretStep(step, 0);
+        perStep.push({ played: [...p.played], drills: [...p.drills] });
+      }
+      return perStep;
+    }
+
+    test("the very end of the song has a drill on every beat", () => {
+      playFinalSteps().forEach((s) => {
+        expect(s.played).toContain("drill");
+      });
+    });
+
+    test("it winds UP (gets faster) over the run-in beats", () => {
+      // the first three beats of the turnaround should get tighter each time
+      const gaps = playFinalSteps()
+        .slice(0, 3)
+        .map((s) => Math.min(...s.drills.map((d) => d.gap)));
+      gaps.forEach((g, i) => {
+        if (i > 0) expect(g).toBeLessThan(gaps[i - 1]);
+      });
+    });
+
+    test("the LAST drill is SLOWER — a wind-down before it repeats", () => {
+      const steps = playFinalSteps();
+      const beforeLast = Math.min(...steps[2].drills.map((d) => d.gap));
+      const last = Math.max(...steps[3].drills.map((d) => d.gap));
+      expect(last).toBeGreaterThan(beforeLast);
+    });
+
+    test("the last drill runs for a full 2 seconds", () => {
+      const last = playFinalSteps()[3].drills;
+      const longest = Math.max(...last.map((d) => d.spread));
+      expect(longest).toBeCloseTo(2.0, 2);
+    });
+
+    test("...and it's still a roll, not just a few lonely notes", () => {
+      const last = playFinalSteps()[3].drills;
+      const biggest = Math.max(...last.map((d) => d.count));
+      expect(biggest).toBeGreaterThanOrEqual(8);
+    });
+
+    test("there's a thump right at the loop point", () => {
+      const last = playFinalSteps()[3];
+      expect(last.played).toContain("rumble");
+    });
+
+    test("the last bar has more drills than any other bar", () => {
+      const p = loadSong();
+      const perBar = {};
+      for (let step = 0; step < 256; step++) {
+        const bar = Math.floor(step / 16);
+        p.played.length = 0;
+        p.secretStep(step, 0);
+        perBar[bar] = (perBar[bar] || 0) + p.played.filter((x) => x === "drill").length;
+      }
+      const others = Object.keys(perBar).filter((b) => b !== "15").map((b) => perBar[b]);
+      expect(perBar[15]).toBeGreaterThan(Math.max(...others));
+    });
+  });
+});
+
+// ============================================================================
 // 5. ORIGINALITY — no audio files, nothing sampled or downloaded
 // ============================================================================
 describe("Music is original and self-contained", () => {

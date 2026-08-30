@@ -18,6 +18,10 @@ const LEVEL_12 = {
   // Play the 8-bit volcano music with the two beat drops! 🌋
   music: "underground",
 
+  // The JETPACK is allowed here on purpose. The flag floats up at y:300 so you
+  // can walk UNDERNEATH it to reach the secret button behind it without ending
+  // the level by accident — which means you need to fly up to actually finish.
+
   memoir: "Dear Diary, the floor is LAVA! For real this time! I have to RUN and JUMP across the bubbling lava pits and hop on the floating volcano rocks. One slip and it's HOT HOT HOT! Tail spin the bad guys and DASH to the end!",
 
   // Fiery red sky + dark lava rock ground

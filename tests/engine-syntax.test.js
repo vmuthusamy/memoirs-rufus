@@ -47,6 +47,55 @@ describe("index.html game engine parses without syntax errors", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 1b. Kaplay component rules
+// ---------------------------------------------------------------------------
+// Some Kaplay components REQUIRE another component to be present. Break the
+// rule and the game throws at the moment that object is created — which kills
+// the game loop and freezes the screen on its last frame.
+//
+// This actually happened: the "Cool Music" grand finale used lifespan() without
+// opacity(), so the game froze the instant you reached Felix with
+//     Component "lifespan" requires component "opacity"
+// Parsing can't catch it (the code is valid JavaScript), and it only shows up
+// if you play all the way to that exact moment — so we check it here instead.
+describe("Kaplay component requirements are respected", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+
+  // Pull out every add([ ... ]) block
+  function addBlocks(src) {
+    return [...src.matchAll(/add\(\[[\s\S]{0,900}?\]\)/g)].map((m) => ({
+      code: m[0],
+      line: src.slice(0, m.index).split("\n").length,
+    }));
+  }
+
+  test("every lifespan() also has opacity()", () => {
+    const offenders = addBlocks(html)
+      .filter((b) => b.code.includes("lifespan(") && !b.code.includes("opacity("))
+      .map((b) => `index.html:${b.line}`);
+    expect(offenders).toEqual([]);
+  });
+
+  test("there are plenty of lifespan uses to check (the scan really runs)", () => {
+    const withLifespan = addBlocks(html).filter((b) => b.code.includes("lifespan("));
+    expect(withLifespan.length).toBeGreaterThan(20);
+  });
+
+  test("the same rule holds in the standalone mini-games", () => {
+    const offenders = [];
+    fs.readdirSync(ROOT)
+      .filter((f) => f.endsWith(".html") && f !== "index.html")
+      .forEach((f) => {
+        const src = fs.readFileSync(path.join(ROOT, f), "utf8");
+        addBlocks(src)
+          .filter((b) => b.code.includes("lifespan(") && !b.code.includes("opacity("))
+          .forEach((b) => offenders.push(`${f}:${b.line}`));
+      });
+    expect(offenders).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 2. Every level file + support file parses
 // ---------------------------------------------------------------------------
 describe("Every level and support .js file parses without syntax errors", () => {

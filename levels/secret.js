@@ -8,11 +8,12 @@
 const SECRET_LEVEL = {
   name: "Rufus's Treat Party",
 
-  // TODO (Arvind): this level still has NO music of its own — it's the only
-  // chapter left without one. Arvind is going to design how it should sound,
-  // then we'll add the recipe to `levelMusic.nesThemes` in index.html and set
-  // `music: "<name>"` right here.
-  //
+  // 🎵 THE SECRET PARTY SONG — designed by Arvind.
+  // "dubstep with a few drills at the start, then normal speed with no drills,
+  //  then a drop with a few drills, then it goes faster and faster."
+  // Built as `secretStep()` in index.html.
+  music: "secret",
+
   // TODO (Arvind): add variation that uses ALL the friends and their powers —
   // Marthina's double jump + glide, Renard's dash, Fiery's fire tail — instead
   // of everything being solvable by Rufus alone.

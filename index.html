@@ -357,7 +357,7 @@ const levelMusic = {
   start(theme) {
     if (this.playing || this.isMuted()) return;
     this.theme = theme || "volcano";
-    const bpmByTheme = { moon: 134, volcano: 116, adventure: 132, candy: 142, circus: 122, outside: 130, gym: 138, library: 96, party: 140, dubstep: 140 };
+    const bpmByTheme = { moon: 134, volcano: 116, adventure: 132, candy: 142, circus: 122, outside: 130, gym: 138, library: 96, party: 140, dubstep: 140, secret: 140 };
     // NES-style themes carry their own speed in their recipe
     const nes = this.nesThemes[this.theme];
     this.bpm = nes ? nes.bpm : (bpmByTheme[this.theme] || 124);
@@ -508,6 +508,18 @@ const levelMusic = {
     lfo.start(time); lfo.stop(time + dur + 0.02);
   },
 
+  // DRILL — a super-fast burst of the same note, like a machine-gun snare roll.
+  // A normal note lands once per 16th beat; a drill squeezes several notes into
+  // that same tiny slot, which is what makes it sound like a "brrrrt".
+  drill(time, midi, count, spread, vol) {
+    if (!this.ctx) return;
+    const gap = spread / count;
+    for (let i = 0; i < count; i++) {
+      this.note(this.freq(midi), time + i * gap, gap * 0.85, "square", vol || 0.05);
+      this.hat(time + i * gap, 0.025);
+    }
+  },
+
   // Rising "riser" tone that builds tension right before the drop
   riser(time, dur, startMidi, endMidi) {
     if (!this.ctx) return;
@@ -520,6 +532,96 @@ const levelMusic = {
     g.gain.exponentialRampToValueAtTime(0.001, time + dur);
     o.connect(g).connect(this.ctx.destination);
     o.start(time); o.stop(time + dur + 0.02);
+  },
+
+  // ============================================================
+  // SECRET PARTY THEME — designed by Arvind for the secret level.
+  // His plan, in his own words: "dubstep with a few drills at the start, then
+  // normal speed with no drills, then a drop with a few drills, then it goes
+  // faster and faster."
+  //
+  // So the 16-bar loop is in four parts:
+  //   bars  0-3   INTRO   dubstep, sparse and moody, a FEW drills
+  //   bars  4-7   NORMAL  a steady groove, NO drills at all
+  //   bars  8-11  DROP    everything at once, drills at the end of each bar
+  //   bars 12-15  RUSH    the tempo genuinely speeds up, drills everywhere
+  // ============================================================
+  secretStep(step, time) {
+    const bar = Math.floor(step / 16), inBar = step % 16;
+    const roots = [28, 28, 31, 26];          // E - E - G - D, dark and low
+    const root = roots[bar % 4];
+    const scale = [64, 67, 71, 74, 76];      // E minor notes for the melody
+
+    const intro  = bar < 4;
+    const normal = bar >= 4 && bar < 8;
+    const drop   = bar >= 8 && bar < 12;
+
+    // TEMPO — steady for most of the song, then it really does accelerate.
+    // (The scheduler reads this.bpm for every note, so changing it here
+    // genuinely speeds the music up rather than just sounding busier.)
+    if (step === 0) this.bpm = 140;                      // reset each time round
+    if (bar >= 12) this.bpm = 140 + (bar - 12) * 16 + inBar;  // climbs to ~200
+
+    if (intro) {
+      // Moody half-time dubstep
+      if (inBar === 0) { this.drum(time, "kick"); this.rumble(time, 0.14); }
+      if (inBar === 8) this.drum(time, "snare");
+      if (inBar % 4 === 0) this.wobble(time, 0.34, root, 5 + bar);
+      if (inBar % 4 === 2) this.hat(time, 0.03);
+      // ...with a FEW drills, at the end of bars 1 and 3 only
+      if ((bar === 1 || bar === 3) && inBar >= 13) {
+        this.drill(time, root + 24, 4, 0.09, 0.05);
+      }
+    } else if (normal) {
+      // Normal speed, NO drills — just a solid groove you can bop to
+      if (inBar % 8 === 0) this.drum(time, "kick");
+      if (inBar % 8 === 4) this.drum(time, "snare");
+      if (inBar % 2 === 1) this.hat(time, 0.028);
+      if (inBar % 4 === 0) this.wobble(time, 0.22, root, 4);
+      if (inBar % 4 === 2) {
+        this.note(this.freq(scale[(bar + inBar / 2) % scale.length]), time, 0.14, "square", 0.07);
+      }
+    } else if (drop) {
+      // THE DROP — everything at once
+      if (inBar === 0) { this.drum(time, "kick"); this.rumble(time, 0.22); }
+      if (inBar === 6 || inBar === 10) this.drum(time, "kick");
+      if (inBar === 4 || inBar === 12) this.drum(time, "snare");
+      this.hat(time, inBar % 2 ? 0.045 : 0.025);
+      if (inBar % 2 === 0) {
+        this.wobble(time, 0.16, root, [4, 8, 6, 12, 5, 16, 8, 6][(inBar / 2) % 8]);
+      }
+      if (inBar % 4 === 0) {
+        this.note(this.freq(scale[(bar * 2 + inBar / 4) % scale.length] + 12), time, 0.12, "sawtooth", 0.06);
+      }
+      // Drills to finish off every bar
+      if (inBar >= 13) this.drill(time, root + 24, 5, 0.085, 0.055);
+    } else {
+      // RUSH — faster and faster, drills all over it
+      if (inBar % 4 === 0) this.drum(time, "kick");
+      if (inBar % 4 === 2) this.drum(time, "snare");
+      this.hat(time, 0.04);
+      if (inBar % 2 === 0) this.wobble(time, 0.1, root, 10 + (bar - 12) * 3);
+      // The melody climbs a little higher every bar as it speeds up
+      this.note(this.freq(scale[inBar % scale.length] + (bar - 12) * 2), time, 0.06, "square", 0.06);
+      if (inBar % 4 >= 2) this.drill(time, root + 24 + (bar - 12), 4, 0.06, 0.05);
+
+      // THE TURNAROUND — right at the very end, a big drill roll that gets
+      // tighter and higher and spins the whole song back round to the start.
+      if (bar === 15 && inBar >= 12) {
+        const k = inBar - 12;                       // 0, 1, 2, 3
+        if (inBar === 15) {
+          // The LAST drill is SLOW and runs for a full 2 SECONDS. After the
+          // fast wind-up it stretches right out, so it's still rolling as the
+          // song starts again — a long tail that carries you into the loop.
+          // (Kept quiet so it sits underneath the intro instead of burying it.)
+          this.drill(time, root + 26, 20, 2.0, 0.05);
+          this.rumble(time, 0.2);                   // thump back into bar 1
+        } else {
+          // ...winding up tighter and higher on the way in
+          this.drill(time, root + 26 + k * 2, 6 + k * 2, 0.05, 0.06);
+        }
+      }
+    }
   },
 
   // ============================================================
@@ -749,6 +851,7 @@ const levelMusic = {
     if (this.theme === "library") return this.libraryStep(step, time);
     if (this.theme === "party") return this.partyStep(step, time);
     if (this.theme === "dubstep") return this.dubstepStep(step, time);
+    if (this.theme === "secret") return this.secretStep(step, time);
     return this.volcanoStep(step, time);
   },
 
@@ -2555,6 +2658,21 @@ function drawPurpleGem() {
   return c;
 }
 
+// ORANGE GEM — the reward for playing every piano key IN ORDER on "Cool Music"
+function drawOrangeGem() {
+  const c = document.createElement("canvas");
+  c.width = 20; c.height = 20;
+  const ctx = c.getContext("2d");
+  // Diamond shape (orange!)
+  ctx.fillStyle = "#F57C00";
+  ctx.fillRect(8, 1, 4, 2); ctx.fillRect(6, 3, 8, 2); ctx.fillRect(4, 5, 12, 2);
+  ctx.fillRect(2, 7, 16, 4); ctx.fillRect(4, 11, 12, 2); ctx.fillRect(6, 13, 8, 2); ctx.fillRect(8, 15, 4, 2);
+  ctx.fillStyle = "#FFB74D"; ctx.fillRect(6, 5, 4, 4); ctx.fillRect(8, 3, 3, 3);
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(7, 5, 2, 2); ctx.fillRect(9, 3, 1, 1);
+  ctx.fillStyle = "#E65100"; ctx.fillRect(2, 10, 16, 1); ctx.fillRect(8, 16, 4, 1);
+  return c;
+}
+
 function drawGreenGem() {
   const c = document.createElement("canvas");
   c.width = 20;
@@ -2656,6 +2774,7 @@ loadSprite("redGem", drawRedGem().toDataURL());
 loadSprite("greenGem", drawGreenGem().toDataURL());
 loadSprite("purpleGem", drawPurpleGem().toDataURL());
 loadSprite("yellowGem", drawYellowGem().toDataURL());
+loadSprite("orangeGem", drawOrangeGem().toDataURL());
 loadSprite("gem", drawGem().toDataURL());
 
 // ============================================
@@ -2763,13 +2882,26 @@ function hasPaw(levelIndex) {
   return getCollectibles().paws[levelIndex] === true;
 }
 
-// Check if ALL golden paws have been collected (unlocks secret level!)
-function allPawsCollected() {
+// How many golden paws you need to unlock the secret level. (Arvind's rule!)
+//
+// This used to demand a paw from EVERY level — but only 9 of the 16 levels
+// actually hide one, so the secret level could never be unlocked by anybody.
+// Needing 5 out of the 9 makes it a real goal you can actually reach.
+const PAWS_FOR_SECRET = 5;
+
+// How many golden paws have been found so far?
+function pawCount() {
   const data = getCollectibles();
+  let found = 0;
   for (let i = 0; i < ALL_LEVELS.length; i++) {
-    if (!data.paws[i]) return false;
+    if (data.paws[i]) found++;
   }
-  return true;
+  return found;
+}
+
+// Found enough paws to open the secret level?
+function hasEnoughPaws() {
+  return pawCount() >= PAWS_FOR_SECRET;
 }
 
 // Color gems — secret collectibles that unlock areas in other levels!
@@ -2790,6 +2922,13 @@ function hasGreenGem() {
 }
 function awardGreenGem() {
   localStorage.setItem("rufus_green_gem", "true");
+}
+// Orange gem — earned by playing every piano key IN ORDER on "Cool Music".
+function hasOrangeGem() {
+  return localStorage.getItem("rufus_orange_gem") === "true";
+}
+function awardOrangeGem() {
+  localStorage.setItem("rufus_orange_gem", "true");
 }
 
 // Yellow gem — earned by beating Mr. Donut (Level 10) with ZERO damage.
@@ -3773,10 +3912,8 @@ scene("title", () => {
 
   titleFox.onClick(() => openCharDialog("rufus"));
   titleRenard.onClick(() => openCharDialog("renard"));
-  // Click Marthina to jump straight into the secret level!
-  titleMarthina.onClick(() => {
-    showYesNo("Want to play the secret level?", () => go("memoir", "secret"), null);
-  });
+  // Marthina used to be a shortcut straight into the secret level, which meant
+  // you could skip it entirely. Now the ONLY way in is finding the golden paws.
 
   // ===== SECRET HAT FEATURE — click the title to set up a custom hat! =====
   // Reusable YES/NO popup
@@ -4278,6 +4415,7 @@ scene("title", () => {
     { spr: "greenGem", has: hasGreenGem() },
     { spr: "yellowGem", has: hasYellowGem() },
     { spr: "purpleGem", has: hasPurpleGem() },
+    { spr: "orangeGem", has: hasOrangeGem() },
   ];
   // Color gems count toward the gem bar too
   const colorCount = colorGems.filter((g) => g.has).length;
@@ -4337,7 +4475,8 @@ scene("title", () => {
   onKeyPress("u", () => {
     if (dialogOpen) return;
     for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
-    add([ text("All levels unlocked!", { size: 22 }), pos(width() / 2, 140), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1), fixed(), z(220) ]);
+    unlockJetpack(); // same as the button — you need it for the fly-only levels
+    add([ text("All levels + jetpack unlocked!", { size: 22 }), pos(width() / 2, 140), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1), fixed(), z(220) ]);
     wait(0.9, () => go("title"));
   });
   onKeyPress("l", () => {
@@ -4728,7 +4867,7 @@ scene("levelSelect", (startPage) => {
   const totalPages = BOOKS.length;
   let currentPage = startPage || 0;
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
-  const hasSecretEntry = allPawsCollected();
+  const hasSecretEntry = hasEnoughPaws();
   let flipping = false;
 
   // Page flip animation!
@@ -4832,7 +4971,12 @@ scene("levelSelect", (startPage) => {
     add([ text("🔓 Unlock All", { size: 14 }), pos(width() - 90, 34), anchor("center"), color(190, 255, 205), fixed(), z(51) ]);
     unlockBtn.onClick(() => {
       for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
-      add([ text("All levels unlocked! 🎉", { size: 18 }), pos(width() / 2, height() - 40), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1.4), fixed(), z(220) ]);
+      // ALSO hand over the JETPACK. You normally earn it by beating the boss in
+      // "King Clown", and levels 7, 8, 9 and 12 have flags you can only reach by
+      // flying. Without this, unlocking everything dropped you into those levels
+      // with no way to finish them. (Bug Arvind hit!)
+      unlockJetpack();
+      add([ text("All levels + jetpack unlocked! 🎉", { size: 18 }), pos(width() / 2, height() - 40), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1.4), fixed(), z(220) ]);
       wait(0.35, () => go("levelSelect", currentPage)); // redraw so tiles show as unlocked
     });
 
@@ -4960,33 +5104,46 @@ scene("levelSelect", (startPage) => {
       }
     }
 
-    // Secret level on last page
-    if (currentPage === totalPages - 1 && hasSecretEntry) {
+    // Secret level on the last page. It's ALWAYS shown now — locked with a
+    // "3/5 golden paws" progress line so you can see how close you are, then
+    // unlocked once you've found enough.
+    if (currentPage === totalPages - 1) {
+      const found = pawCount();
       const secretSlot = endIdx - startIdx;
       const secretY = 120 + secretSlot * 72;
       const secretEntry = add([
         rect(560, 62),
         pos(width() / 2, secretY),
         anchor("center"),
-        color(50, 40, 25),
-        outline(2, rgb(255, 215, 0)),
+        color(hasSecretEntry ? 50 : 34, hasSecretEntry ? 40 : 32, hasSecretEntry ? 25 : 30),
+        outline(2, hasSecretEntry ? rgb(255, 215, 0) : rgb(110, 100, 80)),
         area(),
         fixed(),
       ]);
-      secretEntry.onClick(() => go("memoir", "secret"));
-      add([
-        text("??? Secret Chapter ???", { size: 18 }),
+      if (hasSecretEntry) {
+        secretEntry.onClick(() => go("memoir", "secret"));
+      }
+      const secretTitle = add([
+        text(hasSecretEntry ? "??? Secret Chapter ???" : "🔒 Locked Secret Chapter", { size: 18 }),
         pos(width() / 2, secretY - 10),
         anchor("center"),
-        color(255, 215, 0),
+        color(hasSecretEntry ? rgb(255, 215, 0) : rgb(150, 140, 120)),
         fixed(),
         { t: 0 },
-      ]).onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8; });
+      ]);
+      if (hasSecretEntry) {
+        secretTitle.onUpdate(function() { this.t += dt(); this.opacity = Math.sin(this.t * 2) * 0.2 + 0.8; });
+      }
       add([
-        text("All golden paws collected!", { size: 10 }),
+        text(
+          hasSecretEntry
+            ? "You found " + found + " golden paws!"
+            : "Find " + PAWS_FOR_SECRET + " golden paws to unlock  (" + found + "/" + PAWS_FOR_SECRET + ")",
+          { size: 10 }
+        ),
         pos(width() / 2, secretY + 12),
         anchor("center"),
-        color(200, 180, 100),
+        color(hasSecretEntry ? rgb(200, 180, 100) : rgb(140, 132, 115)),
         fixed(),
       ]);
     }
@@ -5151,7 +5308,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   const isRenard = !isFireHero && !isSecret && chosenChar === "renard";
   const heroSprite = isFireHero ? "fiery" : (isRenard ? "renard" : "rufus");
   // In-level background music (e.g. Level 11's volcano theme). Other levels stay silent.
-  if (!isSecret && level.music) levelMusic.start(level.music);
+  // (The secret level used to be forced silent here — now it can have a theme
+  // like every other chapter.)
+  if (level.music) levelMusic.start(level.music);
   else levelMusic.stop();
   let score = 0;
   let isSpinning = false;
@@ -5610,7 +5769,9 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         outline(3, rgb(40, 40, 60)),
         area(), body({ isStatic: true }),
         "platform", "pianoKey",
-        { midi: midi, litT: 0, noteColor: noteColor, baseX: p.x },
+        // keyIndex = where this key sits in the song (0 = the very first note).
+        // The "play it in order" challenge uses it to know if you're on track.
+        { midi: midi, litT: 0, noteColor: noteColor, baseX: p.x, keyIndex: idx },
       ]);
       // Colored LED strip along the top edge showing which note this key is
       add([ rect(p.width - 6, 5), pos(p.x + 3, p.y - 5), color(...noteColor), z(1), "keyLED", { keyX: p.x } ]);
@@ -6669,8 +6830,13 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     },
   ]);
 
+  // During the piano grand finale the camera glides along the keyboard instead
+  // of following Rufus, so you can watch the keys playing themselves.
+  let finalePlaying = false;
+
   // Camera follows Rufus
   rufus.onUpdate(() => {
+    if (finalePlaying) return;
     // Camera follows Rufus up when flying, but never goes below ground level
     const camY = Math.min(height() / 2, rufus.pos.y);
     camPos(rufus.pos.x, camY);
@@ -7273,6 +7439,54 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
   }
 
   // ROCKET LAUNCH cutscene (Level 13 finale -> blast off into space!)
+  // 🎹 GRAND FINALE (piano levels) — when you reach Felix, the whole keyboard
+  // plays the song BY ITSELF. The camera glides along the keys, each one lights
+  // up and sounds its note in turn, and then the level finishes.
+  function playPianoFinale(done) {
+    const keys = get("pianoKey").slice().sort((a, b) => a.keyIndex - b.keyIndex);
+    if (!keys.length) { done(); return; }
+    isInvincible = true;
+    finalePlaying = true;
+    const step = 0.16;                    // seconds between notes
+    const total = keys.length * step;
+
+    add([
+      text("🎹 The piano plays by itself! 🎹", { size: 22 }),
+      pos(width() / 2, 110), anchor("center"),
+      color(255, 220, 140), outline(3, rgb(80, 40, 0)),
+      opacity(1), fixed(), z(304), lifespan(total + 1.2), { t: 0 },
+    ]).onUpdate(function () { this.t += dt(); this.opacity = Math.sin(this.t * 4) * 0.3 + 0.7; });
+
+    levelMusic.init();
+    keys.forEach((k, i) => {
+      wait(i * step, () => {
+        if (!k.exists()) return;
+        // Slide the camera to whichever key is singing right now
+        camPos(k.pos.x + k.width / 2, 300);
+        k.litT = 1;
+        if (levelMusic.ctx) {
+          if (levelMusic.ctx.state === "suspended") levelMusic.ctx.resume();
+          const now = levelMusic.ctx.currentTime;
+          levelMusic.note(levelMusic.freq(k.midi), now, 0.5, "triangle", 0.26);
+          levelMusic.note(levelMusic.freq(k.midi + 12), now, 0.28, "square", 0.05);
+        }
+        for (let s = 0; s < 6; s++) {
+          add([
+            rect(3, 3), pos(k.pos.x + rand(4, k.width - 4), k.pos.y - 4),
+            color(...k.noteColor), opacity(0.9), lifespan(0.5),
+            move(rand(250, 300), rand(60, 130)), z(9),
+          ]);
+        }
+      });
+    });
+
+    // Let the last note ring out, then finish the level
+    wait(total + 0.9, () => {
+      finalePlaying = false;
+      done();
+    });
+  }
+
   function playLaunchCutscene(done) {
     isInvincible = true;
     levelMusic.stop();
@@ -7527,6 +7741,86 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     }
   });
 
+  // ===== "PLAY THE SONG IN ORDER" CHALLENGE =====
+  // Every note you get RIGHT appears in a strip along the top of the screen, so
+  // you can see the song building up. Play all of them in order and the whole
+  // strip turns into an ORANGE GEM. Hit one out of order and the strip flashes
+  // RED and vanishes — start the song again!
+  const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const totalNotes = isPiano ? level.platforms.length : 0;
+  const NOTE_W = 22, NOTE_GAP = 3, NOTE_Y = 100;
+  const noteStartX = (width() - (totalNotes * (NOTE_W + NOTE_GAP) - NOTE_GAP)) / 2;
+  let noteStreak = 0;    // how many notes you've played correctly in a row
+  let songDone = false;
+
+  if (isPiano) {
+    add([
+      text("Play every key IN ORDER for the ORANGE GEM!", { size: 12 }),
+      pos(width() / 2, 82), anchor("center"),
+      color(255, 190, 120), outline(2, rgb(0, 0, 0)), fixed(), z(100), "noteHint",
+    ]);
+  }
+
+  // Add one note to the strip at the top
+  function addNoteBadge(key) {
+    const bx = noteStartX + noteStreak * (NOTE_W + NOTE_GAP);
+    add([
+      rect(NOTE_W, 20), pos(bx, NOTE_Y),
+      color(...key.noteColor), outline(2, rgb(20, 15, 30)),
+      fixed(), z(100), "noteBadge", "noteBox",
+    ]);
+    add([
+      text(NOTE_NAMES[key.midi % 12], { size: 10 }),
+      pos(bx + NOTE_W / 2, NOTE_Y + 10), anchor("center"),
+      color(20, 15, 30), fixed(), z(101), "noteBadge",
+    ]);
+  }
+
+  // Wrong note! Turn the strip red and make it disappear.
+  function breakNoteStreak() {
+    get("noteBadge").forEach((o) => {
+      // Leave behind a red ghost that fades out, then remove the real badge.
+      // (Fading copies means a fresh streak can start straight away without
+      // the old clean-up deleting the new notes.)
+      if (o.is("noteBox")) {
+        add([
+          rect(NOTE_W, 20), pos(o.pos.x, o.pos.y),
+          color(230, 50, 50), outline(2, rgb(70, 0, 0)),
+          opacity(0.95), lifespan(0.5, { fade: 0.35 }), fixed(), z(101),
+        ]);
+      }
+      destroy(o);
+    });
+    noteStreak = 0;
+  }
+
+  // You played the whole song in order!
+  function completeSong() {
+    songDone = true;
+    get("noteBox").forEach((o) => { o.color = rgb(245, 140, 30); }); // all turn orange
+    wait(0.7, () => {
+      get("noteBadge").forEach((o) => destroy(o));
+      get("noteHint").forEach((o) => destroy(o));
+      awardOrangeGem();
+      add([ sprite("orangeGem"), pos(width() / 2, 150), anchor("center"), scale(4), opacity(1), fixed(), z(220), lifespan(3.5) ]);
+      add([
+        text("ORANGE GEM!", { size: 30 }), pos(width() / 2, 210), anchor("center"),
+        color(255, 150, 40), outline(3, rgb(80, 30, 0)), opacity(1), fixed(), z(220), lifespan(3.5),
+      ]);
+      add([
+        text("You played the whole song in order!", { size: 14 }), pos(width() / 2, 246), anchor("center"),
+        color(255, 210, 150), outline(2, rgb(0, 0, 0)), opacity(1), fixed(), z(220), lifespan(3.5),
+      ]);
+      for (let i = 0; i < 26; i++) {
+        add([
+          rect(rand(3, 6), rand(3, 6)), pos(width() / 2, 150),
+          color(255, rand(120, 200), rand(20, 60)), opacity(1),
+          lifespan(1.2), move(rand(0, 360), rand(90, 260)), fixed(), z(219),
+        ]);
+      }
+    });
+  }
+
   // --- PIANO KEYS: play a note + light up the key when Rufus lands on it! ---
   // Fade each lit key back to white over time.
   onUpdate("pianoKey", (key) => {
@@ -7547,6 +7841,21 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
     if (rufus.pos.y > key.pos.y) return;
     if (key.litT > 0.5) return; // just played — don't double-trigger
     key.litT = 1;
+
+    // --- Is this the next note of the song? ---
+    if (isPiano && !songDone) {
+      const i = key.keyIndex;
+      if (i === noteStreak) {
+        addNoteBadge(key);              // correct! add it to the strip
+        noteStreak++;
+        if (noteStreak >= totalNotes) completeSong();
+      } else if (i === noteStreak - 1) {
+        // Landed back on the key you just played — that's fine, ignore it.
+      } else {
+        breakNoteStreak();              // wrong note — the strip turns red
+        if (i === 0) { addNoteBadge(key); noteStreak = 1; } // restarted from the first key
+      }
+    }
     // Play the key's note. This is the ONLY music in a piano level — there's no
     // background track, so jumping the keys IS the song. Wake the audio if needed.
     levelMusic.init();
@@ -8115,6 +8424,14 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
       if (isHighScore(levelIndex, score)) go("nameEntry", { ...payload, nextScene: "levelComplete" });
       else go("levelComplete", payload);
     };
+
+    // 🎹 Piano finale ("Cool Music"): you made it to Dad — now the whole
+    // keyboard plays the song by itself before the level ends.
+    if (isPiano) {
+      exitReached = true;
+      playPianoFinale(finish);
+      return;
+    }
 
     // Rocket-launch finale (Level 13): blast off into space, then finish!
     if (level.launchCutscene) {
@@ -9178,8 +9495,9 @@ scene("levelComplete", ({ score, levelIndex, earnedGem, pawCollectedThisRun }) =
     awardY += 25;
   }
 
-  // Check if all paws just got collected — secret unlock!
-  if (pawCollectedThisRun && allPawsCollected()) {
+  // Did this paw just hit the magic number? (=== so it celebrates once, on the
+  // 5th paw, and not again on every paw you find afterwards.)
+  if (pawCollectedThisRun && pawCount() === PAWS_FOR_SECRET) {
     const secretMsg = add([
       text("Something secret has been unlocked...", { size: 16 }),
       pos(width() / 2, awardY + 5),

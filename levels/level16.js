@@ -1,19 +1,19 @@
 // ============================================
-// LEVEL 16: "Felix's Piano Party" 🎹🦊🔊
+// LEVEL 16: "Cool Music" 🎹🦊
 // Made by Arvind (Venki's son)
 //
 // Rufus follows a path of giant PIANO KEYS to find his DAD, FELIX! There's NO
 // background music at all — the ONLY sound is Rufus jumping the keys. Each key
-// plays one note of our DUBSTEP song in piano form, so hopping across all the
-// keys plays the whole dubstep riff yourself. It's a long piano solo to Dad!
+// plays one note of a song, so hopping across all the keys plays the whole
+// tune yourself. It's a long piano solo all the way to Dad!
 // ============================================
 
 const LEVEL_16 = {
 
   name: "Cool Music",
 
-  // Piano-key platforms — each key plays a NOTE of our DUBSTEP SONG (in piano
-  // form). There is NO background music; the only music is you jumping the keys!
+  // Piano-key platforms — each key plays one NOTE of the song. There is NO
+  // background music; the only music is you jumping on the keys!
   pianoTheme: true,
   // (no `music:` field on purpose — silence until YOU play the keys)
 
@@ -25,7 +25,7 @@ const LEVEL_16 = {
 
   startLives: 7,
 
-  memoir: "Dear Diary, everything was SILENT until I stepped on the first key — WUB! The long path to my DAD, FELIX, was a giant piano, and every key played a note of our DUBSTEP song, but in piano sounds. When I hopped across all of them I played the whole dubstep riff myself! No background music at all — I made ALL of it with my feet. It was the longest, coolest piano solo ever. 🎹🔊",
+  memoir: "Dear Diary, everything was SILENT until I stepped on the first key — DING! The long path to my DAD, FELIX, was a giant piano, and every single key played a different note of a song. When I hopped across all of them I played the whole tune myself! There was no background music at all — I made ALL of it with my own feet. It was the longest, coolest piano solo ever. 🎹",
 
   // Bright, colorful party sky + purple stage floor
   skyColor: [40, 20, 70],
@@ -48,11 +48,10 @@ const LEVEL_16 = {
     { x: 4200, y: 560 },
   ],
 
-  // Each PIANO KEY plays one note of our DUBSTEP riff (in piano form!). The
-  // pianoNote value is the exact note. Jump them left-to-right to play the whole
-  // song. It's in E-minor (dark and driving, like dubstep). Higher notes = higher
-  // keys, but the jumps are small and there's solid ground under everything, so
-  // the level is always beatable.
+  // Each PIANO KEY plays one note of the song — pianoNote is the exact note.
+  // Jump them left to right to play the whole tune. It's in E-minor, so it
+  // sounds dark and driving. Higher notes sit on higher keys, but the jumps are
+  // small and there's solid ground under everything, so you can always finish.
   platforms: [
     { x: 350,  y: 472, width: 95, height: 26, pianoNote: 64 }, // E
     { x: 510,  y: 472, width: 95, height: 26, pianoNote: 64 }, // E
@@ -111,13 +110,13 @@ const LEVEL_16 = {
   ],
 
   // A few gentle bad guys to tail-spin. Two walkers guard the golden paw at x~2760.
+  // NO WASPS in this level — they fly up where the piano keys are and knock you
+  // off mid-song, which ruins the "play every key in order" run.
   enemies: [
     { type: "walker", x: 700,  y: 535, patrol: 90 },
-    { type: "wasp_patrol", x: 1500, y: 320, patrol: 110 },
     { type: "walker", x: 2680, y: 535, patrol: 70 },  // guards the golden paw
     { type: "walker", x: 2840, y: 535, patrol: 70 },  // guards the golden paw
     { type: "walker", x: 3600, y: 535, patrol: 90 },
-    { type: "wasp_patrol", x: 3950, y: 330, patrol: 100 },
     { type: "walker", x: 4500, y: 535, patrol: 80 },
   ],
 };

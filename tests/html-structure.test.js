@@ -625,7 +625,8 @@ describe("Collectibles system", () => {
     expect(htmlContent).toContain("function awardPaw(");
     expect(htmlContent).toContain("function hasGem(");
     expect(htmlContent).toContain("function hasPaw(");
-    expect(htmlContent).toContain("function allPawsCollected()");
+    expect(htmlContent).toContain("function pawCount()");
+    expect(htmlContent).toContain("function hasEnoughPaws()");
   });
 
   test("has golden paw sprite", () => {
@@ -662,9 +663,10 @@ describe("Collectibles system", () => {
     expect(htmlContent).toContain("GOLDEN PAW FOUND!");
   });
 
-  test("secret level unlock message on all paws collected", () => {
+  test("secret level unlock message fires on the 5th paw", () => {
     expect(htmlContent).toContain("Something secret has been unlocked");
-    expect(htmlContent).toContain("allPawsCollected()");
+    // === (not >=) so it celebrates exactly once, on the paw that unlocks it
+    expect(htmlContent).toContain("pawCount() === PAWS_FOR_SECRET");
   });
 
   test("level select shows gem and paw indicators", () => {
@@ -1282,7 +1284,10 @@ describe("In-level volcano music", () => {
   });
 
   test("plays level music only for levels that define one", () => {
-    expect(htmlContent).toMatch(/if \(!isSecret && level\.music\) levelMusic\.start/);
+    // The secret level used to be forced silent by an extra `!isSecret` here.
+    // It now gets its own theme like any other chapter.
+    expect(htmlContent).toMatch(/if \(level\.music\) levelMusic\.start\(level\.music\);/);
+    expect(htmlContent).not.toMatch(/if \(!isSecret && level\.music\)/);
   });
 
   test("shares the mute setting with the menu music", () => {
@@ -1464,10 +1469,13 @@ describe("Menu theme, PLAY button & Marthina secret-level shortcut", () => {
     expect(titleScene).not.toContain("const playBtn = add");
   });
 
-  test("clicking Marthina offers the secret level", () => {
+  test("Marthina is NO LONGER a shortcut into the secret level", () => {
     const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
-    expect(titleScene).toContain("titleMarthina.onClick");
-    expect(titleScene).toContain("Want to play the secret level?");
+    // The only way in is finding the golden paws.
+    expect(titleScene).not.toContain("titleMarthina.onClick");
+    expect(titleScene).not.toContain("Want to play the secret level?");
+    // ...but she's still on screen dancing
+    expect(titleScene).toContain("const titleMarthina = add");
   });
 });
 
