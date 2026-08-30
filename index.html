@@ -2817,13 +2817,15 @@ function setCharacter(c) {
   localStorage.setItem("rufus_character", c === "renard" ? "renard" : "rufus");
 }
 
-// Secret HAT feature — whether you wear a hat and what text is on it.
+// Secret HAT feature — whether you wear a hat. (Hats used to be able to carry
+// typed TEXT too; that was removed, so hats are now plain or painted only.)
 function getHat() { return localStorage.getItem("rufus_hat") === "1"; }
 function setHat(on) { localStorage.setItem("rufus_hat", on ? "1" : "0"); }
-function getHatText() { return localStorage.getItem("rufus_hat_text") || ""; }
-function setHatText(s) { localStorage.setItem("rufus_hat_text", (s || "").slice(0, 25)); }
+// Tidy up the old saved hat text so it can't linger on anyone's device.
+try { localStorage.removeItem("rufus_hat_text"); } catch (e) {}
 
-// Keep hat text family-friendly. Returns true if the text is OK to use.
+// Keep typed-in words family-friendly (used by the Level Creator).
+// Returns true if the text is OK to use.
 const HAT_BAD_WORDS = [
   "fuck", "shit", "bitch", "asshole", "bastard", "damn", "crap",
   "dick", "piss", "cock", "pussy", "slut", "whore", "fag", "nigger",
@@ -3723,7 +3725,6 @@ scene("title", () => {
   function closeCharDialog() {
     get("charDialog").forEach((o) => destroy(o));
     dialogOpen = false;
-    hatInputActive = false;
   }
 
   function openCharDialog(targetChar) {
@@ -3800,74 +3801,15 @@ scene("title", () => {
     ]);
   }
 
-  // The yes/no chain: hat? -> text on hat? -> custom text? -> type it
+  // Hat on or off. (There used to be a "text on the hat" option here — typing
+  // words onto your hat — but that's gone. Hats are plain or painted now, and
+  // you paint one by clicking Fiery.)
   function openHatFlow() {
     showYesNo("Want a hat?",
-      () => {
-        setHat(true);
-        showYesNo("Want text on the hat?",
-          () => {
-            showYesNo("Want custom text?",
-              () => startHatTextInput(),
-              () => { setHatText("COOL"); hatConfirm("Hat says: COOL"); }
-            );
-          },
-          () => { setHatText(""); hatConfirm("Plain hat on!"); }
-        );
-      },
+      () => { setHat(true); hatConfirm("Hat on!"); },
       () => { setHat(false); hatConfirm("No hat."); }
     );
   }
-
-  // --- Typing the custom hat text ---
-  let hatInputActive = false;
-  let hatTyped = "";
-  let hatTextDisplay = null;
-  let hatErrText = null;
-
-  function refreshHatDisplay() {
-    if (hatTextDisplay) hatTextDisplay.text = (hatTyped || "") + "_";
-  }
-
-  function startHatTextInput() {
-    if (dialogOpen) return;
-    dialogOpen = true;
-    hatInputActive = true;
-    hatTyped = "";
-    add([ rect(width(), height()), pos(0, 0), color(0, 0, 0), opacity(0.7), fixed(), z(200), area(), "charDialog" ]);
-    add([ rect(500, 220), pos(width() / 2, height() / 2), anchor("center"), color(40, 30, 50), outline(3, rgb(180, 160, 255)), fixed(), z(201), "charDialog" ]);
-    add([ text("Type your hat text, then press ENTER", { size: 16, width: 460 }), pos(width() / 2, height() / 2 - 60), anchor("center"), color(255, 255, 255), fixed(), z(202), "charDialog" ]);
-    add([ rect(360, 46), pos(width() / 2, height() / 2 - 6), anchor("center"), color(20, 15, 28), outline(2, rgb(120, 110, 160)), fixed(), z(202), "charDialog" ]);
-    hatTextDisplay = add([ text("_", { size: 24 }), pos(width() / 2, height() / 2 - 6), anchor("center"), color(255, 230, 150), fixed(), z(203), "charDialog" ]);
-    hatErrText = add([ text("", { size: 13, width: 460 }), pos(width() / 2, height() / 2 + 44), anchor("center"), color(255, 100, 100), fixed(), z(203), "charDialog" ]);
-    // DONE button (press ENTER or click this)
-    const doneBtn = add([ rect(120, 40), pos(width() / 2, height() / 2 + 78), anchor("center"), color(50, 170, 70), outline(2, rgb(120, 255, 150)), area(), fixed(), z(203), "charDialog" ]);
-    add([ text("DONE", { size: 18 }), pos(width() / 2, height() / 2 + 78), anchor("center"), color(255, 255, 255), fixed(), z(204), "charDialog" ]);
-    doneBtn.onClick(() => { if (hatInputActive) submitHatText(); });
-    add([ text("letters & numbers, up to 25  •  ENTER or DONE", { size: 11 }), pos(width() / 2, height() / 2 + 104), anchor("center"), color(180, 170, 200), fixed(), z(203), "charDialog" ]);
-  }
-
-  function submitHatText() {
-    const t = hatTyped.trim();
-    if (!t) { setHatText(""); hatInputActive = false; closeCharDialog(); hatConfirm("Plain hat on!"); return; }
-    if (!isCleanHatText(t)) {
-      if (hatErrText) hatErrText.text = "Too inappropriate for game — please change hat text!";
-      hatTyped = "";
-      refreshHatDisplay();
-      return;
-    }
-    setHatText(t);
-    hatInputActive = false;
-    closeCharDialog();
-    hatConfirm("Hat says: " + t);
-  }
-
-  onCharInput((ch) => {
-    if (!hatInputActive) return;
-    if (hatTyped.length >= 25) return;
-    if (/[a-zA-Z0-9 ]/.test(ch)) { hatTyped += ch.toUpperCase(); refreshHatDisplay(); }
-  });
-  onKeyPress("backspace", () => { if (hatInputActive) { hatTyped = hatTyped.slice(0, -1); refreshHatDisplay(); } });
 
   titleText.onClick(() => openHatFlow());
 
@@ -3875,7 +3817,6 @@ scene("title", () => {
   const mBrim = add([ rect(72, 8), pos(0, 0), anchor("center"), color(35, 35, 40), fixed(), z(4) ]);
   const mTop  = add([ rect(48, 30), pos(0, 0), anchor("bot"), color(35, 35, 40), fixed(), z(4) ]);
   const mBand = add([ rect(48, 7), pos(0, 0), anchor("center"), color(220, 40, 40), fixed(), z(5) ]);
-  const mHatLabel = add([ text("", { size: 14 }), pos(0, 0), anchor("center"), color(255, 255, 255), outline(1, rgb(0, 0, 0)), fixed(), z(6) ]);
   onUpdate(() => {
     // Show the plain top-hat preview only when wearing a hat with NO painted design
     const painted = hasHatPaint();
@@ -3886,14 +3827,6 @@ scene("title", () => {
     mBrim.pos.x = hx; mBrim.pos.y = hy;
     mTop.pos.x = hx;  mTop.pos.y = hy + 3;
     mBand.pos.x = hx; mBand.pos.y = hy - 12;
-    // Hat text — neon green and centered on the painted hat, else white on the plain hat
-    const txt = getHatText();
-    const wearing = getHat();
-    mHatLabel.text = (wearing && txt) ? txt : "";
-    mHatLabel.opacity = (wearing && txt) ? 1 : 0;
-    mHatLabel.color = painted ? rgb(57, 255, 20) : rgb(255, 255, 255);
-    mHatLabel.pos.x = hx;
-    mHatLabel.pos.y = painted ? (titleFox.pos.y - 88 - (HAT_PAINT_ROWS * 7) / 2) : (hy - 12);
   });
 
   // Fiery in the top-left corner — flying around with fire particles!
@@ -4390,7 +4323,6 @@ scene("title", () => {
   // dancing characters stay as hidden secrets you have to click on purpose.)
 
   onKeyPress("enter", () => {
-    if (hatInputActive) { submitHatText(); return; } // confirm hat text
     if (!dialogOpen) go("levelSelect");
   });
   onKeyPress("a", () => { if (!dialogOpen) go("about"); });
@@ -6746,16 +6678,11 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
 
   // --- SECRET HAT (rides on top of whoever you're playing as) ---
   if (getHat()) {
-    const hatText = getHatText();
     const paintArr = getHatPaint();
-    const hLabel = hatText
-      ? add([ text(hatText, { size: 10 }), pos(0, 0), anchor("center"), color(255, 255, 255), outline(1, rgb(0, 0, 0)), z(13), "playerHat" ])
-      : null;
 
     if (paintArr && paintArr.some((c) => c)) {
       // PAINTED pixel-art hat (pixels sit on a brim so it reads as a hat)
       const PS = 4;
-      if (hLabel) hLabel.color = rgb(57, 255, 20); // neon green text on a painted hat
       const pBrim = add([ rect(HAT_PAINT_COLS * PS + 14, 5), pos(0, 0), anchor("center"), color(...hatBrimColor()), z(10), "playerHat" ]);
       const pcells = [];
       for (let i = 0; i < paintArr.length; i++) {
@@ -6771,7 +6698,6 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         pBrim.pos.x = hx; pBrim.pos.y = hy + 1; // brim under the pixels
         if (isBrimRainbow()) pBrim.color = rgb(...rainbowRGB(time() * 0.3));
         pcells.forEach((e) => { e.pos.x = hx + e.gridOX; e.pos.y = hy + e.gridOY; });
-        if (hLabel) { hLabel.pos.x = hx; hLabel.pos.y = hy - (HAT_PAINT_ROWS * PS) / 2; } // text ON the painted hat
       });
     } else {
       // Plain black top hat
@@ -6784,7 +6710,6 @@ scene("game", (levelIndex, startLives, spawnPos, deathCount) => {
         hBrim.pos.x = hx; hBrim.pos.y = hy;
         hTop.pos.x = hx;  hTop.pos.y = hy + 2;
         hBand.pos.x = hx; hBand.pos.y = hy - 9;
-        if (hLabel) { hLabel.pos.x = hx; hLabel.pos.y = hy - 9; } // text ON the hat band
       });
     }
   }

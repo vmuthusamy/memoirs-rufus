@@ -1317,24 +1317,48 @@ describe("Secret custom hat", () => {
   test("has hat storage + a bad-word filter", () => {
     expect(htmlContent).toContain("function getHat()");
     expect(htmlContent).toContain("function setHat(");
-    expect(htmlContent).toContain("function getHatText()");
+    // The bad-word filter stays — the Level Creator still uses it.
     expect(htmlContent).toContain("function isCleanHatText(");
     expect(htmlContent).toContain("rufus_hat");
   });
 
-  test("has the hat yes/no chain reachable from the title", () => {
+  test("has the hat yes/no question reachable from the title", () => {
     const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
     expect(titleScene).toContain("openHatFlow");
     expect(titleScene).toContain("Want a hat?");
-    expect(titleScene).toContain("Want text on the hat?");
-    expect(titleScene).toContain("Want custom text?");
     expect(titleScene).toContain("titleText.onClick");
   });
 
-  test("blocks inappropriate hat text with a please-change message", () => {
-    expect(htmlContent).toContain("Too inappropriate for game");
-    const titleScene = htmlContent.match(/scene\("title"[\s\S]*?scene\("about"/)[0];
-    expect(titleScene).toMatch(/!isCleanHatText\(/);
+  // ---- Typing TEXT onto a hat was removed. Hats are plain or painted only. ----
+  test("the hat text feature is completely gone", () => {
+    [
+      "getHatText",
+      "setHatText",
+      "rufus_hat_text\") ||",     // the old getter
+      "Want text on the hat?",
+      "Want custom text?",
+      "Type your hat text",
+      "hatInputActive",
+      "submitHatText",
+      "startHatTextInput",
+    ].forEach((gone) => {
+      expect(htmlContent).not.toContain(gone);
+    });
+  });
+
+  test("no leftover hat-text drawing on the menu or the player", () => {
+    expect(htmlContent).not.toContain("mHatLabel");
+    expect(htmlContent).not.toContain("hLabel");
+  });
+
+  test("old saved hat text is cleaned off the device", () => {
+    expect(htmlContent).toMatch(/localStorage\.removeItem\("rufus_hat_text"\)/);
+  });
+
+  test("you can still paint a hat (that feature stayed)", () => {
+    expect(htmlContent).toContain("openHatPainter");
+    expect(htmlContent).toContain("setHatPaint");
+    expect(htmlContent).toContain("hasHatPaint");
   });
 
   test("draws the hat on the player in-game", () => {
