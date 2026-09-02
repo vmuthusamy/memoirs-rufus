@@ -4978,7 +4978,7 @@ scene("levelSelect", (startPage) => {
       add([ text("🔓 Unlock All", { size: 14 }), pos(width() - 90, 34), anchor("center"), color(190, 255, 205), fixed(), z(51) ]);
       // Little tag so it's obvious WHY this button is showing: you're playing
       // the copy on your own computer, not the public website.
-      add([ text("home only", { size: 9 }), pos(width() - 90, 55), anchor("center"), color(120, 180, 140), fixed(), z(51) ]);
+      add([ text("home only", { size: 9 }), pos(width() - 90, 61), anchor("center"), color(150, 210, 170), outline(2, rgb(10, 25, 15)), fixed(), z(51) ]);
       unlockBtn.onClick(() => {
         for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
         // ALSO hand over the JETPACK. You normally earn it by beating the boss in
