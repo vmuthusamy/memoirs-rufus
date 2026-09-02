@@ -111,35 +111,26 @@ describe("Level Creator is hidden on the public site", () => {
 });
 
 // ============================================================================
-// The "Unlock All" cheat button is home-only too
+// There is no "Unlock All" button any more
 // ----------------------------------------------------------------------------
-// Arvind found this playing on his school iPad: the button sat right there on
-// the live website, so anyone visiting could tap it and skip past every level
-// he'd built instead of playing them.
+// Arvind found it on the live website on his school iPad — anyone visiting
+// could tap it and skip past every level he'd built. It was first hidden on the
+// public site, then removed entirely. Chapters are earned by playing now.
+// Unlocking for testing is the secret U key, which is home-only.
 // ============================================================================
-describe("Unlock All is hidden on the public site", () => {
-  test("the button is only created when running locally", () => {
-    expect(html).toMatch(/if \(isLocalMode\(\)\) \{\s*\n\s*const unlockBtn = add\(\[/);
+describe("No Unlock All button anywhere", () => {
+  test("the button is completely gone from the game", () => {
+    expect(html).not.toContain("unlockBtn");
+    expect(html).not.toContain('text("🔓 Unlock All"');
+    expect(html).not.toContain('text("home only"');
   });
 
-  test("its label and click handler live inside that check", () => {
-    const idx = html.indexOf("const unlockBtn = add([");
-    expect(idx).toBeGreaterThan(-1);
-    // walk back to the nearest enclosing `if (` and make sure it's the local check
-    const before = html.slice(Math.max(0, idx - 400), idx);
-    expect(before).toContain("if (isLocalMode()) {");
-    // the handler must come after the guard, not before it
-    const handlerIdx = html.indexOf("unlockBtn.onClick(", idx);
-    expect(handlerIdx).toBeGreaterThan(idx);
-  });
-
-  test("it still hands over the jetpack when it IS used", () => {
-    // Without this, unlocking everything drops you into the fly-only levels
-    // (7, 8, 9, 12) with no way to finish them.
-    const block = html.slice(html.indexOf("unlockBtn.onClick("));
-    const handler = block.slice(0, block.indexOf("});") + 3);
-    expect(handler).toContain("markBeaten(i)");
-    expect(handler).toContain("unlockJetpack();");
+  test("the level list has no way to unlock everything at once", () => {
+    // Grab the levelSelect scene and make sure no cheat lives in it
+    const scene = html.slice(html.indexOf('scene("levelSelect"'));
+    const body = scene.slice(0, scene.indexOf('scene("memoir"'));
+    expect(body).not.toContain("markBeaten(i)");
+    expect(body).not.toContain("unlockJetpack(");
   });
 
   test("the secret U key also grants the jetpack", () => {

@@ -4472,8 +4472,8 @@ scene("title", () => {
   });
 
   // SECRET: press U to unlock every level (and L to re-lock them).
-  // HOME ONLY, same as the Unlock All button — otherwise anyone on
-  // rufusfamily.com could press U and skip the whole game.
+  // HOME ONLY — otherwise anyone on rufusfamily.com could press U and skip
+  // the whole game without playing it.
   onKeyPress("u", () => {
     if (dialogOpen || !isLocalMode()) return;
     for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
@@ -4965,31 +4965,9 @@ scene("levelSelect", (startPage) => {
       ]);
     }
 
-    // 🔓 UNLOCK ALL button (works on touch too — no keyboard U key needed!)
-    //
-    // HOME ONLY. On the public rufusfamily.com site this button is hidden,
-    // otherwise anyone visiting could tap it and skip straight past every level
-    // instead of playing them. It's a testing tool, not part of the game.
-    if (isLocalMode()) {
-      const unlockBtn = add([
-        rect(150, 34), pos(width() - 90, 34), anchor("center"),
-        color(35, 90, 50), outline(2, rgb(90, 210, 120)), area(), fixed(), z(50),
-      ]);
-      add([ text("🔓 Unlock All", { size: 14 }), pos(width() - 90, 34), anchor("center"), color(190, 255, 205), fixed(), z(51) ]);
-      // Little tag so it's obvious WHY this button is showing: you're playing
-      // the copy on your own computer, not the public website.
-      add([ text("home only", { size: 9 }), pos(width() - 90, 61), anchor("center"), color(150, 210, 170), outline(2, rgb(10, 25, 15)), fixed(), z(51) ]);
-      unlockBtn.onClick(() => {
-        for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
-        // ALSO hand over the JETPACK. You normally earn it by beating the boss in
-        // "King Clown", and levels 7, 8, 9 and 12 have flags you can only reach by
-        // flying. Without this, unlocking everything dropped you into those levels
-        // with no way to finish them. (Bug Arvind hit!)
-        unlockJetpack();
-        add([ text("All levels + jetpack unlocked! 🎉", { size: 18 }), pos(width() / 2, height() - 40), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1.4), fixed(), z(220) ]);
-        wait(0.35, () => go("levelSelect", currentPage)); // redraw so tiles show as unlocked
-      });
-    }
+    // (There used to be an "Unlock All" button here. It's gone — chapters are
+    // earned by playing them now. For testing at home you can still press U on
+    // the title screen to unlock, and L to lock everything back up.)
 
     // Levels for this page
     const startIdx = book.start;
