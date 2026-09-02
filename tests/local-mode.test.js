@@ -151,6 +151,33 @@ describe("Unlock All is hidden on the public site", () => {
     expect(handler).toBeDefined();
     expect(handler).toContain("unlockJetpack();");
   });
+
+  test("the secret U and L keys are home-only too", () => {
+    const unlockKey = [...html.matchAll(/onKeyPress\("u", \(\) => \{[\s\S]*?\n  \}\);/g)]
+      .map((m) => m[0])
+      .find((h) => h.includes("markBeaten"));
+    expect(unlockKey).toContain("!isLocalMode()");
+
+    const relockKey = [...html.matchAll(/onKeyPress\("l", \(\) => \{[\s\S]*?\n  \}\);/g)]
+      .map((m) => m[0])
+      .find((h) => h.includes("rufus_beaten"));
+    expect(relockKey).toContain("!isLocalMode()");
+  });
+
+  // The catch-all: ANY future way of unlocking the whole game must be home-only.
+  test("there is NO way to skip the game on the public site", () => {
+    const cheats = [
+      ...html.matchAll(/for \(let i = 0; i < ALL_LEVELS\.length; i\+\+\) markBeaten\(i\)/g),
+    ];
+    expect(cheats.length).toBeGreaterThan(0);
+
+    const ungated = cheats.filter((m) => {
+      // look back a little way for the home-only check guarding this cheat
+      const before = html.slice(Math.max(0, m.index - 500), m.index);
+      return !before.includes("isLocalMode()");
+    });
+    expect(ungated).toEqual([]);
+  });
 });
 
 // ============================================================================

@@ -4471,16 +4471,18 @@ scene("title", () => {
     musicLabel.text = muted ? "Music: OFF" : "Music: ON";
   });
 
-  // SECRET: press U to unlock every level (and L to re-lock them)
+  // SECRET: press U to unlock every level (and L to re-lock them).
+  // HOME ONLY, same as the Unlock All button — otherwise anyone on
+  // rufusfamily.com could press U and skip the whole game.
   onKeyPress("u", () => {
-    if (dialogOpen) return;
+    if (dialogOpen || !isLocalMode()) return;
     for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
     unlockJetpack(); // same as the button — you need it for the fly-only levels
     add([ text("All levels + jetpack unlocked!", { size: 22 }), pos(width() / 2, 140), anchor("center"), color(120, 255, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1), fixed(), z(220) ]);
     wait(0.9, () => go("title"));
   });
   onKeyPress("l", () => {
-    if (dialogOpen) return;
+    if (dialogOpen || !isLocalMode()) return;
     localStorage.setItem("rufus_beaten", "{}");
     add([ text("Levels re-locked!", { size: 22 }), pos(width() / 2, 140), anchor("center"), color(255, 150, 150), outline(2, rgb(0, 0, 0)), opacity(1), lifespan(1), fixed(), z(220) ]);
     wait(0.9, () => go("title"));
@@ -4974,6 +4976,9 @@ scene("levelSelect", (startPage) => {
         color(35, 90, 50), outline(2, rgb(90, 210, 120)), area(), fixed(), z(50),
       ]);
       add([ text("🔓 Unlock All", { size: 14 }), pos(width() - 90, 34), anchor("center"), color(190, 255, 205), fixed(), z(51) ]);
+      // Little tag so it's obvious WHY this button is showing: you're playing
+      // the copy on your own computer, not the public website.
+      add([ text("home only", { size: 9 }), pos(width() - 90, 55), anchor("center"), color(120, 180, 140), fixed(), z(51) ]);
       unlockBtn.onClick(() => {
         for (let i = 0; i < ALL_LEVELS.length; i++) markBeaten(i);
         // ALSO hand over the JETPACK. You normally earn it by beating the boss in
