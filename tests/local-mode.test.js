@@ -111,6 +111,49 @@ describe("Level Creator is hidden on the public site", () => {
 });
 
 // ============================================================================
+// The "Unlock All" cheat button is home-only too
+// ----------------------------------------------------------------------------
+// Arvind found this playing on his school iPad: the button sat right there on
+// the live website, so anyone visiting could tap it and skip past every level
+// he'd built instead of playing them.
+// ============================================================================
+describe("Unlock All is hidden on the public site", () => {
+  test("the button is only created when running locally", () => {
+    expect(html).toMatch(/if \(isLocalMode\(\)\) \{\s*\n\s*const unlockBtn = add\(\[/);
+  });
+
+  test("its label and click handler live inside that check", () => {
+    const idx = html.indexOf("const unlockBtn = add([");
+    expect(idx).toBeGreaterThan(-1);
+    // walk back to the nearest enclosing `if (` and make sure it's the local check
+    const before = html.slice(Math.max(0, idx - 400), idx);
+    expect(before).toContain("if (isLocalMode()) {");
+    // the handler must come after the guard, not before it
+    const handlerIdx = html.indexOf("unlockBtn.onClick(", idx);
+    expect(handlerIdx).toBeGreaterThan(idx);
+  });
+
+  test("it still hands over the jetpack when it IS used", () => {
+    // Without this, unlocking everything drops you into the fly-only levels
+    // (7, 8, 9, 12) with no way to finish them.
+    const block = html.slice(html.indexOf("unlockBtn.onClick("));
+    const handler = block.slice(0, block.indexOf("});") + 3);
+    expect(handler).toContain("markBeaten(i)");
+    expect(handler).toContain("unlockJetpack();");
+  });
+
+  test("the secret U key also grants the jetpack", () => {
+    // There are two "u" handlers — one un-bans the Level Creator. We want the
+    // one on the title screen that unlocks every level.
+    const handler = [...html.matchAll(/onKeyPress\("u", \(\) => \{[\s\S]*?\n  \}\);/g)]
+      .map((m) => m[0])
+      .find((h) => h.includes("markBeaten"));
+    expect(handler).toBeDefined();
+    expect(handler).toContain("unlockJetpack();");
+  });
+});
+
+// ============================================================================
 // The generator used to drop bounce pads blindly every 1500px
 // ============================================================================
 describe("Generated levels get sensible jump pads", () => {
