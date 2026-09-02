@@ -171,11 +171,33 @@ describe("Unlock All is hidden on the public site", () => {
     ];
     expect(cheats.length).toBeGreaterThan(0);
 
-    const ungated = cheats.filter((m) => {
-      // look back a little way for the home-only check guarding this cheat
-      const before = html.slice(Math.max(0, m.index - 500), m.index);
-      return !before.includes("isLocalMode()");
+    // Work out the exact span of every `if (isLocalMode()) { ... }` block by
+    // matching its braces, rather than guessing by how close the text is.
+    const guardedRanges = [];
+    [...html.matchAll(/if \(isLocalMode\(\)\) \{/g)].forEach((g) => {
+      let depth = 0;
+      for (let i = g.index + g[0].length - 1; i < html.length; i++) {
+        if (html[i] === "{") depth++;
+        else if (html[i] === "}") {
+          depth--;
+          if (depth === 0) { guardedRanges.push([g.index, i]); break; }
+        }
+      }
     });
+    // An early `if (... !isLocalMode()) return;` guard protects the rest of its
+    // own handler, so count those too.
+    const earlyReturns = [...html.matchAll(/!isLocalMode\(\)\) return;/g)].map((m) => m.index);
+
+    const ungated = cheats
+      .filter((m) => {
+        const insideBlock = guardedRanges.some(([s, e]) => m.index > s && m.index < e);
+        const afterEarlyReturn = earlyReturns.some(
+          (i) => m.index > i && m.index - i < 400
+        );
+        return !insideBlock && !afterEarlyReturn;
+      })
+      .map((m) => `index.html:${html.slice(0, m.index).split("\n").length}`);
+
     expect(ungated).toEqual([]);
   });
 });
