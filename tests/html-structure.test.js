@@ -1075,13 +1075,59 @@ describe("Level select", () => {
     expect(htmlContent).toContain("showPage");
   });
 
-  test("has three chapter books (1-6, 7-10, 11+)", () => {
+  test("has four chapter books (1-6, 7-10, 11-13, 14+)", () => {
     const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
-    // Three books, each with a start/end level range
+    // Four books, each with a start/end level range
     const startCount = (selectScene.match(/start:\s*\d+, end:/g) || []).length;
-    expect(startCount).toBe(3);
-    // The new third book uses ALL_LEVELS.length so it grows with new levels
+    expect(startCount).toBe(4);
+    // The LAST book runs to ALL_LEVELS.length so new chapters land on it
     expect(selectScene).toContain("end: ALL_LEVELS.length");
+    expect(selectScene).toContain("Rufus Blasts Off!");
+  });
+
+  test("the books cover every chapter with no gaps or repeats", () => {
+    const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
+    const start = selectScene.indexOf("const BOOKS = [");
+    const end = selectScene.indexOf("\n  ];", start) + 4;
+    const fs2 = require("fs");
+    const path2 = require("path");
+    const levelCount = fs2
+      .readdirSync(path2.join(__dirname, "..", "levels"))
+      .filter((f) => /^level\d+\.js$/.test(f)).length;
+    const BOOKS = new Function(
+      "ALL_LEVELS",
+      selectScene.slice(start, end) + "\nreturn BOOKS;"
+    )(new Array(levelCount).fill({}));
+
+    // first book starts at 0, last ends at the final level, no holes between
+    expect(BOOKS[0].start).toBe(0);
+    expect(BOOKS[BOOKS.length - 1].end).toBe(levelCount);
+    for (let i = 1; i < BOOKS.length; i++) {
+      expect(BOOKS[i].start).toBe(BOOKS[i - 1].end);
+    }
+    // and every book actually holds at least one chapter
+    BOOKS.forEach((b) => expect(b.end).toBeGreaterThan(b.start));
+  });
+
+  test("no book has so many chapters that rows hit the bottom buttons", () => {
+    const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
+    const start = selectScene.indexOf("const BOOKS = [");
+    const end = selectScene.indexOf("\n  ];", start) + 4;
+    const fs2 = require("fs");
+    const path2 = require("path");
+    const levelCount = fs2
+      .readdirSync(path2.join(__dirname, "..", "levels"))
+      .filter((f) => /^level\d+\.js$/.test(f)).length;
+    const BOOKS = new Function(
+      "ALL_LEVELS",
+      selectScene.slice(start, end) + "\nreturn BOOKS;"
+    )(new Array(levelCount).fill({}));
+
+    BOOKS.forEach((b) => {
+      const rows = b.end - b.start;
+      const lastRowBottom = 120 + (rows - 1) * 72 + 31;
+      expect(lastRowBottom).toBeLessThan(543); // About / Scores buttons
+    });
   });
 
   test("has left and right arrows for page navigation", () => {

@@ -4860,10 +4860,19 @@ scene("levelSelect", (startPage) => {
       decor: { spine: [180, 100, 130], spine2: [160, 80, 110], flourish: [200, 130, 160], line: [200, 140, 170] },
     },
     {
-      start: 10, end: ALL_LEVELS.length,
+      start: 10, end: 13,
       bg: [210, 45, 55],
       title: "Rufus's New Adventures!", titleColor: [255, 235, 235],
       decor: { spine: [235, 80, 90], spine2: [205, 60, 70], flourish: [255, 150, 150], line: [255, 150, 150] },
+    },
+    // BOOK 4 — the space book. New chapters go in here: add your level file,
+    // put it in ALL_LEVELS, and it shows up on this page automatically because
+    // this book runs to the end of the list.
+    {
+      start: 13, end: ALL_LEVELS.length,
+      bg: [22, 18, 58],
+      title: "Rufus Blasts Off!", titleColor: [190, 210, 255],
+      decor: { spine: [60, 55, 125], spine2: [42, 38, 95], flourish: [150, 175, 255], line: [125, 145, 230] },
     },
   ];
   const totalPages = BOOKS.length;
