@@ -4859,17 +4859,19 @@ scene("levelSelect", (startPage) => {
       title: "Rufus's Adventures Continue...", titleColor: [255, 180, 220],
       decor: { spine: [180, 100, 130], spine2: [160, 80, 110], flourish: [200, 130, 160], line: [200, 140, 170] },
     },
+    // BOOK 3 holds every chapter up to number 16.
     {
-      start: 10, end: 13,
+      start: 10, end: 16,
       bg: [210, 45, 55],
       title: "Rufus's New Adventures!", titleColor: [255, 235, 235],
       decor: { spine: [235, 80, 90], spine2: [205, 60, 70], flourish: [255, 150, 150], line: [255, 150, 150] },
     },
-    // BOOK 4 — the space book. New chapters go in here: add your level file,
-    // put it in ALL_LEVELS, and it shows up on this page automatically because
-    // this book runs to the end of the list.
+    // BOOK 4 — the blank page, waiting for new chapters.
+    // It starts at 16 and runs to the end of the list, so it's EMPTY right now
+    // (there are 16 chapters). The moment Chapter 17 is added to ALL_LEVELS it
+    // appears on this page by itself — no need to touch this code.
     {
-      start: 13, end: ALL_LEVELS.length,
+      start: 16, end: ALL_LEVELS.length,
       bg: [22, 18, 58],
       title: "Rufus Blasts Off!", titleColor: [190, 210, 255],
       decor: { spine: [60, 55, 125], spine2: [42, 38, 95], flourish: [150, 175, 255], line: [125, 145, 230] },
@@ -4979,6 +4981,30 @@ scene("levelSelect", (startPage) => {
         color(...book.titleColor),
         fixed(),
       ]);
+    }
+
+    // A blank book (no chapters in it yet) gets a friendly note instead of an
+    // empty page, so it looks deliberate rather than broken.
+    if (book.end - book.start === 0) {
+      add([
+        text("This page is empty...", { size: 26 }),
+        pos(width() / 2, 220), anchor("center"),
+        color(...book.titleColor), opacity(0.9), fixed(),
+      ]);
+      add([
+        text("...waiting for Rufus's next adventure!", { size: 16, width: 520, align: "center" }),
+        pos(width() / 2, 270), anchor("center"),
+        color(...book.titleColor), opacity(0.6), fixed(),
+      ]);
+      const quill = add([
+        text("✏️", { size: 40 }),
+        pos(width() / 2, 340), anchor("center"),
+        opacity(0.85), fixed(), { t: 0 },
+      ]);
+      quill.onUpdate(function () {
+        this.t += dt();
+        this.pos.y = 340 + Math.sin(this.t * 2) * 8;
+      });
     }
 
     // (There used to be an "Unlock All" button here. It's gone — chapters are

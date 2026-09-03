@@ -1075,7 +1075,7 @@ describe("Level select", () => {
     expect(htmlContent).toContain("showPage");
   });
 
-  test("has four chapter books (1-6, 7-10, 11-13, 14+)", () => {
+  test("has four chapter books, the last one blank for new chapters", () => {
     const selectScene = htmlContent.match(/scene\("levelSelect"[\s\S]*?scene\("memoir"/)[0];
     // Four books, each with a start/end level range
     const startCount = (selectScene.match(/start:\s*\d+, end:/g) || []).length;
@@ -1083,6 +1083,8 @@ describe("Level select", () => {
     // The LAST book runs to ALL_LEVELS.length so new chapters land on it
     expect(selectScene).toContain("end: ALL_LEVELS.length");
     expect(selectScene).toContain("Rufus Blasts Off!");
+    // the blank page tells you what it's for instead of looking broken
+    expect(htmlContent).toContain("This page is empty...");
   });
 
   test("the books cover every chapter with no gaps or repeats", () => {
@@ -1105,8 +1107,11 @@ describe("Level select", () => {
     for (let i = 1; i < BOOKS.length; i++) {
       expect(BOOKS[i].start).toBe(BOOKS[i - 1].end);
     }
-    // and every book actually holds at least one chapter
-    BOOKS.forEach((b) => expect(b.end).toBeGreaterThan(b.start));
+    // Every book holds at least one chapter — EXCEPT the last one, which is
+    // deliberately left blank as the page where new chapters will appear.
+    BOOKS.slice(0, -1).forEach((b) => expect(b.end).toBeGreaterThan(b.start));
+    const last = BOOKS[BOOKS.length - 1];
+    expect(last.end).toBeGreaterThanOrEqual(last.start);
   });
 
   test("no book has so many chapters that rows hit the bottom buttons", () => {
@@ -1125,6 +1130,7 @@ describe("Level select", () => {
 
     BOOKS.forEach((b) => {
       const rows = b.end - b.start;
+      if (rows === 0) return; // the blank page has no rows to collide
       const lastRowBottom = 120 + (rows - 1) * 72 + 31;
       expect(lastRowBottom).toBeLessThan(543); // About / Scores buttons
     });
