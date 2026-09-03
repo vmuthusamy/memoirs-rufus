@@ -139,6 +139,58 @@ describe("No shortcuts into the secret level", () => {
 });
 
 // ============================================================================
+// 5. WHERE THE SECRET CHAPTER SITS — on the CANDY page (Arvind's choice)
+// ============================================================================
+describe("The secret chapter is on the candy page", () => {
+  // Rebuild the books exactly as the level select defines them
+  function books() {
+    const start = html.indexOf("const BOOKS = [");
+    const end = html.indexOf("];", start) + 2;
+    return new Function("ALL_LEVELS", html.slice(start, end) + "\nreturn BOOKS;")(
+      new Array(levelFiles.length).fill({})
+    );
+  }
+  const names = levelFiles.map((f) => {
+    const src = fs.readFileSync(path.join(LEVELS_DIR, f), "utf8");
+    return src.match(/name: "([^"]+)"/)[1];
+  });
+
+  test("the page is found by looking for the candy levels, not hard-coded", () => {
+    expect(html).toMatch(/const candyBook = BOOKS\.findIndex/);
+    expect(html).toContain('l.name === "Candy Kingdom"');
+    expect(html).toMatch(/if \(currentPage === secretPage\)/);
+  });
+
+  test("it really does land on the book holding Candy Kingdom", () => {
+    const B = books();
+    const candy = B.findIndex((b) => names.slice(b.start, b.end).includes("Candy Kingdom"));
+    expect(candy).toBeGreaterThanOrEqual(0);
+    // and that book should also hold the other candy chapters
+    const onPage = names.slice(B[candy].start, B[candy].end);
+    expect(onPage).toContain("Candy Chaos");
+  });
+
+  test("it doesn't land on top of a chapter or the bottom buttons", () => {
+    const B = books();
+    const candy = B.findIndex((b) => names.slice(b.start, b.end).includes("Candy Kingdom"));
+    const slots = B[candy].end - B[candy].start;
+    const secretY = Math.min(120 + slots * 72, 500);
+    const lastChapterBottom = 120 + (slots - 1) * 72 + 31;
+    expect(secretY - 31).toBeGreaterThan(lastChapterBottom); // below the last chapter
+    expect(secretY + 31).toBeLessThan(543);                  // above About / Scores
+  });
+
+  test("it can never slide down onto the bottom buttons", () => {
+    // The clamp protects pages that fill up with chapters later
+    expect(html).toMatch(/Math\.min\(120 \+ secretSlot \* 72, 500\)/);
+    // check the clamp holds even for a very full page
+    for (let slots = 1; slots <= 10; slots++) {
+      expect(Math.min(120 + slots * 72, 500) + 31).toBeLessThan(543);
+    }
+  });
+});
+
+// ============================================================================
 // 4. YOU CAN SEE HOW CLOSE YOU ARE
 // ============================================================================
 describe("Paw progress is visible", () => {

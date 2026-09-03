@@ -4870,6 +4870,13 @@ scene("levelSelect", (startPage) => {
   let currentPage = startPage || 0;
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   const hasSecretEntry = hasEnoughPaws();
+  // The secret chapter sits on the CANDY page (the pink book) — Arvind's pick.
+  // We look up which book holds the candy levels rather than hard-coding a page
+  // number, so it follows along if the books are ever rearranged.
+  const candyBook = BOOKS.findIndex((b) =>
+    ALL_LEVELS.slice(b.start, b.end).some((l) => l.name === "Candy Kingdom")
+  );
+  const secretPage = candyBook >= 0 ? candyBook : BOOKS.length - 1;
   let flipping = false;
 
   // Page flip animation!
@@ -5093,13 +5100,15 @@ scene("levelSelect", (startPage) => {
       }
     }
 
-    // Secret level on the last page. It's ALWAYS shown now — locked with a
-    // "3/5 golden paws" progress line so you can see how close you are, then
-    // unlocked once you've found enough.
-    if (currentPage === totalPages - 1) {
+    // Secret level, tucked in under the candy chapters. It's ALWAYS shown —
+    // locked with a "3/5 golden paws" progress line so you can see how close
+    // you are, then unlocked once you've found enough.
+    if (currentPage === secretPage) {
       const found = pawCount();
       const secretSlot = endIdx - startIdx;
-      const secretY = 120 + secretSlot * 72;
+      // Never let it slide down onto the About / Scores buttons at the bottom,
+      // however many chapters end up on this page.
+      const secretY = Math.min(120 + secretSlot * 72, 500);
       const secretEntry = add([
         rect(560, 62),
         pos(width() / 2, secretY),
