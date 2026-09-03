@@ -42,8 +42,9 @@ const LEVEL_15 = {
   // Golden paw guarded by the KING COBRA at the end
   secretPaw: { x: 3850, y: 470 },
 
-  // Red gem up on a high ledge
-  redGem: { x: 2050, y: 250 },
+  // (No red gem here — the red gem belongs to Chapter 9, Candy Chaos. This
+  // level used to have one too, but both saved to the same slot, so whichever
+  // you grabbed first made the other one pointless.)
 
   checkpoints: [
     { x: 1400, y: 560 },

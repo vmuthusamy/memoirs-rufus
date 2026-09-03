@@ -5089,6 +5089,24 @@ scene("levelSelect", (startPage) => {
           fixed(),
         ]);
       }
+      if (level.orangeGem) {
+        add([
+          sprite("orangeGem"),
+          pos(width() / 2 + 240, y + 12),
+          anchor("center"),
+          scale(1.1),
+          opacity(hasOrangeGem() ? 1 : 0.2),
+          fixed(),
+        ]);
+        add([
+          text("ORANGE GEM", { size: 8 }),
+          pos(width() / 2 + 240, y + 28),
+          anchor("center"),
+          color(245, 140, 30),
+          opacity(hasOrangeGem() ? 1 : 0.4),
+          fixed(),
+        ]);
+      }
       if (level.greenGem) {
         add([
           sprite("greenGem"),

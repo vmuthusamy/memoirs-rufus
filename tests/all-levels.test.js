@@ -265,6 +265,73 @@ describe("Every level is wired into index.html", () => {
 });
 
 // ============================================================================
+// 3b. COLOUR GEMS — each one belongs to exactly ONE level
+// ----------------------------------------------------------------------------
+// Arvind spotted this: levels 9 and 15 BOTH had a red gem. Every colour gem
+// saves to a single slot, so grabbing one made the other one pointless — and
+// the menu drew a red gem icon on both chapters. Nothing errored; the second
+// gem was just quietly meaningless.
+// ============================================================================
+describe("Each colour gem belongs to one level only", () => {
+  const COLOUR_GEMS = ["redGem", "greenGem", "yellowGem", "orangeGem"];
+
+  COLOUR_GEMS.forEach((gem) => {
+    test(`only one level claims the ${gem}`, () => {
+      const claimants = LEVELS.filter(({ level }) => level[gem]).map((l) => l.file);
+      expect(claimants.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+  // A gem is written one of two ways:
+  //   { x, y }  = it sits somewhere in the level and you go and grab it
+  //   true      = you EARN it (a perfect boss run, or playing the song in
+  //               order), so there's nothing lying around to pick up
+  test("a placed gem sits inside its level", () => {
+    LEVELS.forEach(({ level }) => {
+      COLOUR_GEMS.forEach((gem) => {
+        const g = level[gem];
+        if (!g || g === true) return; // earned, not placed
+        expect(typeof g.x).toBe("number");
+        expect(typeof g.y).toBe("number");
+        expect(g.x).toBeGreaterThanOrEqual(0);
+        expect(g.x).toBeLessThanOrEqual(level.width);
+      });
+    });
+  });
+
+  test("every gem shown on the menu can actually be won and read back", () => {
+    // The menu needs has<Gem>() to know whether to light the icon up.
+    // Winning it can happen in index.html (award<Gem>()) OR in one of the
+    // standalone mini-games — the yellow gem is written by donut-boss.html on a
+    // perfect boss run, so it has no award function in the main file.
+    const otherPages = fs
+      .readdirSync(path.join(__dirname, ".."))
+      .filter((f) => f.endsWith(".html") && f !== "index.html")
+      .map((f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8"))
+      .join("\n");
+
+    LEVELS.forEach(({ file, level }) => {
+      COLOUR_GEMS.forEach((gem) => {
+        if (!level[gem]) return;
+        const name = gem.charAt(0).toUpperCase() + gem.slice(1);
+
+        // the menu must be able to check it
+        expect(INDEX_HTML).toContain("function has" + name + "(");
+
+        // ...and something, somewhere, must be able to give it to you
+        const key = INDEX_HTML.match(
+          new RegExp("function has" + name + "\\(\\)[\\s\\S]*?getItem\\(\"([^\"]+)\"")
+        );
+        expect(key).not.toBeNull();
+        const wonInEngine = INDEX_HTML.includes("function award" + name + "(");
+        const wonElsewhere = otherPages.includes(key[1]);
+        expect(wonInEngine || wonElsewhere).toBe(true);
+      });
+    });
+  });
+});
+
+// ============================================================================
 // 4. "COOL MUSIC" PIANO LEVEL (16) — special mechanics stay intact
 // ============================================================================
 describe("Cool Music piano level stays playable", () => {

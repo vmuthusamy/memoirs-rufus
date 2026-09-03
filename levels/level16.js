@@ -23,6 +23,10 @@ const LEVEL_16 = {
   // No jetpack — this is a hop-and-play music level
   noJetpack: true,
 
+  // ORANGE GEM! You earn it by playing every piano key IN ORDER. There's no
+  // position because it isn't lying around to grab — you have to play the song.
+  orangeGem: true,
+
   startLives: 7,
 
   memoir: "Dear Diary, everything was SILENT until I stepped on the first key — DING! The long path to my DAD, FELIX, was a giant piano, and every single key played a different note of a song. When I hopped across all of them I played the whole tune myself! There was no background music at all — I made ALL of it with my own feet. It was the longest, coolest piano solo ever. 🎹",
